@@ -65,6 +65,16 @@ export function dayHeading(key: DayKey): string {
   return `${WEEKDAYS[weekdayIndex(key)]} (${pad(parseDay(key).getDate())})`;
 }
 
+/** "6" */
+export function dayNumber(key: DayKey): string {
+  return String(parseDay(key).getDate());
+}
+
+/** "Dienstag" */
+export function weekdayName(key: DayKey): string {
+  return WEEKDAYS[weekdayIndex(key)];
+}
+
 /** "Montag, 06.10.2026" */
 export function longDate(key: DayKey): string {
   const d = parseDay(key);

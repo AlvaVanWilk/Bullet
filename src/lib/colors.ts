@@ -1,5 +1,6 @@
-// Highlighter colours for categories. Each has a light marker tone and a
-// darker ink tone that stays readable as text colour on paper.
+// Muted highlighter colours for categories. Each has a light marker tone
+// and a darker ink tone that stays readable as text colour on paper.
+// The keys stay the same as in the first version, so categories keep their place.
 
 export interface CategoryColor {
   key: string;
@@ -9,15 +10,16 @@ export interface CategoryColor {
 }
 
 export const CATEGORY_COLORS: CategoryColor[] = [
-  { key: 'gelb', name: 'Gelb', marker: '#f7dc4a', ink: '#a07c00' },
-  { key: 'orange', name: 'Orange', marker: '#f8ad62', ink: '#c0610f' },
-  { key: 'rosa', name: 'Rosa', marker: '#f39ac0', ink: '#c0397a' },
-  { key: 'lila', name: 'Lila', marker: '#bfa3ec', ink: '#7448c2' },
-  { key: 'blau', name: 'Blau', marker: '#7fc0f2', ink: '#1f6fb4' },
-  { key: 'tuerkis', name: 'Türkis', marker: '#6fd8cc', ink: '#13877c' },
-  { key: 'gruen', name: 'Grün', marker: '#a5df85', ink: '#3d8a22' },
-  { key: 'braun', name: 'Braun', marker: '#d9b48c', ink: '#8a5a2b' },
-  { key: 'grau', name: 'Grau', marker: '#c3c7cc', ink: '#5d636b' },
+  { key: 'gelb', name: 'Ocker', marker: '#e3d29a', ink: '#86691f' },
+  { key: 'orange', name: 'Terrakotta', marker: '#e4bca6', ink: '#94523a' },
+  { key: 'rosa', name: 'Altrosa', marker: '#e2bcc0', ink: '#8f4f5b' },
+  { key: 'lila', name: 'Mauve', marker: '#cdbfd6', ink: '#6a5580' },
+  { key: 'blau', name: 'Taubenblau', marker: '#bccbd9', ink: '#3f5d78' },
+  { key: 'tuerkis', name: 'Petrol', marker: '#b3cfca', ink: '#2f6660' },
+  { key: 'gruen', name: 'Salbei', marker: '#c8d4b6', ink: '#56703f' },
+  { key: 'oliv', name: 'Oliv', marker: '#d6d3a8', ink: '#69682e' },
+  { key: 'braun', name: 'Sand', marker: '#ddcdb6', ink: '#7a6047' },
+  { key: 'grau', name: 'Schiefer', marker: '#c9cbcf', ink: '#4e555e' },
 ];
 
 export function categoryColor(key: string | undefined | null): CategoryColor {
@@ -28,4 +30,9 @@ export function categoryColor(key: string | undefined | null): CategoryColor {
 export function nextFreeColor(used: string[]): string {
   const free = CATEGORY_COLORS.find((c) => !used.includes(c.key));
   return (free ?? CATEGORY_COLORS[used.length % CATEGORY_COLORS.length]).key;
+}
+
+/** A marker colour for each week, when day headings change colour weekly. */
+export function weekMarker(isoWeekNumber: number): string {
+  return CATEGORY_COLORS[isoWeekNumber % CATEGORY_COLORS.length].marker;
 }

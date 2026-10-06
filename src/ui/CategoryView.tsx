@@ -8,7 +8,7 @@ import { categoryTasks, entriesByTask, isOpenToday, suggestions } from '../lib/l
 import type { Task } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
-import { Bang, ScheduledDot, TaskText } from './ink';
+import { Bang, NoteMark, ScheduledDot, TaskText } from './ink';
 import { ui, useNow, useStore, useToday } from './state';
 
 export function CategoryView(props: { id: string }) {
@@ -48,6 +48,7 @@ export function CategoryView(props: { id: string }) {
                 {t.important && <Bang />}
               </span>
               <TaskText text={t.text} color={color.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
+              {t.note && <NoteMark />}
             </li>
           ))}
         </ul>

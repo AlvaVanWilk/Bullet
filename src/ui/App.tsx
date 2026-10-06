@@ -1,10 +1,12 @@
 // The whole app: the side list, the main page and what lies over them.
 
 import { useEffect } from 'preact/hooks';
+import { handFont } from '../lib/fonts';
 import { entriesByTask, isOpenToday } from '../lib/logic';
 import { STAGE } from '../stage';
 import { store } from '../store/store';
 import { ArchiveSheet } from './Archive';
+import { alignToPaper, watchPaperAlignment } from './baseline';
 import { CategoryView } from './CategoryView';
 import { configureDrops } from './drag';
 import { Login } from './Login';
@@ -38,8 +40,16 @@ export function App() {
   const state = useUi();
 
   useEffect(() => {
-    document.documentElement.dataset.font = snap.settings.font;
+    const font = handFont(snap.settings.font);
+    const root = document.documentElement.style;
+    root.setProperty('--hand', `${font.family}, 'Patrick Hand', cursive`);
+    root.setProperty('--hand-size', `${font.size}px`);
+    alignToPaper();
+    // the font may still be loading; measure again once it is there
+    document.fonts?.load(`${font.size}px ${font.family}`).then(alignToPaper).catch(() => {});
   }, [snap.settings.font]);
+
+  useEffect(() => watchPaperAlignment(), []);
 
   if (server.mode === 'checking') return <div class="desk boot" />;
   if (server.mode === 'signedOut') return <Login configured={server.configured} note={server.note} offline={server.offline} />;

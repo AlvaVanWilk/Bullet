@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { archive, dayItems, isOpenToday, entriesByTask, masterTasks, specialsOn, suggestions, weekDeadlines, type Snapshot } from '../../src/lib/logic';
-import { DEFAULT_SETTINGS, type Entry, type Special, type Task } from '../../src/lib/model';
+import { archive, dayItems, entriesByTask, hiddenKeys, isOpenToday, masterTasks, specialsOn, suggestions, visibleEvents, weekDeadlines, type Snapshot } from '../../src/lib/logic';
+import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Special, type Task } from '../../src/lib/model';
 
 const DAY = 86400000;
 const NOW = new Date(2026, 9, 7, 12).getTime(); // Wednesday 07.10.2026
@@ -13,7 +13,7 @@ function entry(id: string, taskId: string, day: string): Entry {
   return { id, type: 'entry', updatedAt: 1, taskId, day, createdAt: 1 };
 }
 function snap(tasks: Task[], entries: Entry[] = [], specials: Special[] = []): Snapshot {
-  return { tasks, categories: [], entries, specials, settings: DEFAULT_SETTINGS };
+  return { tasks, categories: [], entries, specials, hides: [], settings: DEFAULT_SETTINGS };
 }
 const states = (s: Snapshot, day: string) => dayItems(s, day, TODAY).map((i) => `${i.task.id}:${i.kind}:${i.state}`);
 
@@ -125,5 +125,20 @@ describe('specials', () => {
     expect(specialsOn(list, '2026-02-28').map((x) => x.id)).toEqual(['feb']);
     expect(specialsOn(list, '2028-02-29').map((x) => x.id)).toEqual(['feb']);
     expect(specialsOn(list, '2028-02-28').map((x) => x.id)).toEqual([]);
+  });
+});
+
+describe('hidden appointments', () => {
+  const ev = (id: string, seriesId?: string): CalEvent => ({ id: `cal|${id}`, calendarId: 'cal', title: id, start: '2026-10-06', end: '2026-10-07', allDay: true, kind: 'termin', seriesId });
+  const hide = (key: string, deleted = false): Hide => ({ id: key, type: 'hide', updatedAt: 1, key, title: '', when: '', createdAt: 1, deleted });
+  it('leaves out one appointment or all repetitions of one', () => {
+    const events = [ev('a'), ev('b_1', 'b'), ev('b_2', 'b'), ev('c')];
+    expect(visibleEvents(events, hiddenKeys([hide('cal|a')])).map((e) => e.title)).toEqual(['b_1', 'b_2', 'c']);
+    expect(visibleEvents(events, hiddenKeys([hide('cal|series:b')])).map((e) => e.title)).toEqual(['a', 'c']);
+    expect(visibleEvents(events, hiddenKeys([hide('cal|a', true)])).length).toBe(4);
+  });
+  it('finds finished tasks by their note', () => {
+    const s = snap([task('n', { text: 'Anruf', note: 'Termin bei Frau Berger', doneDay: TODAY, doneAt: NOW })]);
+    expect(archive(s, 'berger').length).toBe(1);
   });
 });

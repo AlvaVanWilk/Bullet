@@ -27,8 +27,6 @@
   --ease-paper: cubic-bezier(0.62, 0.02, 0.22, 1);
   color-scheme: light;
 }
-:root[data-font='kalam'] { --hand: 'Kalam', 'Patrick Hand', cursive; --hand-size: 19px; }
-:root[data-font='gaegu'] { --hand: 'Gaegu', 'Patrick Hand', cursive; --hand-size: 23px; }
 
 *, *::before, *::after { box-sizing: border-box; }
 

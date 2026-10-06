@@ -5,7 +5,11 @@ import type { DayKey } from './dates';
 
 export type PaperStyle = 'grid' | 'lines' | 'dots';
 export type ColorMode = 'text' | 'marker';
-export type FontKey = 'patrick' | 'kalam' | 'gaegu';
+export type FontKey = string;
+/** "6 DIENSTAG" or "DIENSTAG 6" */
+export type DayFormat = 'zahl' | 'tag';
+/** How the heading of a day is set off. */
+export type DayStyle = 'marker' | 'woche' | 'linie' | 'striche' | 'rahmen' | 'ohne';
 export type CalendarRole = 'termine' | 'besonderes' | 'aus';
 export type ReminderMode = 'google' | 'eve';
 
@@ -29,6 +33,8 @@ export interface Task extends Base {
   doneDay: DayKey | null;
   /** What was last written to Google for the deadline (null: nothing there). */
   gcalSig?: string | null;
+  /** A longer note on the post-it. */
+  note?: string;
 }
 
 export interface Category extends Base {
@@ -54,6 +60,17 @@ export interface Special extends Base {
   createdAt: number;
 }
 
+/** An appointment from Google that should not be shown (the event itself stays as it is). */
+export interface Hide extends Base {
+  type: 'hide';
+  /** "calendarId|eventId" for one appointment, "calendarId|series:id" for all its repetitions. */
+  key: string;
+  title: string;
+  /** When it was, as shown in the list of hidden appointments. */
+  when: string;
+  createdAt: number;
+}
+
 export interface Settings extends Base {
   type: 'settings';
   paperSidebar: PaperStyle;
@@ -64,11 +81,14 @@ export interface Settings extends Base {
   calendars: Record<string, CalendarRole>;
   bulletCalendarId: string | null;
   reminders: ReminderMode;
+  dayFormat: DayFormat;
+  dayStyle: DayStyle;
+  sounds: boolean;
 }
 
-export type AnyRecord = Task | Category | Entry | Special | Settings;
+export type AnyRecord = Task | Category | Entry | Special | Settings | Hide;
 export type RecordType = AnyRecord['type'];
-export const RECORD_TYPES: RecordType[] = ['task', 'category', 'entry', 'special', 'settings'];
+export const RECORD_TYPES: RecordType[] = ['task', 'category', 'entry', 'special', 'settings', 'hide'];
 
 export const SETTINGS_ID = 'settings';
 
@@ -84,6 +104,9 @@ export const DEFAULT_SETTINGS: Settings = {
   calendars: {},
   bulletCalendarId: null,
   reminders: 'google',
+  dayFormat: 'zahl',
+  dayStyle: 'marker',
+  sounds: true,
 };
 
 /** An appointment read from Google (not synced, cached per week). */
@@ -96,4 +119,6 @@ export interface CalEvent {
   end: string;
   allDay: boolean;
   kind: 'termin' | 'besonderes';
+  /** Id of the repeating event this one belongs to. */
+  seriesId?: string;
 }

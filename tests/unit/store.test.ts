@@ -73,3 +73,15 @@ describe('store', () => {
     expect(s.pendingChanges().map((r) => r.id)).toEqual([t.id]);
   });
 });
+
+describe('hiding appointments', () => {
+  it('gives the same appointment the same record on every device, and can show it again', () => {
+    const a = makeStore();
+    const b = makeStore();
+    a.hideEvent('cal|x', 'Zahnarzt', 'Di 6.10.');
+    b.hideEvent('cal|x', 'Zahnarzt', 'Di 6.10.');
+    expect(a.snapshot().hides[0].id).toBe(b.snapshot().hides[0].id);
+    a.unhideEvent(a.snapshot().hides[0].id);
+    expect(a.snapshot().hides[0].deleted).toBe(true);
+  });
+});

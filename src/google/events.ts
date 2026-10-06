@@ -43,6 +43,7 @@ export function toCalEvent(ev: GoogleEvent, calendarId: string, role: CalendarRo
     end,
     allDay,
     kind: role === 'besonderes' || ev.eventType === 'birthday' ? 'besonderes' : 'termin',
+    ...(ev.recurringEventId ? { seriesId: ev.recurringEventId } : {}),
   };
 }
 

@@ -20,8 +20,8 @@
     var(--grain),
     linear-gradient(transparent calc(var(--grid) - 1px), var(--line) calc(var(--grid) - 1px));
   background-size: auto, 100% var(--grid);
-  /* the line runs just under the letters */
-  background-position: 0 0, 0 -5px;
+  /* the line runs right under the letters (--baseline is measured, see ui/baseline.ts) */
+  background-position: 0 0, 0 calc(var(--baseline, 22px) - var(--grid) + 1px);
   background-attachment: local, local;
 }
 .paper[data-paper='dots'] {
@@ -29,7 +29,8 @@
     var(--grain),
     radial-gradient(circle at 1.2px 1.2px, var(--dot) 1.05px, transparent 1.6px);
   background-size: auto, var(--grid) var(--grid);
-  background-position: 0 0, 7px 0;
+  /* each row of dots lies under a row of writing */
+  background-position: 0 0, 7px calc(var(--baseline, 22px) - 1px);
   background-attachment: local, local;
 }
 
@@ -179,3 +180,11 @@
 .cb-fill.on path { stroke-dashoffset: 0; }
 .cb-mark { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .cb:active svg { transform: scale(0.9); }
+
+.note-mark {
+  flex: none;
+  margin-left: 6px;
+  vertical-align: top;
+  margin-top: 9px;
+}
+.note-mark path { fill: none; stroke: var(--ink-faint); stroke-width: 1.4; stroke-linecap: round; }

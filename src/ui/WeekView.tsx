@@ -4,15 +4,17 @@
 
 import { useLayoutEffect, useRef } from 'preact/hooks';
 import { eventEndDay, eventIsPast, eventOnDay, eventStartDay } from '../google/events';
-import { categoryColor } from '../lib/colors';
+import { categoryColor, weekMarker } from '../lib/colors';
 import {
-  addDays, compareDays, dayHeading, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekRangeLabel, type DayKey,
+  addDays, compareDays, dayNumber, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekdayName, weekRangeLabel, type DayKey,
 } from '../lib/dates';
-import { dayItems, entriesByTask, specialsOn, weekDeadlines, weekSpecials, type DayItem } from '../lib/logic';
-import type { CalEvent } from '../lib/model';
+import {
+  dayItems, entriesByTask, hiddenKeys, specialsOn, visibleEvents, weekDeadlines, weekSpecials, type DayItem,
+} from '../lib/logic';
+import type { CalEvent, Settings } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
-import { Checkbox, HandBox, Scribble, TaskText } from './ink';
+import { Checkbox, HandBox, NoteMark, TaskText } from './ink';
 import { StatusNote } from './StatusNote';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { useWeekEvents } from './useEvents';
@@ -25,7 +27,7 @@ export function WeekView() {
   const monday = addDays(mondayOf(today), state.weekOffset * 7);
   const current = state.weekOffset === 0;
   const days = weekDays(monday).filter((d) => !current || compareDays(d, today) <= 0);
-  const events = useWeekEvents(monday);
+  const events = visibleEvents(useWeekEvents(monday), hiddenKeys(snap.hides));
   const scrollRef = useRef<HTMLDivElement>(null);
   const index = entriesByTask(snap.entries);
 
@@ -99,7 +101,7 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
         <HandBox class="wbox" seed={`termine${props.monday}`} title="Termine">
           <ul class="wlist clean">
             {termine.map((ev) => (
-              <li key={ev.id} class={eventIsPast(ev, now) ? 'past' : ''}>
+              <li key={ev.id} class={`ev ${eventIsPast(ev, now) ? 'past' : ''}`} onClick={(e) => openEvent(ev, e)}>
                 <span class="wd">{weekdaySpan(ev)}</span>
                 {!ev.allDay && <span class="when">{timeLabel(new Date(ev.start))}</span>}
                 <span class="what">{ev.title}</span>
@@ -117,7 +119,7 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
                 onClick={(e) => ui.set({ postIt: { kind: 'task', id: task.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
               >
                 <span class="wd">{shortWeekday(task.deadline!)}</span>
-                <TaskText text={task.text} struck={mark === 'done'} />
+                <span class="what">{task.text}</span>
               </li>
             ))}
             {!deadlines.length && <li class="none">keine</li>}
@@ -138,7 +140,7 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
         >
           <ul class="wlist hand">
             {besondere.map((ev) => (
-              <li key={ev.id} class={eventIsPast(ev, now) ? 'past' : ''}>
+              <li key={ev.id} class={`ev ${eventIsPast(ev, now) ? 'past' : ''}`} onClick={(e) => openEvent(ev, e)}>
                 <span class="wd">{weekdaySpan(ev)}</span>
                 <span class="what">{ev.title}</span>
               </li>
@@ -159,6 +161,10 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
       </div>
     </header>
   );
+}
+
+function openEvent(ev: CalEvent, e: MouseEvent) {
+  ui.set({ postIt: { kind: 'event', event: ev, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } });
 }
 
 function weekdaySpan(ev: CalEvent): string {
@@ -185,7 +191,6 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
   const specials = specialsOn(snap.specials, props.day);
   const special = props.events.filter((e) => e.kind === 'besonderes');
   const termine = props.events.filter((e) => e.kind === 'termin');
-  const heading = dayHeading(props.day);
 
   return (
     <section
@@ -193,20 +198,16 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
       data-drop={isToday ? 'day' : undefined}
       data-day={props.day}
     >
-      <h2 class="day-title">
-        <span>{heading}</span>
-        <Scribble seed={`day${props.day}`} width={heading.length * 11 + 10} />
-        {isToday && <span class="today-note">heute</span>}
-      </h2>
+      <DayHeading day={props.day} isToday={isToday} settings={snap.settings} />
       {(special.length > 0 || specials.length > 0) && (
         <ul class="day-specials">
-          {special.map((ev) => <li key={ev.id}><span class="sp-mark">✱</span>{ev.title}</li>)}
+          {special.map((ev) => <li key={ev.id} onClick={(e) => openEvent(ev, e)}>{ev.title}</li>)}
           {specials.map((sp) => (
             <li
               key={sp.id}
               onClick={(e) => ui.set({ postIt: { kind: 'special', id: sp.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
             >
-              <span class="sp-mark">✱</span>{sp.text}
+              {sp.text}
             </li>
           ))}
         </ul>
@@ -214,7 +215,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
       {termine.length > 0 && (
         <ul class="day-events">
           {termine.map((ev) => (
-            <li key={ev.id} class={eventIsPast(ev, now) ? 'past' : ''}>
+            <li key={ev.id} class={eventIsPast(ev, now) ? 'past' : ''} onClick={(e) => openEvent(ev, e)}>
               <span class="t">{ev.allDay ? 'ganztags' : startOnDay(ev, props.day)}</span>
               <span class="what">{ev.title}</span>
             </li>
@@ -226,6 +227,44 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
       </ul>
       {isToday && <div class="drop-hint">Aufgaben aus der Liste hierher ziehen</div>}
     </section>
+  );
+}
+
+/** "6 DIENSTAG" (or "DIENSTAG 6") in small capitals, set off as chosen in the settings. */
+function DayHeading(props: { day: DayKey; isToday: boolean; settings: Settings }) {
+  const num = <span class="dt-num">{dayNumber(props.day)}</span>;
+  const name = <span class="dt-name">{weekdayName(props.day)}</span>;
+  const text = (
+    <span class="dt-text">
+      {props.settings.dayFormat === 'tag' ? <>{name} {num}</> : <>{num} {name}</>}
+    </span>
+  );
+  const note = props.isToday && <span class="today-note">heute</span>;
+  const style = props.settings.dayStyle;
+  if (style === 'rahmen') {
+    return (
+      <h2 class="day-title st-rahmen">
+        <HandBox class="dt-box" seed={`day${props.day}`}>{text}</HandBox>
+        {note}
+      </h2>
+    );
+  }
+  if (style === 'striche') {
+    return (
+      <h2 class="day-title st-striche">
+        <span class="dt-rule" aria-hidden="true" />
+        {text}
+        {note}
+        <span class="dt-rule" aria-hidden="true" />
+      </h2>
+    );
+  }
+  const marker = style === 'woche' ? { '--day-marker': weekMarker(isoWeek(props.day)) } : undefined;
+  return (
+    <h2 class={`day-title st-${style === 'woche' ? 'marker' : style}`} style={marker}>
+      {text}
+      {note}
+    </h2>
   );
 }
 
@@ -269,6 +308,7 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
         }}
       >
         <TaskText text={task.text} fresh={item.entry ? store.isFresh(item.entry.id) : false} />
+        {task.note && <NoteMark />}
       </span>
       {color && <span class="cat-dot" style={{ '--dot': color.marker }} aria-label={cat!.name} />}
     </li>

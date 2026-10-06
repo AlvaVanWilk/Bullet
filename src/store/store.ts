@@ -3,12 +3,12 @@
 
 import { createStore, get, set } from 'idb-keyval';
 import { dayKey, type DayKey } from '../lib/dates';
-import { newId } from '../lib/ids';
+import { newId, stableId } from '../lib/ids';
 import { nextFreeColor } from '../lib/colors';
 import type { Snapshot } from '../lib/logic';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
-  type AnyRecord, type Category, type Entry, type Settings, type Special, type Task,
+  type AnyRecord, type Category, type Entry, type Hide, type Settings, type Special, type Task,
 } from '../lib/model';
 import { STORAGE_PREFIX } from '../stage';
 import { isNewer } from './merge';
@@ -57,13 +57,14 @@ export class Store {
 
   snapshot(): Snapshot {
     if (this.snapshotCache?.version === this.version) return this.snapshotCache.snap;
-    const snap: Snapshot = { tasks: [], categories: [], entries: [], specials: [], settings: DEFAULT_SETTINGS };
+    const snap: Snapshot = { tasks: [], categories: [], entries: [], specials: [], hides: [], settings: DEFAULT_SETTINGS };
     for (const r of this.records.values()) {
       switch (r.type) {
         case 'task': snap.tasks.push(r); break;
         case 'category': snap.categories.push(r); break;
         case 'entry': snap.entries.push(r); break;
         case 'special': snap.specials.push(r); break;
+        case 'hide': snap.hides.push(r); break;
         case 'settings': {
           const calendars = r.calendars && !Array.isArray(r.calendars) ? r.calendars : {};
           snap.settings = { ...DEFAULT_SETTINGS, ...r, calendars };
@@ -280,6 +281,21 @@ export class Store {
   deleteSpecial(id: string) {
     const r = this.records.get(id);
     if (r?.type !== 'special' || r.deleted) return;
+    this.put({ ...r, deleted: true });
+    this.changed(true);
+  }
+
+  /** Stop showing an appointment (or all repetitions of it); the event in Google stays. */
+  hideEvent(key: string, title: string, when: string) {
+    const id = stableId('h', key);
+    const hide: Hide = { id, type: 'hide', updatedAt: 0, key, title, when, createdAt: this.now() };
+    this.put(hide);
+    this.changed(true);
+  }
+
+  unhideEvent(id: string) {
+    const r = this.records.get(id);
+    if (r?.type !== 'hide' || r.deleted) return;
     this.put({ ...r, deleted: true });
     this.changed(true);
   }

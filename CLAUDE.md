@@ -26,7 +26,17 @@ Bedienung und Einrichtung: `README.md`.
   alle bleiben im versteckten Archiv (Suche nach Wort und Datum).
 - Hauptseite: Kopf (Kalenderwoche, Boxen Termine/Deadlines/Besonderes) scrollt nicht.
   Tage von Montag bis heute; heute nie unterhalb der Fenstermitte. Vergangene Termine
-  blass; vergangene Deadlines durchgestrichen (erledigt) oder leuchtend (offen).
+  blass. Deadlines im Kopf in normaler Schrift; nur überfällige rot und leuchtend,
+  erledigte dünn durchgestrichen (nicht mit dem dicken Marker).
+- Tage als „6 DIENSTAG“ (oder „DIENSTAG 6“) in Kapitälchen; Hervorhebung wählbar
+  (grauer Marker, Marker in Wochenfarbe, gerader Strich, Striche links/rechts, Rahmen).
+- Besonderes in Grau, ohne Sternchen.
+- Die Schrift sitzt auf den Punktreihen bzw. Linien: Zeilen sind Vielfache von 28 px,
+  die Grundlinie der gewählten Schrift wird gemessen (`src/ui/baseline.ts`).
+- Farben gedeckt und „erwachsen“, nicht knallig.
+- Leise Geräusche: Papier über Papier beim Laschenwechsel, Stift beim Durchstreichen
+  (abschaltbar). Post-it: „speichern“, Notizfeld; kein „erledigt“ dort.
+- Termine aus Google lassen sich in Bullet ausblenden, ohne sie in Google zu ändern.
 - Vorplanen künftiger Tage ist (vorerst) nicht vorgesehen.
 
 ## Technik

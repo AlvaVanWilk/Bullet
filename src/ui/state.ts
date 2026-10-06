@@ -4,13 +4,15 @@
 import { useLayoutEffect, useState } from 'preact/hooks';
 import { dayKey, type DayKey } from '../lib/dates';
 import type { Snapshot } from '../lib/logic';
+import type { CalEvent } from '../lib/model';
 import { loadDevice, saveDevice, type DeviceState } from '../store/local';
 import { store } from '../store/store';
 
 export type PostItTarget =
   | { kind: 'task'; id: string; rect: DOMRect; day?: DayKey; entryId?: string }
   | { kind: 'category'; id: string; rect: DOMRect }
-  | { kind: 'special'; id: string | null; rect: DOMRect; date?: DayKey };
+  | { kind: 'special'; id: string | null; rect: DOMRect; date?: DayKey }
+  | { kind: 'event'; event: CalEvent; rect: DOMRect };
 
 export interface UiState {
   view: { kind: 'week' } | { kind: 'category'; id: string };

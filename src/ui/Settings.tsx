@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { GoogleCalendar } from '../google/calendar';
 import { cachedCalendars, calendarName, loadCalendars, roleOf } from '../google/events';
-import type { CalendarRole, ColorMode, FontKey, PaperStyle, ReminderMode } from '../lib/model';
+import { FONTS } from '../lib/fonts';
+import type { CalendarRole, ColorMode, DayFormat, DayStyle, PaperStyle, ReminderMode } from '../lib/model';
 import { signIn, signOut } from '../server';
 import { STAGE } from '../stage';
 import { store } from '../store/store';
@@ -28,7 +29,10 @@ function Choice<T extends string>(props: { value: T; options: [T, string][]; onC
 }
 
 const PAPERS: [PaperStyle, string][] = [['grid', 'kariert'], ['lines', 'liniert'], ['dots', 'gepunktet']];
-const FONTS: [FontKey, string][] = [['patrick', 'Patrick Hand'], ['kalam', 'Kalam'], ['gaegu', 'Gaegu']];
+const DAY_STYLES: [DayStyle, string][] = [
+  ['marker', 'grauer Marker'], ['woche', 'Marker, jede Woche andere Farbe'], ['linie', 'gerader Strich'],
+  ['striche', 'Striche links und rechts'], ['rahmen', 'Rahmen'], ['ohne', 'ohne'],
+];
 const ROLES: [CalendarRole, string][] = [['termine', 'Termine'], ['besonderes', 'Besonderes'], ['aus', 'aus']];
 
 export function SettingsSheet() {
@@ -38,6 +42,7 @@ export function SettingsSheet() {
   const google = useGoogleStatus();
   const [calendars, setCalendars] = useState<GoogleCalendar[]>(cachedCalendars());
   const s = snap.settings;
+  const hides = snap.hides.filter((h) => !h.deleted).sort((a, b) => b.createdAt - a.createdAt);
 
   useEffect(() => {
     if (!state.settingsOpen || server.mode !== 'signedIn') return;
@@ -67,8 +72,34 @@ export function SettingsSheet() {
 
           <section class="set">
             <h3>Schrift und Farben</h3>
-            <div class="set-row"><span>Handschrift</span>
-              <Choice value={s.font} options={FONTS} class="fonts" onChange={(v) => store.updateSettings({ font: v })} />
+            <div class="set-row stack"><span>Handschrift</span>
+              <div class="font-grid" role="radiogroup">
+                {FONTS.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={s.font === f.key}
+                    class={`font-opt ${s.font === f.key ? 'on' : ''}`}
+                    style={{ fontFamily: `${f.family}, var(--hand)`, fontSize: `${f.size}px` }}
+                    onClick={() => store.updateSettings({ font: f.key })}
+                  >
+                    Brot kaufen
+                    <small>{f.label}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div class="set-row"><span>Tage</span>
+              <Choice<DayFormat>
+                value={s.dayFormat}
+                options={[['zahl', '6 Dienstag'], ['tag', 'Dienstag 6']]}
+                class="caps"
+                onChange={(v) => store.updateSettings({ dayFormat: v })}
+              />
+            </div>
+            <div class="set-row stack"><span>Tage hervorheben mit</span>
+              <Choice value={s.dayStyle} options={DAY_STYLES} onChange={(v) => store.updateSettings({ dayStyle: v })} />
             </div>
             <div class="set-row"><span>Kategorien in der Masterliste</span>
               <Choice<ColorMode>
@@ -83,6 +114,17 @@ export function SettingsSheet() {
                 <span>{s.hideDoneAfterDays} {s.hideDoneAfterDays === 1 ? 'Tag' : 'Tagen'}</span>
                 <button type="button" class="ghost-btn" onClick={() => store.updateSettings({ hideDoneAfterDays: Math.min(90, s.hideDoneAfterDays + 1) })}>+</button>
               </div>
+            </div>
+          </section>
+
+          <section class="set">
+            <h3>Geräusche</h3>
+            <div class="set-row"><span>Papier beim Blättern, Stift beim Durchstreichen</span>
+              <Choice<'an' | 'aus'>
+                value={s.sounds ? 'an' : 'aus'}
+                options={[['an', 'an'], ['aus', 'aus']]}
+                onChange={(v) => store.updateSettings({ sounds: v === 'an' })}
+              />
             </div>
           </section>
 
@@ -121,6 +163,21 @@ export function SettingsSheet() {
               </>
             )}
           </section>
+
+          {hides.length > 0 && (
+            <section class="set">
+              <h3>Ausgeblendete Termine</h3>
+              <ul class="hidden-list">
+                {hides.map((h) => (
+                  <li key={h.id}>
+                    <span class="cal-name">{h.title}</span>
+                    <span class="set-note">{h.when}</span>
+                    <button type="button" class="note-btn" onClick={() => store.unhideEvent(h.id)}>wieder zeigen</button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section class="set">
             <h3>Erinnerung an Deadlines</h3>

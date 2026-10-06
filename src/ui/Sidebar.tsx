@@ -7,7 +7,8 @@ import { categoryColor } from '../lib/colors';
 import { entriesByTask, isOpenToday, liveCategories, masterTasks } from '../lib/logic';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
-import { Bang, ScheduledDot, TaskText } from './ink';
+import { Bang, NoteMark, ScheduledDot, TaskText } from './ink';
+import { playPaperSlide, playStrike } from './sound';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
 
 const SWAP_MS = 640;
@@ -51,6 +52,7 @@ export function Sidebar() {
       return;
     }
     setSwapping(true);
+    playPaperSlide(SWAP_MS / 1000);
     const opts: KeyframeAnimationOptions = { duration: SWAP_MS, easing: 'cubic-bezier(.45,.05,.2,1)' };
     out.animate([
       { transform: 'none', zIndex: 3, boxShadow: 'var(--sheet-shadow)' },
@@ -148,6 +150,7 @@ function MasterList(props: { active: boolean }) {
   const uiState = useUi();
   const listRef = useRef<HTMLUListElement>(null);
   const [striking, setStriking] = useState<Set<string>>(new Set());
+  const struckRef = useRef<Set<string>>(new Set());
   const tasks = masterTasks(snap, Math.max(now, Date.now()));
   const index = entriesByTask(snap.entries);
   const seen = dev.strikeSeenAt;
@@ -161,11 +164,17 @@ function MasterList(props: { active: boolean }) {
   useEffect(() => {
     if (!props.active || !pending.length) return;
     const timers = pending.map((t, i) =>
-      setTimeout(() => setStriking((s) => (s.has(t.id) ? s : new Set(s).add(t.id))), STRIKE_START_MS + i * STRIKE_STEP_MS),
+      setTimeout(() => {
+        if (struckRef.current.has(t.id)) return;
+        struckRef.current.add(t.id);
+        setStriking(new Set(struckRef.current));
+        playStrike(0.4);
+      }, STRIKE_START_MS + i * STRIKE_STEP_MS),
     );
     const last = Math.max(...pending.map((t) => t.doneAt!));
     timers.push(setTimeout(() => {
       device.set({ strikeSeenAt: Math.max(device.get().strikeSeenAt, last) });
+      struckRef.current = new Set();
       setStriking(new Set());
     }, STRIKE_START_MS + pending.length * STRIKE_STEP_MS + 450));
     return () => timers.forEach(clearTimeout);
@@ -207,6 +216,7 @@ function MasterList(props: { active: boolean }) {
                 animate={striking.has(t.id)}
                 fresh={store.isFresh(t.id)}
               />
+              {t.note && <NoteMark />}
             </li>
           );
         })}

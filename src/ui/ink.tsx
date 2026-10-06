@@ -64,22 +64,6 @@ export function HandBox(props: { class?: string; seed: string; children: Compone
   );
 }
 
-/** A wobbly underline, e.g. under the heading of a day. */
-export function Scribble(props: { seed: string; width: number; class?: string }) {
-  const w = Math.max(20, Math.round(props.width));
-  const p = paths(`line|${props.seed}|${w}`, () =>
-    gen.curve(
-      [[2, 4], [w * 0.35, 3 + (seedOf(props.seed) % 3) - 1], [w * 0.7, 5], [w - 2, 3.5]],
-      { roughness: 0.8, stroke: INK, strokeWidth: 1.3, seed: seedOf(props.seed) },
-    ),
-  );
-  return (
-    <svg class={props.class ?? 'scribble'} width={w} height={8} aria-hidden="true">
-      {p.map((x, i) => <path key={i} d={x.d} />)}
-    </svg>
-  );
-}
-
 /** The box in front of a task in a day. */
 export function Checkbox(props: { state: BoxState; important: boolean; seed: string; onClick?: (e: MouseEvent) => void; label: string }) {
   const s = seedOf(props.seed);
@@ -113,6 +97,15 @@ export function Checkbox(props: { state: BoxState; important: boolean; seed: str
 
 export function Bang() {
   return <span class="bang" aria-label="wichtig">!</span>;
+}
+
+/** Two little pencil lines after a task that has a note. */
+export function NoteMark() {
+  return (
+    <svg class="note-mark" width="16" height="12" viewBox="0 0 16 12" aria-label="mit Notiz">
+      <path d="M1.5 4.2c2.6-.7 6.8-.5 12.6-.4M1.8 8.6c2.2-.4 4.9-.4 8.1-.2" />
+    </svg>
+  );
 }
 
 export function ScheduledDot() {

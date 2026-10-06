@@ -2,13 +2,14 @@
 // rules can be tested without any interface.
 
 import { addDays, compareDays, daySearchText, parseDay, weekDays, type DayKey } from './dates';
-import type { Category, Entry, Settings, Special, Task } from './model';
+import type { CalEvent, Category, Entry, Hide, Settings, Special, Task } from './model';
 
 export interface Snapshot {
   tasks: Task[];
   categories: Category[];
   entries: Entry[];
   specials: Special[];
+  hides: Hide[];
   settings: Settings;
 }
 
@@ -163,7 +164,7 @@ export function archive(s: Snapshot, query: string, onDay?: DayKey | null): Arch
     if (t.deleted || !t.doneDay || t.doneAt == null) return false;
     if (onDay && t.doneDay !== onDay) return false;
     if (!words.length) return true;
-    const hay = `${t.text.toLowerCase()} | ${daySearchText(t.doneDay)} | ${categories.get(t.categoryId ?? '') ?? ''}`;
+    const hay = `${t.text.toLowerCase()} | ${(t.note ?? '').toLowerCase()} | ${daySearchText(t.doneDay)} | ${categories.get(t.categoryId ?? '') ?? ''}`;
     return words.every((w) => hay.includes(w));
   });
   hits.sort((a, b) => compareDays(b.doneDay!, a.doneDay!) || b.doneAt! - a.doneAt!);
@@ -188,4 +189,19 @@ export function suggestions(s: Snapshot, categoryId: string, text: string, now: 
       return as - bs || byCreated(a, b);
     })
     .slice(0, limit);
+}
+
+// --- appointments the person chose not to see ---------------------------------------
+
+export function seriesKey(ev: CalEvent): string | null {
+  return ev.seriesId ? `${ev.calendarId}|series:${ev.seriesId}` : null;
+}
+
+export function hiddenKeys(hides: Hide[]): Set<string> {
+  return new Set(hides.filter((h) => !h.deleted).map((h) => h.key));
+}
+
+export function visibleEvents(events: CalEvent[], hidden: Set<string>): CalEvent[] {
+  if (!hidden.size) return events;
+  return events.filter((ev) => !hidden.has(ev.id) && !hidden.has(seriesKey(ev) ?? ''));
 }

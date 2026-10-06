@@ -25,7 +25,7 @@ sich auch so anfühlt, nur ein bisschen magisch.
 | Was | Wie |
 | --- | --- |
 | Aufgabe anlegen | unten in der Masterliste schreiben, Enter |
-| Aufgabe bearbeiten (Text, „!“, Deadline, Kategorie, erledigt, löschen) | Aufgabe antippen, dann klebt ein Post-it daneben |
+| Aufgabe bearbeiten (Text, Notiz, „!“, Deadline, Kategorie, löschen) | Aufgabe antippen, dann klebt ein Post-it daneben; „speichern“ oder daneben tippen |
 | in den heutigen Tag schreiben | Aufgabe kurz gedrückt halten und in den heutigen Tag ziehen |
 | in eine Kategorie legen | Kategorie öffnen (Seite rechts), Aufgabe aus der Masterliste hineinziehen, oder oben in der Kategorie tippen und eine vorgeschlagene Aufgabe wählen |
 | Farbe einer Kategorie | auf den Farbklecks vor ihrem Namen tippen |
@@ -33,8 +33,9 @@ sich auch so anfühlt, nur ein bisschen magisch.
 | unerledigte Aufgabe von gestern weitertragen | aus dem alten Tag in heute ziehen; im alten Tag steht dann „>“ |
 | frühere Wochen | Pfeile neben der Kalenderwoche |
 | Besonderes eintragen (z. B. Geburtstag, jährlich) | „+“ an der Box „Besonderes“ |
+| einen Termin aus Google nicht mehr sehen | Termin antippen → „ausblenden“ (bei Serien auch „alle Wiederholungen“). In Google bleibt er unverändert; zurückholen unter Einstellungen → Ausgeblendete Termine |
 | alle erledigten Aufgaben, mit Suche nach Wort und Datum | die Lasche „Master“ lange gedrückt halten, oder Einstellungen → ganz unten |
-| Papier, Schrift, Textmarker statt Schriftfarbe, Kalender | Zahnrad oben rechts |
+| Papier, Handschrift (12 zur Auswahl), Tage als „6 Dienstag“ oder „Dienstag 6“ und wie sie hervorgehoben werden, Textmarker statt Schriftfarbe, Geräusche, Kalender | Zahnrad oben rechts |
 
 ## Testfassung und echte App
 

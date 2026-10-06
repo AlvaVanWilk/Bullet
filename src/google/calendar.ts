@@ -25,6 +25,7 @@ export interface GoogleEvent {
   status?: string;
   summary?: string;
   eventType?: string;
+  recurringEventId?: string;
   start?: { date?: string; dateTime?: string };
   end?: { date?: string; dateTime?: string };
   attendees?: { self?: boolean; responseStatus?: string }[];

@@ -189,11 +189,18 @@ test('devices exchange records; the newer version wins', async () => {
   assert.deepEqual(c.body.changes.map((r) => r.text), ['Vollkornbrot']);
 });
 
+test('hidden appointments are records like any other', async () => {
+  const hide = { id: 'h0123abcd', type: 'hide', updatedAt: 400, key: 'cal|ev1', title: 'Chorprobe', when: 'Mi 7.10.', createdAt: 1 };
+  const r = await ipad.call({ action: 'sync', since: 0, changes: [hide] });
+  assert.equal(r.status, 200);
+  assert.ok(r.body.changes.some((c) => c.id === 'h0123abcd'));
+});
+
 test('empty objects survive the round trip', async () => {
   const settings = { id: 'settings', type: 'settings', updatedAt: 300, calendars: {} };
   await ipad.call({ action: 'sync', since: 3, changes: [settings] });
   const r = await phone.call({ action: 'sync', since: 3, changes: [] });
-  assert.ok(r.body.changes[0].calendars !== undefined);
+  assert.ok(r.body.changes.find((c) => c.id === 'settings').calendars !== undefined);
 });
 
 test('broken records are refused', async () => {
