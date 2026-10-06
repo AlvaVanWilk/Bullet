@@ -1,0 +1,118 @@
+# Runs on every change in the repository:
+#   1. test the rules (days, deadlines, archive) and the server (sign-in, sync)
+#   2. build the app
+#   3. upload it per SFTP to the IONOS web space:
+#      - the working branch into the test folder (name of the real folder
+#        with "-test", e.g. /bullet-test). It is called "Bullet Test", shows
+#        a small "Test" sign, has an orange icon and keeps its own data;
+#      - the branch main into the real folder. Only what was looked at in
+#        the test folder and released ("freigeben") goes onto main.
+#
+# Secrets (Settings → Secrets and variables → Actions), see README:
+#   IONOS_SFTP_HOST, IONOS_SFTP_USER, IONOS_SFTP_PASSWORD, IONOS_SFTP_PATH
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+#   BULLET_EMAILS (optional: Google addresses that may use Bullet)
+# Without the IONOS secrets step 3 is skipped.
+
+name: Prüfen und hochladen
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bullet-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pruefen-und-hochladen:
+    runs-on: ubuntu-latest
+    env:
+      IONOS_SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+      IONOS_SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
+      IONOS_SFTP_PATH: ${{ secrets.IONOS_SFTP_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Pakete holen
+        run: npm ci
+
+      - name: Regeln testen
+        run: npm test
+
+      - name: Server testen
+        run: npm run test:php
+
+      - name: App bauen
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            npm run build
+          else
+            VITE_STAGE=test VITE_APP_NAME="Bullet Test" npm run build
+            # Test copy: own name and an orange icon, so it stands out on the home screen.
+            sed -i 's/"name": "Bullet"/"name": "Bullet Test"/; s/"short_name": "Bullet"/"short_name": "Bullet Test"/' dist/manifest.webmanifest
+            cp public/icons/test/*.png dist/icons/
+            grep -q '"Bullet Test"' dist/manifest.webmanifest || { echo "Die Testfassung ließ sich nicht kennzeichnen."; exit 1; }
+          fi
+          rm -rf dist/icons/test
+
+      - name: Einstellungen für den Server schreiben
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          BULLET_EMAILS: ${{ secrets.BULLET_EMAILS }}
+        run: |
+          if [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; then
+            echo "Hinweis: GOOGLE_CLIENT_ID oder GOOGLE_CLIENT_SECRET fehlt – die Anmeldung zeigt dann „nicht eingerichtet“."
+            exit 0
+          fi
+          php -r '
+            $config = [
+              "google_client_id" => getenv("GOOGLE_CLIENT_ID"),
+              "google_client_secret" => getenv("GOOGLE_CLIENT_SECRET"),
+              "allowed_emails" => (string) getenv("BULLET_EMAILS"),
+            ];
+            file_put_contents("dist/bullet-config.php", "<?php\n// Written by the upload; not in the repository.\nreturn " . var_export($config, true) . ";\n");
+          '
+          php -l dist/bullet-config.php > /dev/null
+
+      - name: Auf den Webspace laden
+        if: github.event_name != 'pull_request'
+        env:
+          LFTP_PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+        run: |
+          fehlt=0
+          for name in IONOS_SFTP_HOST IONOS_SFTP_USER IONOS_SFTP_PATH LFTP_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "Fehlt: ${name/LFTP_PASSWORD/IONOS_SFTP_PASSWORD}"; fehlt=1; fi
+          done
+          if [ "$fehlt" = 1 ]; then echo "Nicht hochgeladen: Es fehlen Geheimnisse (siehe README)."; exit 0; fi
+
+          ordner="${IONOS_SFTP_PATH%/}"
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            echo "Ziel: der echte Ordner."
+          else
+            ordner="${ordner:-/bullet}-test"
+            echo "Ziel: der Testordner (echter Ordner mit -test)."
+          fi
+
+          sudo apt-get install -y -qq lftp > /dev/null
+          lftp -c "
+            set sftp:auto-confirm yes;
+            set net:max-retries 3;
+            set net:timeout 30;
+            open --env-password -u \"$IONOS_SFTP_USER\" sftp://$IONOS_SFTP_HOST;
+            mkdir -p -f \"$ordner\";
+            mirror --reverse --parallel=4 \
+              --exclude-glob bullet-daten/ \
+              ./dist/ \"$ordner\"
+          "
+          echo "Hochgeladen."

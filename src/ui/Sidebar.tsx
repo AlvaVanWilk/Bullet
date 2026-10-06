@@ -1,0 +1,298 @@
+// The side list: two sheets lying on top of each other, the master list and
+// the categories, with sticky-note tabs at the bottom. It slides in and out;
+// switching tabs pulls the front sheet out and tucks it behind the other.
+
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { categoryColor } from '../lib/colors';
+import { entriesByTask, isOpenToday, liveCategories, masterTasks } from '../lib/logic';
+import { store } from '../store/store';
+import { clickSuppressed, startDrag } from './drag';
+import { Bang, ScheduledDot, TaskText } from './ink';
+import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
+
+const SWAP_MS = 640;
+const BACK = 'translate(7px, 9px) rotate(0.9deg)';
+
+export function Sidebar() {
+  const dev = useDevice();
+  const snap = useStore();
+  const asideRef = useRef<HTMLElement>(null);
+  const sheets = useRef<Record<'master' | 'categories', HTMLElement | null>>({ master: null, categories: null });
+  const [swapping, setSwapping] = useState(false);
+  const [settled, setSettled] = useState(dev.sidebarOpen);
+  const [moved, setMoved] = useState(false);
+  const front = dev.sidebarTab;
+
+  // A ticked box makes the list glow and swell for a moment.
+  useEffect(() => store.onEffect((e) => {
+    if (e.kind !== 'done') return;
+    const el = asideRef.current;
+    if (!el) return;
+    el.classList.remove('glow');
+    void el.offsetWidth;
+    el.classList.add('glow');
+  }), []);
+
+  useEffect(() => {
+    if (!dev.sidebarOpen) {
+      setSettled(false);
+      return;
+    }
+    const t = setTimeout(() => setSettled(true), 520);
+    return () => clearTimeout(t);
+  }, [dev.sidebarOpen]);
+
+  function switchTo(tab: 'master' | 'categories') {
+    if (tab === front || swapping) return;
+    const out = sheets.current[front];
+    const into = sheets.current[tab];
+    if (!out || !into || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      device.set({ sidebarTab: tab });
+      return;
+    }
+    setSwapping(true);
+    const opts: KeyframeAnimationOptions = { duration: SWAP_MS, easing: 'cubic-bezier(.45,.05,.2,1)' };
+    out.animate([
+      { transform: 'none', zIndex: 3, boxShadow: 'var(--sheet-shadow)' },
+      { transform: 'translate(74%, -2%) rotate(5.5deg)', zIndex: 3, boxShadow: 'var(--sheet-shadow-lifted)', offset: 0.46 },
+      { transform: 'translate(74%, -2%) rotate(5.5deg)', zIndex: 1, offset: 0.4601 },
+      { transform: BACK, zIndex: 1, boxShadow: 'var(--sheet-shadow)' },
+    ], opts);
+    into.animate([
+      { transform: BACK, zIndex: 2 },
+      { transform: 'translate(-3%, 0.5%) rotate(-0.6deg)', zIndex: 2, offset: 0.46 },
+      { transform: 'none', zIndex: 2 },
+    ], opts);
+    device.set({ sidebarTab: tab });
+    setTimeout(() => setSwapping(false), SWAP_MS);
+  }
+
+  function toggle() {
+    setMoved(true);
+    // The list always opens with the master list in front.
+    device.set(dev.sidebarOpen ? { sidebarOpen: false } : { sidebarOpen: true, sidebarTab: 'master' });
+  }
+
+  const openCount = masterTasks(snap, Date.now()).filter((t) => t.doneAt == null).length;
+
+  return (
+    <aside ref={asideRef} class={`sidebar ${dev.sidebarOpen ? 'open' : 'closed'} ${moved ? 'moved' : ''}`} onAnimationEnd={(e) => {
+      const name = (e as AnimationEvent).animationName;
+      if (name === 'list-shine' || name === 'spine-twitch') asideRef.current?.classList.remove('glow');
+    }}>
+      <div class={`sheets ${swapping ? 'swapping' : ''}`}>
+        <section
+          ref={(el) => { sheets.current.master = el; }}
+          class={`sheet paper ${front === 'master' ? 'front' : 'back'}`}
+          data-paper={snap.settings.paperSidebar}
+          aria-hidden={front !== 'master'}
+        >
+          <MasterList active={dev.sidebarOpen && settled && front === 'master' && !swapping} />
+        </section>
+        <section
+          ref={(el) => { sheets.current.categories = el; }}
+          class={`sheet paper ${front === 'categories' ? 'front' : 'back'}`}
+          data-paper={snap.settings.paperSidebar}
+          aria-hidden={front !== 'categories'}
+        >
+          <CategoryList />
+        </section>
+      </div>
+      <div class="tabs" role="tablist">
+        <button
+          type="button" role="tab" aria-selected={front === 'master'}
+          class={`tab tab-master ${front === 'master' ? 'on' : ''}`}
+          onClick={() => switchTo('master')}
+          onContextMenu={(e) => { e.preventDefault(); ui.set({ archiveOpen: true }); }}
+          {...longPress(() => ui.set({ archiveOpen: true }))}
+        >
+          Master
+        </button>
+        <button
+          type="button" role="tab" aria-selected={front === 'categories'}
+          class={`tab tab-categories ${front === 'categories' ? 'on' : ''}`}
+          onClick={() => switchTo('categories')}
+        >
+          Kategorien
+        </button>
+      </div>
+      <button type="button" class="spine" onClick={toggle} aria-label={dev.sidebarOpen ? 'Liste einfahren' : 'Liste ausfahren'}>
+        <span class="spine-tab">Liste{openCount ? <small> {openCount}</small> : null}</span>
+      </button>
+    </aside>
+  );
+}
+
+/** Hidden way into the archive: hold the "Master" tab. */
+function longPress(fn: () => void) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const stop = () => { if (timer) clearTimeout(timer); timer = null; };
+  return {
+    onPointerDown: () => { stop(); timer = setTimeout(fn, 900); },
+    onPointerUp: stop,
+    onPointerLeave: stop,
+    onPointerCancel: stop,
+  };
+}
+
+// --- the master list ---------------------------------------------------------------
+
+const STRIKE_START_MS = 380;
+const STRIKE_STEP_MS = 430;
+
+function MasterList(props: { active: boolean }) {
+  const snap = useStore();
+  const today = useToday();
+  const now = useNow();
+  const dev = useDevice();
+  const uiState = useUi();
+  const listRef = useRef<HTMLUListElement>(null);
+  const [striking, setStriking] = useState<Set<string>>(new Set());
+  const tasks = masterTasks(snap, Math.max(now, Date.now()));
+  const index = entriesByTask(snap.entries);
+  const seen = dev.strikeSeenAt;
+
+  // Struck through one after the other, in the order they were done.
+  const pending = tasks
+    .filter((t) => t.doneAt != null && t.doneAt > seen)
+    .sort((a, b) => a.doneAt! - b.doneAt!);
+  const pendingKey = pending.map((t) => t.id).join(',');
+
+  useEffect(() => {
+    if (!props.active || !pending.length) return;
+    const timers = pending.map((t, i) =>
+      setTimeout(() => setStriking((s) => (s.has(t.id) ? s : new Set(s).add(t.id))), STRIKE_START_MS + i * STRIKE_STEP_MS),
+    );
+    const last = Math.max(...pending.map((t) => t.doneAt!));
+    timers.push(setTimeout(() => {
+      device.set({ strikeSeenAt: Math.max(device.get().strikeSeenAt, last) });
+      setStriking(new Set());
+    }, STRIKE_START_MS + pending.length * STRIKE_STEP_MS + 450));
+    return () => timers.forEach(clearTimeout);
+  }, [props.active, pendingKey]);
+
+  const mode = snap.settings.colorMode;
+  const openPostIt = (taskId: string, el: HTMLElement) => {
+    if (clickSuppressed()) return;
+    ui.set({ postIt: { kind: 'task', id: taskId, rect: el.getBoundingClientRect() } });
+  };
+
+  return (
+    <div class="sheet-inner">
+      <h2 class="sheet-title">Masterliste</h2>
+      <ul class="task-list" ref={listRef} data-scroll>
+        {tasks.map((t) => {
+          const cat = store.category(t.categoryId);
+          const color = cat ? categoryColor(cat.color) : null;
+          const isStruck = t.doneAt != null && (t.doneAt <= seen || striking.has(t.id));
+          const editing = uiState.postIt?.kind === 'task' && uiState.postIt.id === t.id;
+          return (
+            <li
+              key={t.id}
+              class={`row ${editing ? 'editing' : ''}`}
+              onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, {
+                taskId: t.id, text: t.text, from: 'master', color: color?.ink,
+              })}
+              onClick={(e) => openPostIt(t.id, e.currentTarget as HTMLElement)}
+            >
+              <span class="lead">
+                {isOpenToday(t, today, index) && <ScheduledDot />}
+                {t.important && <Bang />}
+              </span>
+              <TaskText
+                text={t.text}
+                color={color && mode === 'text' ? color.ink : undefined}
+                marker={color && mode === 'marker' ? color.marker : null}
+                struck={isStruck}
+                animate={striking.has(t.id)}
+                fresh={store.isFresh(t.id)}
+              />
+            </li>
+          );
+        })}
+        {!tasks.length && <li class="empty-hint">Hier entsteht deine Liste. Schreib unten los und drück Enter.</li>}
+      </ul>
+      <NewLine
+        placeholder="Neue Aufgabe …"
+        onEnter={(text) => {
+          store.addTask(text);
+          requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }));
+        }}
+      />
+    </div>
+  );
+}
+
+// --- the categories ------------------------------------------------------------------
+
+function CategoryList() {
+  const snap = useStore();
+  const uiState = useUi();
+  const now = useNow();
+  const cats = liveCategories(snap);
+  const open = new Map<string, number>();
+  for (const t of masterTasks(snap, now)) {
+    if (t.categoryId && t.doneAt == null) open.set(t.categoryId, (open.get(t.categoryId) ?? 0) + 1);
+  }
+  return (
+    <div class="sheet-inner">
+      <h2 class="sheet-title">Kategorien</h2>
+      <ul class="cat-list" data-scroll>
+        {cats.map((c) => {
+          const color = categoryColor(c.color);
+          const current = uiState.view.kind === 'category' && uiState.view.id === c.id;
+          return (
+            <li key={c.id} class={`cat-row ${current ? 'current' : ''} ${store.isFresh(c.id) ? 'ink-in' : ''}`}>
+              <button
+                type="button"
+                class="cat-blob"
+                style={{ '--blob': color.marker }}
+                aria-label={`Farbe von ${c.name}`}
+                onClick={(e) => ui.set({ postIt: { kind: 'category', id: c.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
+              />
+              <button
+                type="button"
+                class="cat-name"
+                style={{ color: color.ink }}
+                onClick={() => ui.set({ view: current ? { kind: 'week' } : { kind: 'category', id: c.id } })}
+              >
+                {c.name}
+              </button>
+              {open.get(c.id) ? <span class="cat-count">{open.get(c.id)}</span> : null}
+            </li>
+          );
+        })}
+        {!cats.length && <li class="empty-hint">Zum Beispiel „Familie“ oder „Arbeit“. Tipp auf den Farbklecks, um die Farbe zu ändern.</li>}
+      </ul>
+      <NewLine placeholder="Neue Kategorie …" onEnter={(name) => store.addCategory(name)} />
+    </div>
+  );
+}
+
+// --- writing a new line ----------------------------------------------------------------
+
+export function NewLine(props: { placeholder: string; onEnter: (text: string) => void }) {
+  const [value, setValue] = useState('');
+  return (
+    <form
+      class="new-line"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!value.trim()) return;
+        props.onEnter(value);
+        setValue('');
+      }}
+    >
+      <span class="new-line-mark" aria-hidden="true">+</span>
+      <input
+        value={value}
+        onInput={(e) => setValue((e.target as HTMLInputElement).value)}
+        placeholder={props.placeholder}
+        enterKeyHint="enter"
+        autoComplete="off"
+        autoCorrect="on"
+        spellcheck={true}
+      />
+    </form>
+  );
+}

@@ -1,0 +1,36 @@
+# Bullet – settings for the web server (Apache, e.g. IONOS)
+
+AddType application/manifest+json .webmanifest
+AddType text/javascript .js
+AddType font/woff2 .woff2
+
+<IfModule mod_headers.c>
+  # The page, the service worker and the manifest are checked on every start,
+  # so a new version arrives at once.
+  <FilesMatch "\.(html|webmanifest)$|^sw\.js$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "same-origin"
+</IfModule>
+<IfModule mod_headers.c>
+  # Built files carry a fingerprint in their name and never change.
+  <If "%{REQUEST_URI} =~ m#/assets/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+</IfModule>
+
+# Not public: the data, the server code and its settings.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule (^|/)(bullet-daten|lib|\.git|\.github)(/|$) - [F,L]
+  RewriteRule (^|/)bullet-config\.php$ - [F,L]
+  RewriteRule \.(md|lock|tmp[0-9a-f]*)$ - [F,L]
+</IfModule>
+<IfModule mod_authz_core.c>
+  <Files "bullet-config.php">
+    Require all denied
+  </Files>
+</IfModule>
+
+Options -Indexes

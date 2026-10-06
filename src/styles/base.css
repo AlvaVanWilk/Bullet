@@ -1,0 +1,151 @@
+/* Bullet – colours, type, the desk the papers lie on, and the layout. */
+
+:root {
+  --paper: #fbf8f1;
+  --paper-warm: #f7f2e7;
+  --desk: #d8d0c1;
+  --desk-dark: #c9bfad;
+  --ink: #2b2b30;
+  --ink-soft: #55555d;
+  --ink-faint: #9b978d;
+  --red: #cc3a2e;
+  --red-soft: rgba(204, 58, 46, 0.14);
+  --accent: #c98a24;
+  --postit: #fdf0a2;
+  --postit-dark: #f3df70;
+  --grid: 28px;
+  --line: rgba(78, 108, 140, 0.18);
+  --dot: rgba(64, 64, 76, 0.34);
+  --margin-line: rgba(204, 58, 46, 0.22);
+  --sidebar-w: 352px;
+  --spine-w: 24px;
+  --hand: 'Patrick Hand', 'Comic Neue', 'Segoe Print', 'Bradley Hand', cursive;
+  --clean: -apple-system, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --hand-size: 21px;
+  --sheet-shadow: 0 1px 1px rgba(60, 45, 20, 0.12), 0 6px 18px rgba(60, 45, 20, 0.16);
+  --sheet-shadow-lifted: 0 4px 6px rgba(60, 45, 20, 0.12), 0 22px 46px rgba(60, 45, 20, 0.28);
+  --ease-paper: cubic-bezier(0.62, 0.02, 0.22, 1);
+  color-scheme: light;
+}
+:root[data-font='kalam'] { --hand: 'Kalam', 'Patrick Hand', cursive; --hand-size: 19px; }
+:root[data-font='gaegu'] { --hand: 'Gaegu', 'Patrick Hand', cursive; --hand-size: 23px; }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--hand);
+  font-size: var(--hand-size);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  /* a little linen on the desk */
+  background-image:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.28), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .22 0 0 0 .11 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+#app { height: 100%; }
+.svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:disabled { cursor: default; opacity: 0.35; }
+input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px dashed rgba(43, 43, 48, 0.45); outline-offset: 2px; }
+ul { list-style: none; margin: 0; padding: 0; }
+h1, h2, h3 { font-weight: 400; margin: 0; }
+
+.desk {
+  height: 100%;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.app {
+  display: flex;
+  gap: 0;
+  position: relative;
+}
+.boot { background: var(--desk); }
+
+/* --- the main page --- */
+.page {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 10px 10px 10px 0;
+  position: relative;
+  border-radius: 3px 6px 6px 3px;
+  background: var(--paper);
+  box-shadow: var(--sheet-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+}
+
+.ghost-btn {
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--ink-soft);
+  transition: transform 0.15s, background-color 0.15s;
+}
+.ghost-btn:active { transform: scale(0.92); background: rgba(43, 43, 48, 0.06); }
+
+.link { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.link.quiet { color: var(--ink-faint); }
+
+.test-badge {
+  position: fixed;
+  right: 18px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 50;
+  padding: 2px 12px 0;
+  background: #f59e3b;
+  color: #fff;
+  border-radius: 3px;
+  transform: rotate(-4deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  font-size: 20px;
+}
+
+/* --- signing in --- */
+.login {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+}
+.login-card {
+  width: min(460px, calc(100% - 32px));
+  padding: calc(var(--grid) * 2) calc(var(--grid) * 1.5);
+  border-radius: 4px;
+  box-shadow: var(--sheet-shadow-lifted);
+  text-align: center;
+  transform: rotate(-0.6deg);
+}
+.login-title { font-size: 64px; line-height: 1.1; letter-spacing: 0.02em; }
+.login-sub { color: var(--ink-soft); margin: 4px 0 28px; }
+.login-note { color: var(--red); margin: 0 0 18px; }
+.login-btn {
+  padding: 10px 26px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 10px 14px 12px 9px;
+  background: var(--postit);
+  box-shadow: 2px 3px 0 rgba(43, 43, 48, 0.85);
+  font-size: 24px;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.login-btn:active { transform: translate(2px, 3px); box-shadow: 0 0 0 rgba(43, 43, 48, 0.85); }
+.login-small { font-family: var(--clean); font-size: 13px; color: var(--ink-faint); margin: 26px 0 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
