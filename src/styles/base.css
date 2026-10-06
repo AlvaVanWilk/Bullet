@@ -134,6 +134,7 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 .login-title { font-size: 64px; line-height: 1.1; letter-spacing: 0.02em; }
 .login-sub { color: var(--ink-soft); margin: 4px 0 28px; }
 .login-note { color: var(--red); margin: 0 0 18px; }
+.login-reason { display: block; margin-top: 6px; font-family: var(--clean); font-size: 13px; color: var(--ink-soft); }
 .login-btn {
   padding: 10px 26px 8px;
   border: 2px solid var(--ink);

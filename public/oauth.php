@@ -2,10 +2,13 @@
 // Bullet – sign in with Google.
 //
 //   oauth.php?start=1   sends the browser to Google
-//   oauth.php?code=…    Google sends it back here; the device gets its cookie
+//   oauth.php?code=…    Google sends it back here; the server keeps Google's
+//                       refresh token and hands the app a one-time ticket
+//                       (./?ticket=…), which api.php exchanges for the
+//                       device's session cookie.
 //
-// The server keeps Google's refresh token, so the calendar stays connected
-// without signing in again.
+// The ticket step exists because on the iPad the sign-in at Google runs in a
+// small browser of its own that does not share cookies with the home-screen app.
 
 declare(strict_types=1);
 
@@ -13,20 +16,21 @@ require __DIR__ . '/lib/bullet.php';
 
 header('Cache-Control: no-store');
 
-function backToApp(string $note = ''): void
+function backToApp(array $params = []): void
 {
-    header('Location: ' . appUrl() . ($note !== '' ? '?anmeldung=' . rawurlencode($note) : ''), true, 302);
+    $query = $params ? '?' . http_build_query($params) : '';
+    header('Location: ' . appUrl() . $query, true, 302);
     exit;
 }
 
 try {
     if (!googleConfigured()) {
-        backToApp('nicht-eingerichtet');
+        backToApp(['anmeldung' => 'nicht-eingerichtet']);
     }
 
     if (isset($_GET['start'])) {
         $state = bin2hex(random_bytes(16));
-        setAppCookie(STATE_COOKIE, $state, 900);
+        rememberOnce('state', $state, STATE_SECONDS);
         $params = [
             'client_id' => setting('google_client_id'),
             'redirect_uri' => redirectUri(),
@@ -47,15 +51,13 @@ try {
     }
 
     if (isset($_GET['error'])) {
-        backToApp('abgebrochen');
+        backToApp(['anmeldung' => 'abgebrochen']);
     }
 
     $code = (string) ($_GET['code'] ?? '');
     $state = (string) ($_GET['state'] ?? '');
-    $expected = (string) ($_COOKIE[STATE_COOKIE] ?? '');
-    setAppCookie(STATE_COOKIE, '', -1);
-    if ($code === '' || $expected === '' || !hash_equals($expected, $state)) {
-        backToApp('fehler');
+    if ($code === '' || takeOnce('state', $state) === null) {
+        backToApp(['anmeldung' => 'fehler-sitzung']);
     }
 
     [$answer, $status] = googlePost(tokenEndpoint(), [
@@ -66,18 +68,19 @@ try {
         'grant_type' => 'authorization_code',
     ]);
     if ($status !== 200 || empty($answer['id_token'])) {
+        $reason = preg_replace('/[^a-z_]/', '', strtolower((string) ($answer['error'] ?? ('http' . $status))));
         error_log('Bullet: token exchange failed: ' . json_encode($answer));
-        backToApp('fehler');
+        backToApp(['anmeldung' => 'fehler-google', 'grund' => $reason]);
     }
 
     $claims = idTokenClaims((string) $answer['id_token']);
     $sub = (string) ($claims['sub'] ?? '');
     $email = (string) ($claims['email'] ?? '');
     if ($sub === '' || $email === '' || ($claims['email_verified'] ?? false) !== true) {
-        backToApp('fehler');
+        backToApp(['anmeldung' => 'fehler-konto']);
     }
     if (!mayUse($sub, $email)) {
-        backToApp('nicht-erlaubt');
+        backToApp(['anmeldung' => 'nicht-erlaubt']);
     }
 
     $uid = userId($sub);
@@ -97,9 +100,11 @@ try {
         writeJson(userFile($uid), $user);
     });
 
-    startSession($uid);
-    backToApp();
+    // The app picks this up wherever it opens, and gets its own session for it.
+    $ticket = bin2hex(random_bytes(24));
+    rememberOnce('ticket', $ticket, TICKET_SECONDS, ['uid' => $uid]);
+    backToApp(['ticket' => $ticket]);
 } catch (Throwable $e) {
     error_log('Bullet: ' . $e->getMessage());
-    backToApp('fehler');
+    backToApp(['anmeldung' => 'fehler']);
 }

@@ -110,7 +110,15 @@ test('requests without the app header are refused', async () => {
   assert.equal(r.status, 403);
 });
 
-test('sign-in with Google sets a session cookie and keeps the refresh token', async () => {
+async function signIn(device) {
+  const start = await device.get('oauth.php?start=1');
+  const state = new URL(start.headers.get('location')).searchParams.get('state');
+  const back = await device.get(`oauth.php?code=good-code&state=${state}`);
+  const ticket = new URL(back.headers.get('location')).searchParams.get('ticket');
+  return device.call({ action: 'redeem', ticket });
+}
+
+test('sign-in with Google hands out a one-time ticket that starts the session', async () => {
   const start = await ipad.get('oauth.php?start=1');
   assert.equal(start.status, 302);
   const to = new URL(start.headers.get('location'));
@@ -118,18 +126,40 @@ test('sign-in with Google sets a session cookie and keeps the refresh token', as
   assert.equal(to.searchParams.get('access_type'), 'offline');
   assert.equal(to.searchParams.get('redirect_uri'), base + 'oauth.php');
   const state = to.searchParams.get('state');
-  assert.ok(ipad.cookies.get('bullet_oauth'));
 
-  const wrong = await new Device().get(`oauth.php?code=good-code&state=${state}`);
-  assert.match(wrong.headers.get('location'), /anmeldung=fehler/);
-
-  const back = await ipad.get(`oauth.php?code=good-code&state=${state}`);
+  // The way back may run in another browser (iPad home-screen app): no cookie needed.
+  const back = await new Device().get(`oauth.php?code=good-code&state=${state}`);
   assert.equal(back.status, 302);
-  assert.equal(back.headers.get('location'), base);
+  const ticket = new URL(back.headers.get('location')).searchParams.get('ticket');
+  assert.ok(ticket);
+
+  const redeemed = await ipad.call({ action: 'redeem', ticket });
+  assert.equal(redeemed.status, 200);
+  assert.equal(redeemed.body.user.email, 'alva@example.com');
   assert.ok(ipad.cookies.get('bullet_session'));
   const me = await ipad.call({ action: 'status' });
   assert.equal(me.body.user.email, 'alva@example.com');
   assert.equal(me.body.user.google, true);
+
+  const again = await new Device().call({ action: 'redeem', ticket });
+  assert.equal(again.status, 403);
+});
+
+test('a used or unknown sign-in state is refused', async () => {
+  const start = await new Device().get('oauth.php?start=1');
+  const state = new URL(start.headers.get('location')).searchParams.get('state');
+  await new Device().get(`oauth.php?code=good-code&state=${state}`);
+  const twice = await new Device().get(`oauth.php?code=good-code&state=${state}`);
+  assert.match(twice.headers.get('location'), /anmeldung=fehler-sitzung/);
+  const unknown = await new Device().get('oauth.php?code=good-code&state=abc');
+  assert.match(unknown.headers.get('location'), /anmeldung=fehler-sitzung/);
+});
+
+test("Google's reason for refusing comes back to the app", async () => {
+  const start = await new Device().get('oauth.php?start=1');
+  const state = new URL(start.headers.get('location')).searchParams.get('state');
+  const back = await new Device().get(`oauth.php?code=bad-code&state=${state}`);
+  assert.match(back.headers.get('location'), /anmeldung=fehler-google&grund=invalid_grant/);
 });
 
 test('an access token comes from the stored one while it is valid', async () => {
@@ -139,11 +169,6 @@ test('an access token comes from the stored one while it is valid', async () => 
 });
 
 test('devices exchange records; the newer version wins', async () => {
-  const signIn = async (device) => {
-    const s = await device.get('oauth.php?start=1');
-    const state = new URL(s.headers.get('location')).searchParams.get('state');
-    await device.get(`oauth.php?code=good-code&state=${state}`);
-  };
   await signIn(phone);
 
   const a = await ipad.call({ action: 'sync', since: 0, changes: [task('t1', 'Brot', 100), task('t2', 'Milch', 100)] });

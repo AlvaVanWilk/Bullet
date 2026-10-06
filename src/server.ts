@@ -97,8 +97,19 @@ export async function connect(): Promise<void> {
     setState({ mode: 'local' });
     return;
   }
-  const note = new URLSearchParams(location.search).get('anmeldung');
-  if (note !== null) history.replaceState(null, '', location.pathname);
+  const params = new URLSearchParams(location.search);
+  const reason = params.get('grund');
+  const note = params.get('anmeldung') && (reason ? `${params.get('anmeldung')}:${reason}` : params.get('anmeldung'));
+  const ticket = params.get('ticket');
+  if (params.has('anmeldung') || ticket) history.replaceState(null, '', location.pathname);
+  // Back from Google: this device fetches its own session with the one-time ticket.
+  if (ticket) {
+    try {
+      await api('redeem', { ticket });
+    } catch {
+      /* expired or used: the status below shows the sign-in page again */
+    }
+  }
   const status = await fetchStatus();
   const known = readLocal<User | null>('user', null);
 

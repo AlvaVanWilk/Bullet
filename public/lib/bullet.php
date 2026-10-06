@@ -8,7 +8,8 @@
 declare(strict_types=1);
 
 const SESSION_COOKIE = 'bullet_session';
-const STATE_COOKIE = 'bullet_oauth';
+const STATE_SECONDS = 900;           // time to finish signing in at Google
+const TICKET_SECONDS = 120;          // time for the app to pick up a finished sign-in
 const SESSION_DAYS = 400;            // browsers keep cookies at most this long
 const MAX_SESSIONS = 20;             // devices signed in at the same time
 const MAX_BODY_BYTES = 4000000;
@@ -262,6 +263,44 @@ function endSession(): void
         }
     }
     setAppCookie(SESSION_COOKIE, '', -1);
+}
+
+// --- one-time values ------------------------------------------------------------
+//
+// The sign-in state and the ticket after signing in are kept on the server,
+// not in a cookie: on the iPad, an app on the home screen opens Google in a
+// small browser of its own, which does not share cookies with the app.
+
+function onceFile(string $kind): string
+{
+    return dataDir() . '/once-' . $kind . '.json';
+}
+
+function rememberOnce(string $kind, string $value, int $seconds, array $data = []): void
+{
+    $file = onceFile($kind);
+    withLock($file, function () use ($file, $value, $seconds, $data) {
+        $all = array_filter(readJson($file) ?? [], fn ($e) => (int) $e['exp'] > time());
+        $all[hash('sha256', $value)] = ['exp' => time() + $seconds, 'data' => $data];
+        writeJson($file, $all);
+    });
+}
+
+/** The data stored with a value, once; null if unknown or expired. */
+function takeOnce(string $kind, string $value): ?array
+{
+    if ($value === '' || strlen($value) > 200) {
+        return null;
+    }
+    $file = onceFile($kind);
+    return withLock($file, function () use ($file, $value) {
+        $all = array_filter(readJson($file) ?? [], fn ($e) => (int) $e['exp'] > time());
+        $key = hash('sha256', $value);
+        $entry = $all[$key] ?? null;
+        unset($all[$key]);
+        writeJson($file, $all);
+        return $entry === null ? null : (array) $entry['data'];
+    });
 }
 
 // --- Google ----------------------------------------------------------------------

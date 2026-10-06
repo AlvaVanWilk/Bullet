@@ -2,6 +2,7 @@
 // Bullet – the app's server. Requests are JSON with a field "action":
 //
 //   status                 -> { ok, configured, user: { email, name } | null }
+//   redeem { ticket }      -> { ok, user }  (after oauth.php: starts this device's session)
 //   token                  -> { ok, accessToken, expiresAt }  (Google calendar)
 //   sync { since, changes } -> { ok, seq, changes }
 //   logout                 -> { ok }
@@ -70,6 +71,15 @@ try {
             'configured' => googleConfigured(),
             'user' => $uid ? userInfo($uid) : null,
         ]);
+    }
+
+    if ($action === 'redeem') {
+        $data = takeOnce('ticket', (string) ($request['ticket'] ?? ''));
+        if ($data === null || !is_string($data['uid'] ?? null) || !is_file(userFile($data['uid']))) {
+            fail(403, 'ticket');
+        }
+        startSession($data['uid']);
+        reply(200, ['ok' => true, 'user' => userInfo($data['uid'])]);
     }
 
     // Only for the automatic tests on a developer machine (PHP's own server).
