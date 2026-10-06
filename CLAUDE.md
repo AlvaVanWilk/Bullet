@@ -1,0 +1,44 @@
+# Bullet
+
+Bullet Journal als Web-App fürs iPad (vor allem quer). Optik und Gefühl von echtem
+Papier, „nur magisch“: handgeschriebene Druckschrift, Fineliner-Boxen, Textmarker,
+dicke Durchstreichungen, kurze Animationen, die den Arbeitsfluss nie bremsen.
+
+Bedienung und Einrichtung: `README.md`.
+
+## Feste Regeln (von der Nutzerin so gewünscht)
+
+- Masterliste ist unstrukturiert, ohne Kästchen. Farbe der Kategorie als Schriftfarbe
+  oder als Textmarker (Einstellung). Rotes, handgeschriebenes „!“ vor wichtigen Aufgaben.
+- Ein kleiner schwarzer Punkt vor einer Aufgabe der Masterliste heißt: Sie steht heute
+  offen im Tag. Der Punkt verschwindet, wenn der Tag vorbei ist und sie nicht erledigt wurde.
+- Ziehen schreibt immer nur hinüber. Das Original bleibt, auch im alten Tag.
+- Im Tag: Kästchen vor der Aufgabe. Wichtig → Kästchen rot getönt, kein „!“. Kein
+  Textmarker, die Kategoriefarbe nur als Klecks hinter der Aufgabe.
+- Unerledigte Aufgaben vergangener Tage: verblasst, waagerechter Strich durchs
+  Kästchen. In einen späteren Tag gezogen → „>“ im Kästchen.
+- Deadlines erscheinen von selbst (rot) am Tag und wandern jeden Tag weiter, bis sie
+  erledigt sind. Das Datum der Deadline wird nirgends angezeigt. Nachträgliches
+  Abhaken in früheren Tagen und Wochen geht immer.
+- Erledigt → Seitenleiste leuchtet auf. Beim Öffnen der Masterliste werden die seither
+  erledigten Aufgaben nacheinander (in Erledigungsreihenfolge) dick durchgestrichen.
+  Die Reihenfolge der Liste ändert sich nie. Nach 7 Tagen (einstellbar) verschwinden sie;
+  alle bleiben im versteckten Archiv (Suche nach Wort und Datum).
+- Hauptseite: Kopf (Kalenderwoche, Boxen Termine/Deadlines/Besonderes) scrollt nicht.
+  Tage von Montag bis heute; heute nie unterhalb der Fenstermitte. Vergangene Termine
+  blass; vergangene Deadlines durchgestrichen (erledigt) oder leuchtend (offen).
+- Vorplanen künftiger Tage ist (vorerst) nicht vorgesehen.
+
+## Technik
+
+- Preact + TypeScript + Vite. `src/lib` enthält die Regeln ohne Oberfläche und ist
+  getestet (`npm test`). Der PHP-Server in `public/` ist es auch (`npm run test:php`).
+- Läuft auf dem IONOS-Webspace der Nutzerin unter `alva-van-wilk.de/bullet`.
+  Anmeldung mit Google (der Server hält das Refresh-Token), Abgleich per `api.php`.
+  Zusammenführen: pro Datensatz gewinnt der neuere.
+- Veröffentlichung wie bei Envoy: Arbeitszweig → Testordner `bullet-test` („Bullet
+  Test“, oranges Icon, Schild „Test“, eigene Daten). `main` → echter Ordner. Auf
+  `main` kommt nur, was die Nutzerin im Testordner angesehen und mit „freigeben“
+  freigegeben hat.
+- UI-Texte auf Deutsch, Bezeichner und Kommentare im Code auf Englisch.
+- Vor dem Pushen: `npm test`, `npm run test:php`, `npm run build`.
