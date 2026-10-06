@@ -75,9 +75,10 @@ jobs:
             echo "Hinweis: GOOGLE_CLIENT_ID oder GOOGLE_CLIENT_SECRET fehlt – die Anmeldung zeigt dann „nicht eingerichtet“."
             exit 0
           fi
-          # Client id and secret never contain spaces; a line break from copying would break the sign-in.
+          # Client id and secret consist of letters, digits, ".", "_" and "-" only. Copying wrapped
+          # text on an iPad can add line breaks or invisible characters, which would break the sign-in.
           php -r '
-            $clean = fn ($v) => preg_replace("/\s+/", "", (string) $v);
+            $clean = fn ($v) => preg_replace("/[^A-Za-z0-9._-]/", "", (string) $v);
             $config = [
               "google_client_id" => $clean(getenv("GOOGLE_CLIENT_ID")),
               "google_client_secret" => $clean(getenv("GOOGLE_CLIENT_SECRET")),
