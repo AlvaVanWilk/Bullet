@@ -52,7 +52,7 @@ export function Sidebar() {
       return;
     }
     setSwapping(true);
-    playPaperSlide(SWAP_MS / 1000);
+    playPaperSlide();
     const opts: KeyframeAnimationOptions = { duration: SWAP_MS, easing: 'cubic-bezier(.45,.05,.2,1)' };
     out.animate([
       { transform: 'none', zIndex: 3, boxShadow: 'var(--sheet-shadow)' },

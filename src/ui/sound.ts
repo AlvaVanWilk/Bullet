@@ -79,7 +79,7 @@ export function paperSlide(c: BaseAudioContext, buffer: AudioBuffer, out: AudioN
   lp.frequency.linearRampToValueAtTime(4200, t + duration);
   const gain = c.createGain();
   gain.gain.value = 0;
-  gain.gain.setValueCurveAtTime(softCurve(40, 0.03, 0.3, 0.55, 0.15), t, duration);
+  gain.gain.setValueCurveAtTime(softCurve(32, 0.03, 0.25, 0.5, 0.15), t, duration);
   src.connect(hp).connect(lp).connect(gain).connect(out);
   src.start(t, Math.random());
   src.stop(t + duration + 0.05);
@@ -89,18 +89,18 @@ export function paperSlide(c: BaseAudioContext, buffer: AudioBuffer, out: AudioN
 export function penStroke(c: BaseAudioContext, buffer: AudioBuffer, out: AudioNode, t: number, duration: number) {
   const src = c.createBufferSource();
   src.buffer = buffer;
-  const hp = filter(c, 'highpass', 2600);
-  const bp = filter(c, 'bandpass', 4300, 0.9);
-  const lp = filter(c, 'lowpass', 8500);
+  const hp = filter(c, 'highpass', 2200);
+  const bp = filter(c, 'bandpass', 3600, 0.6);
+  const lp = filter(c, 'lowpass', 5600);
   const gain = c.createGain();
   gain.gain.value = 0;
-  gain.gain.setValueCurveAtTime(softCurve(120, 0.04, 0.15, 0.3, 0.12), t, duration);
+  gain.gain.setValueCurveAtTime(softCurve(60, 0.032, 0.3, 0.45, 0.06), t, duration);
   src.connect(hp).connect(bp).connect(lp).connect(gain).connect(out);
   src.start(t, Math.random());
   src.stop(t + duration + 0.05);
 }
 
-export function playPaperSlide(duration = 0.6) {
+export function playPaperSlide(duration = 0.34) {
   const c = context();
   if (c && noise) paperSlide(c, noise, c.destination, c.currentTime + 0.01, duration);
 }
