@@ -9,6 +9,8 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     target: 'safari15',
+    // The single-file preview carries its fonts inside.
+    assetsInlineLimit: process.env.VITE_PREVIEW ? 10_000_000 : 4096,
   },
   test: {
     include: ['tests/unit/**/*.test.ts'],

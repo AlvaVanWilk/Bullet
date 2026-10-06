@@ -92,6 +92,11 @@ async function fetchStatus(): Promise<{ app?: string; configured?: boolean; user
 
 /** Find out at start whether there is a server and who is signed in. */
 export async function connect(): Promise<void> {
+  // The preview page (a single file without server) always runs on its own.
+  if (import.meta.env.VITE_PREVIEW) {
+    setState({ mode: 'local' });
+    return;
+  }
   const note = new URLSearchParams(location.search).get('anmeldung');
   if (note !== null) history.replaceState(null, '', location.pathname);
   const status = await fetchStatus();

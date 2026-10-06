@@ -206,3 +206,18 @@
   .week-boxes { grid-template-columns: 1fr 1fr; }
   .week-boxes .wbox:first-child { grid-column: 1 / -1; }
 }
+/* phones and narrow windows: the list lies over the page instead of beside it */
+@media (max-width: 760px) {
+  :root { --sidebar-w: min(320px, calc(100vw - 40px)); }
+  .sidebar { position: absolute; top: 0; bottom: 0; left: 0; }
+  .sidebar.closed { width: var(--spine-w); }
+  .page { margin-left: calc(var(--spine-w) + 6px); }
+  .week-head { padding: 10px 14px 14px 18px; }
+  .week-title { flex-wrap: wrap; gap: 8px 14px; }
+  .kw { font-size: 34px; }
+  .week-boxes { grid-template-columns: 1fr; gap: 20px; }
+  .wbox .handbox-body { max-height: 96px; }
+  .days { padding: var(--grid) 16px 0 20px; }
+  .cat-page { padding: 14px 16px 40vh 20px; }
+  .postit { width: min(312px, calc(100vw - 24px)); }
+}
