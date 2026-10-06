@@ -1,6 +1,7 @@
 // Quiet paper sounds, made in the browser (no sound files): a sheet sliding
-// over another when the tabs switch, and a marker scratching over paper
-// when a task is struck through. They can be turned off in the settings.
+// softly over another when the tabs switch, and a fine pen gliding over
+// paper when a task is struck through. They can be turned off in the
+// settings. Both fade in and out smoothly, with nothing hard at the end.
 //
 // iPad Safari only plays sound after a touch, so the first touch unlocks it.
 
@@ -24,16 +25,11 @@ function context(): AudioContext | null {
   }
 }
 
-/** Two seconds of soft noise, slightly weighted to the lower end like paper. */
-function makeNoise(c: AudioContext): AudioBuffer {
+/** Two seconds of white noise; the filters below shape it. */
+export function makeNoise(c: BaseAudioContext): AudioBuffer {
   const buf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
   const data = buf.getChannelData(0);
-  let last = 0;
-  for (let i = 0; i < data.length; i++) {
-    const white = Math.random() * 2 - 1;
-    last = 0.86 * last + 0.14 * white;
-    data[i] = 0.6 * white + 1.8 * last;
-  }
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
   return buf;
 }
 
@@ -51,84 +47,65 @@ if (typeof document !== 'undefined') {
   document.addEventListener('pointerdown', unlock);
 }
 
-/** A gain curve: the envelope, roughened by the grain of the paper. */
-function grainCurve(points: number, shape: (x: number) => number, grain: number): Float32Array {
+/** A gain curve from silence to silence, roughened a little by the grain of the paper. */
+function softCurve(points: number, peak: number, attack: number, release: number, grain: number): Float32Array {
   const curve = new Float32Array(points);
   for (let i = 0; i < points; i++) {
     const x = i / (points - 1);
-    curve[i] = Math.max(0, shape(x) * (1 - grain + grain * Math.random()));
+    const rise = x < attack ? Math.sin((Math.PI / 2) * (x / attack)) ** 2 : 1;
+    const fall = x > 1 - release ? Math.sin((Math.PI / 2) * ((1 - x) / release)) ** 2 : 1;
+    curve[i] = peak * rise * fall * (1 - grain + grain * Math.random());
   }
+  curve[0] = 0;
   curve[points - 1] = 0;
   return curve;
 }
 
-function noiseVoice(c: AudioContext, at: number, offset: number) {
-  const src = c.createBufferSource();
-  src.buffer = noise;
-  src.start(at, offset % 1.5);
-  return src;
+function filter(c: BaseAudioContext, type: BiquadFilterType, frequency: number, q = 0.7): BiquadFilterNode {
+  const f = c.createBiquadFilter();
+  f.type = type;
+  f.frequency.value = frequency;
+  f.Q.value = q;
+  return f;
 }
 
-/** A sheet of paper drawn over another one. */
+/** A sheet of paper drawn softly over another one: a light, airy "shh". */
+export function paperSlide(c: BaseAudioContext, buffer: AudioBuffer, out: AudioNode, t: number, duration: number) {
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  const hp = filter(c, 'highpass', 1600);
+  const lp = filter(c, 'lowpass', 6000);
+  lp.frequency.setValueAtTime(6500, t);
+  lp.frequency.linearRampToValueAtTime(4200, t + duration);
+  const gain = c.createGain();
+  gain.gain.value = 0;
+  gain.gain.setValueCurveAtTime(softCurve(40, 0.03, 0.3, 0.55, 0.15), t, duration);
+  src.connect(hp).connect(lp).connect(gain).connect(out);
+  src.start(t, Math.random());
+  src.stop(t + duration + 0.05);
+}
+
+/** A fine pen gliding through a line of text: high, light, barely there. */
+export function penStroke(c: BaseAudioContext, buffer: AudioBuffer, out: AudioNode, t: number, duration: number) {
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  const hp = filter(c, 'highpass', 2600);
+  const bp = filter(c, 'bandpass', 4300, 0.9);
+  const lp = filter(c, 'lowpass', 8500);
+  const gain = c.createGain();
+  gain.gain.value = 0;
+  gain.gain.setValueCurveAtTime(softCurve(120, 0.04, 0.15, 0.3, 0.12), t, duration);
+  src.connect(hp).connect(bp).connect(lp).connect(gain).connect(out);
+  src.start(t, Math.random());
+  src.stop(t + duration + 0.05);
+}
+
 export function playPaperSlide(duration = 0.6) {
   const c = context();
-  if (!c || !noise) return;
-  const t = c.currentTime + 0.01;
-
-  const src = noiseVoice(c, t, Math.random());
-  const hp = c.createBiquadFilter();
-  hp.type = 'highpass';
-  hp.frequency.value = 500;
-  const bp = c.createBiquadFilter();
-  bp.type = 'bandpass';
-  bp.Q.value = 0.6;
-  bp.frequency.setValueAtTime(2600, t);
-  bp.frequency.exponentialRampToValueAtTime(1100, t + duration);
-  const gain = c.createGain();
-  gain.gain.value = 0;
-  gain.gain.setValueCurveAtTime(
-    grainCurve(48, (x) => 0.11 * Math.sin(Math.PI * Math.min(1, x * 1.15)) ** 1.4, 0.35),
-    t,
-    duration,
-  );
-  src.connect(hp).connect(bp).connect(gain).connect(c.destination);
-  src.stop(t + duration + 0.05);
-
-  // the sheet settles: a soft, low touch at the end
-  const land = noiseVoice(c, t + duration * 0.82, Math.random());
-  const lp = c.createBiquadFilter();
-  lp.type = 'lowpass';
-  lp.frequency.value = 420;
-  const lg = c.createGain();
-  const lt = t + duration * 0.82;
-  lg.gain.setValueAtTime(0, lt);
-  lg.gain.linearRampToValueAtTime(0.16, lt + 0.012);
-  lg.gain.exponentialRampToValueAtTime(0.001, lt + 0.11);
-  land.connect(lp).connect(lg).connect(c.destination);
-  land.stop(lt + 0.15);
+  if (c && noise) paperSlide(c, noise, c.destination, c.currentTime + 0.01, duration);
 }
 
-/** A thick marker drawn through a line of text. */
 export function playStrike(duration = 0.4) {
   const c = context();
-  if (!c || !noise) return;
-  const t = c.currentTime + 0.01;
-  const src = noiseVoice(c, t, Math.random());
-  const bp = c.createBiquadFilter();
-  bp.type = 'bandpass';
-  bp.Q.value = 1.1;
-  bp.frequency.setValueAtTime(1500, t);
-  bp.frequency.linearRampToValueAtTime(1900, t + duration);
-  const hp = c.createBiquadFilter();
-  hp.type = 'highpass';
-  hp.frequency.value = 350;
-  const gain = c.createGain();
-  gain.gain.value = 0;
-  gain.gain.setValueCurveAtTime(
-    grainCurve(90, (x) => 0.13 * (x < 0.08 ? x / 0.08 : x > 0.85 ? (1 - x) / 0.15 : 1), 0.55),
-    t,
-    duration,
-  );
-  src.connect(hp).connect(bp).connect(gain).connect(c.destination);
-  src.stop(t + duration + 0.05);
+  if (c && noise) penStroke(c, noise, c.destination, c.currentTime + 0.01, duration);
 }
