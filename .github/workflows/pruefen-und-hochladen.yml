@@ -75,10 +75,12 @@ jobs:
             echo "Hinweis: GOOGLE_CLIENT_ID oder GOOGLE_CLIENT_SECRET fehlt – die Anmeldung zeigt dann „nicht eingerichtet“."
             exit 0
           fi
+          # Client id and secret never contain spaces; a line break from copying would break the sign-in.
           php -r '
+            $clean = fn ($v) => preg_replace("/\s+/", "", (string) $v);
             $config = [
-              "google_client_id" => getenv("GOOGLE_CLIENT_ID"),
-              "google_client_secret" => getenv("GOOGLE_CLIENT_SECRET"),
+              "google_client_id" => $clean(getenv("GOOGLE_CLIENT_ID")),
+              "google_client_secret" => $clean(getenv("GOOGLE_CLIENT_SECRET")),
               "allowed_emails" => (string) getenv("BULLET_EMAILS"),
             ];
             file_put_contents("dist/bullet-config.php", "<?php\n// Written by the upload; not in the repository.\nreturn " . var_export($config, true) . ";\n");
