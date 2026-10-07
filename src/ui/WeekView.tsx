@@ -87,7 +87,14 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
         <nav class="week-nav" aria-label="Wochen">
           <button type="button" class="ghost-btn" onClick={() => ui.set({ weekOffset: state.weekOffset - 1 })} aria-label="Woche davor">‹</button>
           {state.weekOffset !== 0 && (
-            <button type="button" class="ghost-btn today-btn" onClick={() => ui.set({ weekOffset: 0 })}>heute</button>
+            // In another week there is no today on the page: "heute" takes a dragged deadline instead.
+            <button
+              type="button"
+              class="ghost-btn today-btn"
+              data-drop="day"
+              data-day={props.today}
+              onClick={() => ui.set({ weekOffset: 0 })}
+            >heute</button>
           )}
           <button
             type="button"
@@ -123,7 +130,14 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
               <li
                 key={task.id}
                 class={`deadline ${mark}`}
-                onClick={(e) => ui.set({ postIt: { kind: 'task', id: task.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
+                // An open deadline can be written into today to do it earlier; the deadline stays.
+                onPointerDown={(e) => mark !== 'done' && startDrag(e, e.currentTarget as HTMLElement, {
+                  taskId: task.id, text: task.text, from: 'week',
+                })}
+                onClick={(e) => {
+                  if (clickSuppressed()) return;
+                  ui.set({ postIt: { kind: 'task', id: task.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } });
+                }}
               >
                 <span class="wd">{shortWeekday(task.deadline!)}</span>
                 <span class="what">{task.text}</span>

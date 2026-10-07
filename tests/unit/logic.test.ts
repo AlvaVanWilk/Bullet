@@ -143,3 +143,16 @@ describe('hidden appointments', () => {
   });
 });
 
+
+describe('doing a deadline earlier', () => {
+  it('shows it as a normal task today; ticked, it no longer appears on its day', () => {
+    const open = snap([task('d', { deadline: '2026-10-09' })], [entry('e1', 'd', TODAY)]);
+    expect(states(open, TODAY)).toEqual(['d:entry:open']);
+    expect(isOpenToday(open.tasks[0], TODAY, entriesByTask(open.entries))).toBe(true);
+
+    const done = snap([task('d', { deadline: '2026-10-09', doneDay: TODAY, doneAt: NOW })], [entry('e1', 'd', TODAY)]);
+    expect(states(done, TODAY)).toEqual(['d:entry:done']);
+    expect(dayItems(done, '2026-10-09', '2026-10-09')).toEqual([]);
+    expect(weekDeadlines(done, '2026-10-05', TODAY).map((x) => x.mark)).toEqual(['done']);
+  });
+});

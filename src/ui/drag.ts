@@ -7,7 +7,8 @@ import type { DayKey } from '../lib/dates';
 export interface DragSource {
   taskId: string;
   text: string;
-  from: 'master' | 'category' | 'day';
+  /** master list, category page, a day, or the deadlines in the head of the week */
+  from: 'master' | 'category' | 'day' | 'week';
   day?: DayKey;
   color?: string;
 }

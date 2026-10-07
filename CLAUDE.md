@@ -19,7 +19,9 @@ Bedienung und Einrichtung: `README.md`.
   Kästchen. In einen späteren Tag gezogen → „>“ im Kästchen.
 - Deadlines erscheinen von selbst (rot) am Tag und wandern jeden Tag weiter, bis sie
   erledigt sind. Das Datum der Deadline wird nirgends angezeigt. Nachträgliches
-  Abhaken in früheren Tagen und Wochen geht immer.
+  Abhaken in früheren Tagen und Wochen geht immer. Offene Deadlines lassen sich aus der
+  Wochenübersicht in den heutigen Tag ziehen (früher erledigen; die Deadline bleibt);
+  in anderen Wochen nimmt der Knopf „heute“ sie an.
 - Erledigt → Seitenleiste leuchtet auf. Beim Öffnen der Masterliste werden die seither
   erledigten Aufgaben nacheinander (in Erledigungsreihenfolge) dick durchgestrichen.
   Die Reihenfolge der Liste ändert sich nie. Nach 7 Tagen (einstellbar) verschwinden sie;

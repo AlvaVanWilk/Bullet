@@ -33,7 +33,16 @@
 .kw { font-size: 42px; line-height: 1; letter-spacing: 0.02em; }
 .week-range { font-size: 25px; color: var(--ink-soft); }
 .week-nav { display: flex; align-items: center; gap: 2px; margin-left: 6px; align-self: center; }
-.today-btn { font-size: 19px; border-radius: 14px; padding: 0 10px; }
+.today-btn { font-size: 19px; border-radius: 14px; padding: 0 10px; transition: background-color 0.2s, box-shadow 0.2s; }
+.is-dragging .today-btn { box-shadow: inset 0 0 0 1.5px rgba(43, 43, 48, 0.35); }
+.today-btn.drop-over { background: rgba(253, 240, 162, 0.7); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.wlist .deadline:not(.done) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: pan-y;
+}
+.wlist .deadline.lifted { opacity: 0.3; }
 .week-tools { margin-left: auto; display: flex; align-items: center; gap: 10px; align-self: center; }
 .gear svg { fill: none; stroke: var(--ink-soft); stroke-width: 1.5; stroke-linejoin: round; }
 .status-note {
