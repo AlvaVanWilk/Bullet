@@ -35,6 +35,15 @@ export interface Task extends Base {
   gcalSig?: string | null;
   /** A longer note on the post-it. */
   note?: string;
+  /** The appointment this task prepares (its day was the first deadline). */
+  link?: TaskLink;
+}
+
+export interface TaskLink {
+  /** "calendarId|eventId" for a Google appointment, "special|id|day" for something special. */
+  key: string;
+  title: string;
+  day: DayKey;
 }
 
 export interface Category extends Base {

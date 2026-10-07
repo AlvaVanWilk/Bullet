@@ -39,6 +39,10 @@ Bedienung und Einrichtung: `README.md`.
 - Leise Geräusche: Papier über Papier beim Laschenwechsel, Stift beim Durchstreichen
   (abschaltbar). Post-it: „speichern“, Notizfeld; kein „erledigt“ dort.
 - Termine aus Google lassen sich in Bullet ausblenden, ohne sie in Google zu ändern.
+- Termin oder Besonderes antippen → „Vorbereiten“: Die Aufgaben dort sind normale
+  Aufgaben der Masterliste mit dem Tag des Termins als Deadline (änderbar) und merken
+  sich den Termin (`task.link`). Neben dem Termin steht die Zahl der offenen. Für
+  vergangene Termine gibt es keine neuen.
 - Vorplanen künftiger Tage ist (vorerst) nicht vorgesehen. Vorausblättern in kommende
   Wochen geht, aber dort steht nur der Kopf (Wochenübersicht mit Terminen, Deadlines,
   Besonderem), keine Tage – Tage gibt es immer nur bis heute.

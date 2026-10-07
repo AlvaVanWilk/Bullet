@@ -9,7 +9,8 @@ import {
   addDays, compareDays, dayNumber, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekdayName, weekRangeLabel, type DayKey,
 } from '../lib/dates';
 import {
-  dayItems, entriesByTask, hiddenKeys, specialsOn, visibleEvents, weekDeadlines, weekSpecials, type DayItem,
+  dayItems, entriesByTask, hiddenKeys, openLinkCounts, specialLinkKey, specialsOn, visibleEvents, weekDeadlines, weekSpecials,
+  type DayItem,
 } from '../lib/logic';
 import type { CalEvent, Settings } from '../lib/model';
 import { store } from '../store/store';
@@ -78,6 +79,7 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
   const specials = weekSpecials(snap.specials, props.monday);
   const deadlines = weekDeadlines(snap, props.monday, props.today);
   const special = props.monday === mondayOf(props.today) ? props.today : props.monday;
+  const prep = openLinkCounts(snap);
 
   return (
     <header class="week-head">
@@ -119,6 +121,7 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
                 <span class="wd">{weekdaySpan(ev)}</span>
                 {!ev.allDay && <span class="when">{timeLabel(new Date(ev.start))}</span>}
                 <span class="what">{ev.title}</span>
+                <PrepCount n={prep.get(ev.id)} />
               </li>
             ))}
             {!termine.length && <li class="none">keine</li>}
@@ -164,16 +167,18 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
               <li key={ev.id} class={`ev ${eventIsPast(ev, now) ? 'past' : ''}`} onClick={(e) => openEvent(ev, e)}>
                 <span class="wd">{weekdaySpan(ev)}</span>
                 <span class="what">{ev.title}</span>
+                <PrepCount n={prep.get(ev.id)} />
               </li>
             ))}
             {specials.map(({ day, special: sp }) => (
               <li
                 key={`${sp.id}-${day}`}
                 class={`own ${compareDays(day, props.today) < 0 ? 'past' : ''}`}
-                onClick={(e) => ui.set({ postIt: { kind: 'special', id: sp.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
+                onClick={(e) => openSpecial(sp.id, day, e)}
               >
                 <span class="wd">{shortWeekday(day)}</span>
                 <span class="what">{sp.text}</span>
+                <PrepCount n={prep.get(specialLinkKey(sp.id, day))} />
               </li>
             ))}
             {!besondere.length && !specials.length && <li class="none">nichts</li>}
@@ -186,6 +191,17 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
 
 function openEvent(ev: CalEvent, e: MouseEvent) {
   ui.set({ postIt: { kind: 'event', event: ev, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } });
+}
+
+/** The day matters: tasks prepare one occurrence of a yearly special. */
+function openSpecial(id: string, day: DayKey, e: MouseEvent) {
+  ui.set({ postIt: { kind: 'special', id, date: day, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } });
+}
+
+/** How many tasks for this appointment are still open. */
+function PrepCount(props: { n?: number }) {
+  if (!props.n) return null;
+  return <span class="prep-count" title={`${props.n} zum Vorbereiten`}>{props.n}</span>;
 }
 
 function weekdaySpan(ev: CalEvent): string {
@@ -224,12 +240,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
         <ul class="day-specials">
           {special.map((ev) => <li key={ev.id} onClick={(e) => openEvent(ev, e)}>{ev.title}</li>)}
           {specials.map((sp) => (
-            <li
-              key={sp.id}
-              onClick={(e) => ui.set({ postIt: { kind: 'special', id: sp.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
-            >
-              {sp.text}
-            </li>
+            <li key={sp.id} onClick={(e) => openSpecial(sp.id, props.day, e)}>{sp.text}</li>
           ))}
         </ul>
       )}

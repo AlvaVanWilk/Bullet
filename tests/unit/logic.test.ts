@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { archive, dayItems, entriesByTask, hiddenKeys, isOpenToday, masterTasks, specialsOn, suggestions, visibleEvents, weekDeadlines, type Snapshot } from '../../src/lib/logic';
+import {
+  archive, dayItems, entriesByTask, hiddenKeys, isOpenToday, linkedTasks, masterTasks, openLinkCounts, specialLinkKey, specialsOn, suggestions,
+  visibleEvents, weekDeadlines, type Snapshot,
+} from '../../src/lib/logic';
 import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Special, type Task } from '../../src/lib/model';
 
 const DAY = 86400000;
@@ -154,5 +157,33 @@ describe('doing a deadline earlier', () => {
     expect(states(done, TODAY)).toEqual(['d:entry:done']);
     expect(dayItems(done, '2026-10-09', '2026-10-09')).toEqual([]);
     expect(weekDeadlines(done, '2026-10-05', TODAY).map((x) => x.mark)).toEqual(['done']);
+  });
+});
+
+describe('tasks that prepare an appointment', () => {
+  const zahnarzt = { key: 'cal|ev1', title: 'Zahnarzt', day: '2026-10-13' };
+  const party = { key: specialLinkKey('sp1', '2026-10-10'), title: 'Geburtstag Lisa', day: '2026-10-10' };
+
+  it('lists them under their appointment and counts the open ones', () => {
+    const s = snap([
+      task('a', { link: zahnarzt, deadline: zahnarzt.day, createdAt: 2 }),
+      task('b', { link: zahnarzt, deadline: '2026-10-12', createdAt: 3, doneDay: TODAY, doneAt: NOW }),
+      task('c', { link: party, createdAt: 4 }),
+      task('d', { link: zahnarzt, deleted: true }),
+      task('e'),
+    ]);
+    expect(linkedTasks(s, zahnarzt.key).map((t) => t.id)).toEqual(['a', 'b']);
+    expect(Object.fromEntries(openLinkCounts(s))).toEqual({ [zahnarzt.key]: 1, [party.key]: 1 });
+    // they stay ordinary tasks in the master list
+    expect(masterTasks(s, NOW).map((t) => t.id)).toEqual(['e', 'a', 'b', 'c']);
+  });
+
+  it('keeps each year of a yearly special apart', () => {
+    expect(specialLinkKey('sp1', '2026-10-10')).not.toBe(specialLinkKey('sp1', '2027-10-10'));
+  });
+
+  it('finds finished ones by the appointment', () => {
+    const s = snap([task('a', { text: 'Fragen aufschreiben', link: zahnarzt, doneDay: TODAY, doneAt: NOW })]);
+    expect(archive(s, 'zahnarzt').map((g) => g.tasks.map((t) => t.id))).toEqual([['a']]);
   });
 });

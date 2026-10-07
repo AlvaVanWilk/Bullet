@@ -1,13 +1,14 @@
 // Notes stuck next to what was tapped: a task (text, note, "!", deadline,
 // category, delete), a category (name, colour), something special, or an
-// appointment from Google (to hide it).
+// appointment from Google (to hide it). Appointments and specials also take
+// the tasks that prepare them.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CATEGORY_COLORS, categoryColor } from '../lib/colors';
 import { eventStartDay } from '../google/events';
-import { parseDay, shortWeekday, timeLabel } from '../lib/dates';
-import { liveCategories, seriesKey } from '../lib/logic';
-import type { CalEvent, Special } from '../lib/model';
+import { compareDays, parseDay, shortWeekday, timeLabel, type DayKey } from '../lib/dates';
+import { linkedTasks, liveCategories, seriesKey, specialLinkKey } from '../lib/logic';
+import type { CalEvent, Special, TaskLink } from '../lib/model';
 import { store } from '../store/store';
 import { ui, useStore, useToday, useUi, type PostItTarget } from './state';
 
@@ -37,15 +38,22 @@ function Placed(props: { target: PostItTarget; children: preact.ComponentChildre
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const r = props.target.rect;
-    const h = el.offsetHeight;
-    const vw = innerWidth;
-    const vh = innerHeight;
-    let left = r.right + 14;
-    if (left + WIDTH > vw - 12) left = r.left - WIDTH - 14;
-    if (left < 12) left = Math.min(vw - WIDTH - 12, Math.max(12, r.left + 24));
-    const top = Math.min(Math.max(14, r.top - 24), vh - h - 14);
-    setPos({ left, top: Math.max(14, top) });
+    const place = () => {
+      const r = props.target.rect;
+      const h = el.offsetHeight;
+      const vw = innerWidth;
+      const vh = innerHeight;
+      let left = r.right + 14;
+      if (left + WIDTH > vw - 12) left = r.left - WIDTH - 14;
+      if (left < 12) left = Math.min(vw - WIDTH - 12, Math.max(12, r.left + 24));
+      const top = Math.min(Math.max(14, r.top - 24), vh - h - 14);
+      setPos({ left, top: Math.max(14, top) });
+    };
+    place();
+    // A note that grows (more tasks to prepare) moves up rather than out of the window.
+    const watch = new ResizeObserver(place);
+    watch.observe(el);
+    return () => watch.disconnect();
   }, []);
   return (
     <div
@@ -88,6 +96,7 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         }}
         aria-label="Aufgabe"
       />
+      {task.link && <div class="note-for">für: {task.link.title} · {shortDate(task.link.day)}</div>}
 
       <textarea
         class="note-memo"
@@ -186,6 +195,7 @@ function EventNote(props: { event: CalEvent; close: () => void }) {
     <div class="note">
       <div class="note-event">{ev.title}</div>
       <div class="note-label">{when}</div>
+      <PrepList link={{ key: ev.id, title: ev.title, day: eventStartDay(ev) }} />
       <p class="note-hint">Ausblenden zeigt den Termin in Bullet nicht mehr an. Im Google-Kalender bleibt er, wie er ist.</p>
       <div class="note-actions">
         <button
@@ -206,9 +216,68 @@ function EventNote(props: { event: CalEvent; close: () => void }) {
 }
 
 function eventWhen(ev: CalEvent): string {
-  const day = eventStartDay(ev);
-  const date = `${shortWeekday(day)} ${parseDay(day).getDate()}.${parseDay(day).getMonth() + 1}.`;
+  const date = shortDate(eventStartDay(ev));
   return ev.allDay ? `${date} ganztags` : `${date} ${timeLabel(new Date(ev.start))}–${timeLabel(new Date(ev.end))}`;
+}
+
+/** "Di 13.10." */
+function shortDate(day: DayKey): string {
+  const d = parseDay(day);
+  return `${shortWeekday(day)} ${d.getDate()}.${d.getMonth() + 1}.`;
+}
+
+/**
+ * What has to be done before an appointment. Each line becomes an ordinary task
+ * in the master list, with the appointment's day as its deadline.
+ */
+function PrepList(props: { link: TaskLink }) {
+  const snap = useStore();
+  const today = useToday();
+  const [text, setText] = useState('');
+  const latest = useRef(text);
+  latest.current = text;
+  const add = (value: string) => store.addTask(value, null, { deadline: props.link.day, link: props.link });
+  // As everywhere on the post-its, what was written counts when the note goes away.
+  useEffect(() => () => { add(latest.current); }, []);
+  const tasks = linkedTasks(snap, props.link.key);
+  // Once the day is over there is nothing left to prepare (a new task would be overdue at once).
+  const over = compareDays(props.link.day, today) < 0;
+  if (over && !tasks.length) return null;
+
+  return (
+    <div class="prep">
+      <div class="note-label">Vorbereiten</div>
+      {tasks.length > 0 && (
+        <ul class="prep-list">
+          {tasks.map((t) => (
+            <li
+              key={t.id}
+              class={t.doneAt != null ? 'done' : ''}
+              onClick={(e) => ui.set({ postIt: { kind: 'task', id: t.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
+            >
+              {t.important && <span class="bang">!</span>}
+              <span class="prep-text">{t.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!over && (
+        <input
+          class="prep-new"
+          value={text}
+          placeholder={tasks.length ? 'noch etwas …' : 'Was ist vorher zu tun?'}
+          enterKeyHint="enter"
+          onInput={(e) => setText((e.target as HTMLInputElement).value)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' || e.isComposing) return;
+            e.preventDefault();
+            if (add(text)) setText('');
+          }}
+          aria-label="Aufgabe zum Vorbereiten"
+        />
+      )}
+    </div>
+  );
 }
 
 function CategoryNote(props: { id: string; close: () => void }) {
@@ -308,6 +377,7 @@ function SpecialNote(props: { id: string | null; date?: string; close: () => voi
         <input type="checkbox" checked={yearly} onChange={(e) => setYearly((e.target as HTMLInputElement).checked)} />
         <span>jedes Jahr</span>
       </label>
+      {existing && <PrepList link={specialLink(existing, props.date ?? existing.date)} />}
       <div class="note-actions">
         <button type="button" class="note-btn" onClick={() => { if (save()) props.close(); }}>
           {existing ? 'speichern' : 'eintragen'}
@@ -326,4 +396,9 @@ function SpecialNote(props: { id: string | null; date?: string; close: () => voi
       </div>
     </div>
   );
+}
+
+/** A yearly special is prepared anew each year, so the link names the day it falls on. */
+function specialLink(sp: Special, day: DayKey): TaskLink {
+  return { key: specialLinkKey(sp.id, day), title: sp.text, day };
 }

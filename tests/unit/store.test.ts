@@ -9,6 +9,17 @@ function makeStore() {
 }
 
 describe('store', () => {
+  it('gives a task for an appointment the day of the appointment as deadline', () => {
+    const s = makeStore();
+    const link = { key: 'cal|ev1', title: 'Zahnarzt', day: '2026-10-13' };
+    const t = s.addTask('  Fragen aufschreiben ', null, { deadline: link.day, link })!;
+    expect(s.task(t.id)).toMatchObject({ text: 'Fragen aufschreiben', deadline: '2026-10-13', link, categoryId: null });
+    // the deadline can be set differently afterwards; the link stays
+    s.updateTask(t.id, { deadline: '2026-10-12' });
+    expect(s.task(t.id)).toMatchObject({ deadline: '2026-10-12', link });
+    expect(s.addTask('   ', null, { deadline: link.day, link })).toBeNull();
+  });
+
   it('copies a task into a day only once', () => {
     const s = makeStore();
     const t = s.addTask('Brot kaufen')!;

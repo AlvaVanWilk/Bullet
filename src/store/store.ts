@@ -137,12 +137,12 @@ export class Store {
     return t != null && this.clock() - t < withinMs;
   }
 
-  addTask(text: string, categoryId: string | null = null): Task | null {
+  addTask(text: string, categoryId: string | null = null, extra: Partial<Pick<Task, 'deadline' | 'link'>> = {}): Task | null {
     const clean = text.trim();
     if (!clean) return null;
     const task: Task = {
       id: newId(), type: 'task', updatedAt: 0, text: clean, categoryId, important: false,
-      deadline: null, createdAt: this.now(), doneAt: null, doneDay: null,
+      deadline: null, createdAt: this.now(), doneAt: null, doneDay: null, ...extra,
     };
     this.put(task);
     this.markFresh(task.id);

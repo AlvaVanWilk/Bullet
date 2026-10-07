@@ -164,7 +164,7 @@ export function archive(s: Snapshot, query: string, onDay?: DayKey | null): Arch
     if (t.deleted || !t.doneDay || t.doneAt == null) return false;
     if (onDay && t.doneDay !== onDay) return false;
     if (!words.length) return true;
-    const hay = `${t.text.toLowerCase()} | ${(t.note ?? '').toLowerCase()} | ${daySearchText(t.doneDay)} | ${categories.get(t.categoryId ?? '') ?? ''}`;
+    const hay = `${t.text.toLowerCase()} | ${(t.note ?? '').toLowerCase()} | ${(t.link?.title ?? '').toLowerCase()} | ${daySearchText(t.doneDay)} | ${categories.get(t.categoryId ?? '') ?? ''}`;
     return words.every((w) => hay.includes(w));
   });
   hits.sort((a, b) => compareDays(b.doneDay!, a.doneDay!) || b.doneAt! - a.doneAt!);
@@ -204,4 +204,24 @@ export function hiddenKeys(hides: Hide[]): Set<string> {
 export function visibleEvents(events: CalEvent[], hidden: Set<string>): CalEvent[] {
   if (!hidden.size) return events;
   return events.filter((ev) => !hidden.has(ev.id) && !hidden.has(seriesKey(ev) ?? ''));
+}
+
+// --- tasks that prepare an appointment ------------------------------------------------
+
+export function specialLinkKey(specialId: string, day: DayKey): string {
+  return `special|${specialId}|${day}`;
+}
+
+export function linkedTasks(s: Snapshot, key: string): Task[] {
+  return s.tasks.filter((t) => !t.deleted && t.link?.key === key).sort(byCreated);
+}
+
+/** How many open tasks each appointment still has. */
+export function openLinkCounts(s: Snapshot): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const t of s.tasks) {
+    if (t.deleted || t.doneAt != null || !t.link) continue;
+    counts.set(t.link.key, (counts.get(t.link.key) ?? 0) + 1);
+  }
+  return counts;
 }

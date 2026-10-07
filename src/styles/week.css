@@ -82,6 +82,22 @@
 .wlist .what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .deadline .what { white-space: normal; }
 .wlist .past { opacity: 0.36; }
+/* open tasks that prepare the appointment */
+.wlist .prep-count {
+  flex: none;
+  align-self: center;
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1.3px solid var(--ink-soft);
+  border-radius: 9px 10px 9px 8px;
+  font-family: var(--hand);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--ink-soft);
+}
 .wlist .none { color: var(--ink-faint); font-family: var(--hand); font-size: 18px; }
 .wlist .own { cursor: pointer; }
 .wlist .tt { line-height: 24px; }
