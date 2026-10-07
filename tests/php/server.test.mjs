@@ -203,6 +203,30 @@ test('empty objects survive the round trip', async () => {
   assert.ok(r.body.changes.find((c) => c.id === 'settings').calendars !== undefined);
 });
 
+test('admins let family members in from the app; each has separate data', async () => {
+  const oma = new Device();
+  const before = await oma.call({ action: 'testlogin', email: 'oma@example.com' });
+  assert.equal(before.status, 403);
+
+  const added = await ipad.call({ action: 'family_add', email: ' Oma@Example.com ' });
+  assert.equal(added.status, 200);
+  assert.deepEqual(added.body.family, ['oma@example.com']);
+  assert.ok(added.body.admins.includes('alva@example.com'));
+
+  const after = await oma.call({ action: 'testlogin', email: 'oma@example.com' });
+  assert.equal(after.status, 200);
+  const me = await oma.call({ action: 'status' });
+  assert.equal(me.body.user.admin, false);
+  assert.equal((await oma.call({ action: 'family' })).status, 403);
+  const own = await oma.call({ action: 'sync', since: 0, changes: [] });
+  assert.deepEqual(own.body.changes, []);
+
+  assert.equal((await ipad.call({ action: 'family_add', email: 'kein-email' })).status, 400);
+  const removed = await ipad.call({ action: 'family_remove', email: 'oma@example.com' });
+  assert.deepEqual(removed.body.family, []);
+  assert.equal((await oma.call({ action: 'sync', since: 0, changes: [] })).status, 401);
+});
+
 test('broken records are refused', async () => {
   const r = await ipad.call({ action: 'sync', since: 0, changes: [{ id: '../x', type: 'task', updatedAt: 1 }] });
   assert.equal(r.status, 400);
@@ -240,6 +264,7 @@ test('without a list, only the first account may use the copy', async () => {
   assert.equal(first.status, 200);
   const second = await new Device().call({ action: 'testlogin', email: 'zweite@example.com' });
   assert.equal(second.status, 403);
+  writeConfig("'allowed_emails' => 'alva@example.com, test@example.com',");
 });
 
 test('signing out ends the session of this device only', async () => {

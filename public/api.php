@@ -6,6 +6,9 @@
 //   token                  -> { ok, accessToken, expiresAt }  (Google calendar)
 //   sync { since, changes } -> { ok, seq, changes }
 //   logout                 -> { ok }
+//   family                 -> { ok, admins, family }        (admins only)
+//   family_add { email }   -> { ok, admins, family }        (admins only)
+//   family_remove { email } -> { ok, admins, family }       (admins only)
 //
 // Everything but "status" needs a signed-in device (cookie from oauth.php).
 
@@ -56,7 +59,18 @@ function userInfo(string $uid): array
         'email' => $user['email'] ?? '',
         'name' => $user['name'] ?? '',
         'google' => !empty($user['google']['refresh_token']),
+        'admin' => isAdmin((string) ($user['sub'] ?? ''), (string) ($user['email'] ?? '')),
     ];
+}
+
+function familyReply(): void
+{
+    $admins = allowedEmails();
+    if (!$admins) {
+        $owner = readJson(ownerFile());
+        $admins = $owner ? [strtolower((string) $owner['email'])] : [];
+    }
+    reply(200, ['ok' => true, 'admins' => $admins, 'family' => familyEmails()]);
 }
 
 try {
@@ -137,6 +151,23 @@ try {
         case 'logout':
             endSession();
             reply(200, ['ok' => true]);
+
+        case 'family':
+        case 'family_add':
+        case 'family_remove':
+            if (!userInfo($uid)['admin']) {
+                fail(403, 'admin');
+            }
+            if ($action !== 'family') {
+                $email = strtolower(trim((string) ($request['email'] ?? '')));
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 200) {
+                    fail(400, 'email');
+                }
+                changeFamily(fn ($list) => $action === 'family_add'
+                    ? array_merge($list, [$email])
+                    : array_filter($list, fn ($e) => $e !== $email));
+            }
+            familyReply();
 
         default:
             fail(404, 'unknown_action');

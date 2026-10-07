@@ -31,7 +31,8 @@ sich auch so anfühlt, nur ein bisschen magisch.
 | Farbe einer Kategorie | auf den Farbklecks vor ihrem Namen tippen |
 | abhaken | Kästchen im Tag antippen (geht auch nachträglich in früheren Tagen und Wochen) |
 | unerledigte Aufgabe von gestern weitertragen | aus dem alten Tag in heute ziehen; im alten Tag steht dann „>“ |
-| frühere und kommende Wochen ansehen | Pfeile neben der Kalenderwoche, „heute“ führt zurück |
+| frühere und kommende Wochen ansehen | Pfeile neben der Kalenderwoche, „heute“ führt zurück; in kommenden Wochen steht nur die Wochenübersicht |
+| Familie dazuholen | Einstellungen → Familie → Google-Adresse eintragen → „freigeben“. Jede Person hat ihre eigene Liste und ihren eigenen Kalender. |
 | Besonderes eintragen (z. B. Geburtstag, jährlich) | „+“ an der Box „Besonderes“ |
 | einen Termin aus Google nicht mehr sehen | Termin antippen → „ausblenden“ (bei Serien auch „alle Wiederholungen“). In Google bleibt er unverändert; zurückholen unter Einstellungen → Ausgeblendete Termine |
 | alle erledigten Aufgaben, mit Suche nach Wort und Datum | die Lasche „Master“ lange gedrückt halten, oder Einstellungen → ganz unten |
@@ -86,7 +87,7 @@ repository secret**:
 | `IONOS_SFTP_PATH` | der Ordner für Bullet im Ordner der Domain, also wie bei Envoy, nur mit `bullet` am Ende (z. B. `/wordpress/bullet`). Der Testordner heißt dann von selbst `…/bullet-test`. |
 | `GOOGLE_CLIENT_ID` | die Client-ID aus Schritt 1 |
 | `GOOGLE_CLIENT_SECRET` | der Clientschlüssel aus Schritt 1 |
-| `BULLET_EMAILS` | deine Google-Adresse (mehrere mit Komma). Nur diese Konten dürfen Bullet benutzen. Ohne diesen Eintrag gehört Bullet dem ersten Konto, das sich anmeldet. |
+| `BULLET_EMAILS` | deine Google-Adresse. Wer hier steht, verwaltet Bullet und kann in der App weitere Personen freigeben (Einstellungen → Familie). Ohne diesen Eintrag verwaltet das erste Konto, das sich anmeldet. |
 
 GitHub zeigt die Werte danach nie wieder an, auch nicht in den Protokollen. Die
 Google-Daten landen auf dem Webspace in `bullet-config.php`. Die Datei ist von außen

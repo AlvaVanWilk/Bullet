@@ -38,8 +38,12 @@ Bedienung und Einrichtung: `README.md`.
   (abschaltbar). Post-it: „speichern“, Notizfeld; kein „erledigt“ dort.
 - Termine aus Google lassen sich in Bullet ausblenden, ohne sie in Google zu ändern.
 - Vorplanen künftiger Tage ist (vorerst) nicht vorgesehen. Vorausblättern in kommende
-  Wochen geht, nur zum Ansehen: Termine, Besonderes und fällige Deadlines (gestricheltes,
-  nicht abhakbares Kästchen); dort wird nichts hineingezogen oder abgehakt.
+  Wochen geht, aber dort steht nur der Kopf (Wochenübersicht mit Terminen, Deadlines,
+  Besonderem), keine Tage – Tage gibt es immer nur bis heute.
+- Familie: Wer Bullet verwaltet (Adressen im Secret BULLET_EMAILS, sonst das erste Konto),
+  gibt weitere Google-Adressen in den Einstellungen frei („Familie“, liegt in
+  bullet-daten/familie.json). Jede Person hat eigene, getrennte Daten; wer entfernt wird,
+  ist auf allen Geräten abgemeldet.
 
 ## Technik
 

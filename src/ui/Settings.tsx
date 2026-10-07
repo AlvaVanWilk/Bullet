@@ -5,7 +5,7 @@ import type { GoogleCalendar } from '../google/calendar';
 import { cachedCalendars, calendarName, loadCalendars, roleOf } from '../google/events';
 import { FONTS } from '../lib/fonts';
 import type { CalendarRole, ColorMode, DayFormat, DayStyle, PaperStyle, ReminderMode } from '../lib/model';
-import { signIn, signOut } from '../server';
+import { api, ApiError, signIn, signOut } from '../server';
 import { STAGE } from '../stage';
 import { store } from '../store/store';
 import { ui, useStore, useUi } from './state';
@@ -194,6 +194,8 @@ export function SettingsSheet() {
             </p>
           </section>
 
+          {server.mode === 'signedIn' && server.user.admin && <FamilySection />}
+
           {server.mode === 'signedIn' && (
             <section class="set">
               <h3>Konto</h3>
@@ -212,5 +214,84 @@ export function SettingsSheet() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Admins let family members in: each signs in with their own Google account and has their own Bullet. */
+function FamilySection() {
+  const [admins, setAdmins] = useState<string[]>([]);
+  const [family, setFamily] = useState<string[] | null>(null);
+  const [email, setEmail] = useState('');
+  const [sure, setSure] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const call = async (action: string, body: Record<string, unknown> = {}) => {
+    try {
+      const res = await api<{ admins: string[]; family: string[] }>(action, body);
+      setAdmins(res.admins);
+      setFamily(res.family);
+      setProblem(null);
+      return true;
+    } catch (err) {
+      setProblem(err instanceof ApiError && err.code === 'email'
+        ? 'Das sieht nicht nach einer E-Mail-Adresse aus.'
+        : 'Gerade nicht erreichbar. Bitte später noch einmal.');
+      return false;
+    }
+  };
+
+  useEffect(() => { void call('family'); }, []);
+  const address = `${location.origin}${location.pathname}`.replace(/^https?:\/\//, '');
+
+  return (
+    <section class="set">
+      <h3>Familie</h3>
+      <p class="set-note">
+        Wer hier steht, kann sich mit diesem Google-Konto bei Bullet anmelden, unter {address}.
+        Jede Person hat ihre eigene Liste, Woche und ihren eigenen Kalender; niemand sieht die
+        Daten der anderen. Beim ersten Anmelden zeigt Google einmal „nicht überprüft“, dort auf
+        „Erweitert“ und „weiter“ tippen.
+      </p>
+      <ul class="hidden-list">
+        {admins.map((a) => (
+          <li key={a}><span class="cal-name">{a}</span><span class="set-note">verwaltet Bullet</span></li>
+        ))}
+        {(family ?? []).map((f) => (
+          <li key={f}>
+            <span class="cal-name">{f}</span>
+            <button
+              type="button"
+              class={`note-btn danger ${sure === f ? 'sure' : ''}`}
+              onClick={() => {
+                if (sure !== f) { setSure(f); return; }
+                setSure(null);
+                void call('family_remove', { email: f });
+              }}
+            >{sure === f ? 'wirklich entfernen?' : 'entfernen'}</button>
+          </li>
+        ))}
+        {family === null && !problem && <li class="set-note">wird geladen …</li>}
+      </ul>
+      <form
+        class="family-add"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (!email.trim()) return;
+          if (await call('family_add', { email: email.trim() })) setEmail('');
+        }}
+      >
+        <input
+          type="email"
+          value={email}
+          placeholder="Google-Adresse, z. B. name@gmail.com"
+          autoComplete="off"
+          autoCapitalize="off"
+          onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
+          aria-label="Google-Adresse"
+        />
+        <button type="submit" class="note-btn">freigeben</button>
+      </form>
+      {problem && <p class="set-note warn">{problem}</p>}
+    </section>
   );
 }

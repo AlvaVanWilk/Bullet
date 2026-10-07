@@ -162,23 +162,66 @@ function allowedEmails(): array
 }
 
 /**
- * Who may use this copy: the addresses in the settings, or, if none are set,
- * the first Google account that signs in (it is written down as the owner).
+ * Who may use this copy. Admins are the addresses in the settings (secret
+ * BULLET_EMAILS) or, if none are set, the first Google account that signed
+ * in (it is written down as the owner). Admins can let more people in from
+ * the app (the family list); each person has their own, separate data.
  */
-function mayUse(string $sub, string $email): bool
+function ownerFile(): string
+{
+    return dataDir() . '/owner.json';
+}
+
+function familyFile(): string
+{
+    return dataDir() . '/familie.json';
+}
+
+function familyEmails(): array
+{
+    $data = readJson(familyFile()) ?? [];
+    return array_values(array_map('strval', $data['emails'] ?? []));
+}
+
+function isAdmin(string $sub, string $email): bool
 {
     $allowed = allowedEmails();
     if ($allowed) {
         return in_array(strtolower($email), $allowed, true);
     }
-    $ownerFile = dataDir() . '/owner.json';
-    return withLock($ownerFile, function () use ($ownerFile, $sub, $email) {
-        $owner = readJson($ownerFile);
-        if ($owner === null) {
-            writeJson($ownerFile, ['sub' => $sub, 'email' => $email, 'since' => time()]);
-            return true;
-        }
-        return hash_equals((string) $owner['sub'], $sub);
+    $owner = readJson(ownerFile());
+    return $owner !== null && hash_equals((string) $owner['sub'], $sub);
+}
+
+function hasAccess(string $sub, string $email): bool
+{
+    return isAdmin($sub, $email) || in_array(strtolower($email), familyEmails(), true);
+}
+
+/** At sign-in: as hasAccess, and without a list the first account becomes the owner. */
+function mayUse(string $sub, string $email): bool
+{
+    if (!allowedEmails()) {
+        $file = ownerFile();
+        withLock($file, function () use ($file, $sub, $email) {
+            if (readJson($file) === null) {
+                writeJson($file, ['sub' => $sub, 'email' => $email, 'since' => time()]);
+            }
+        });
+    }
+    return hasAccess($sub, $email);
+}
+
+/** Change the family list; returns it afterwards. */
+function changeFamily(callable $change): array
+{
+    $file = familyFile();
+    return withLock($file, function () use ($file, $change) {
+        $emails = $change(familyEmails());
+        $emails = array_values(array_unique(array_map(fn ($e) => strtolower(trim((string) $e)), $emails)));
+        sort($emails);
+        writeJson($file, ['emails' => $emails]);
+        return $emails;
     });
 }
 
@@ -212,6 +255,10 @@ function currentUser(): ?string
     [$_, $uid, $token] = $m;
     $user = readJson(userFile($uid));
     if ($user === null) {
+        return null;
+    }
+    // Someone taken off the family list is signed out on every device.
+    if (!hasAccess((string) ($user['sub'] ?? ''), (string) ($user['email'] ?? ''))) {
         return null;
     }
     $hash = hash('sha256', $token);

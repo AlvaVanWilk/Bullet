@@ -193,6 +193,18 @@
 .choice.caps .choice-opt { font-variant-caps: small-caps; letter-spacing: 0.04em; }
 .hidden-list li { display: flex; align-items: center; gap: 12px; min-height: 44px; font-family: var(--clean); font-size: 15px; }
 .hidden-list .set-note { margin: 0; white-space: nowrap; }
+.family-add { display: flex; gap: 8px; margin: 6px 0 4px; }
+.family-add input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--clean);
+  font-size: 15px;
+  padding: 7px 10px;
+  border: 1.5px solid rgba(43, 43, 48, 0.3);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+}
+.set-note.warn { color: var(--red); }
 .stepper { display: inline-flex; align-items: center; gap: 4px; }
 .stepper .ghost-btn { font-size: 24px; }
 .cal-list li {

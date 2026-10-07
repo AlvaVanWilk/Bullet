@@ -9,7 +9,7 @@ import {
   addDays, compareDays, dayNumber, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekdayName, weekRangeLabel, type DayKey,
 } from '../lib/dates';
 import {
-  dayItems, entriesByTask, hiddenKeys, specialsOn, upcomingDayItems, visibleEvents, weekDeadlines, weekSpecials, type DayItem,
+  dayItems, entriesByTask, hiddenKeys, specialsOn, visibleEvents, weekDeadlines, weekSpecials, type DayItem,
 } from '../lib/logic';
 import type { CalEvent, Settings } from '../lib/model';
 import { store } from '../store/store';
@@ -29,8 +29,9 @@ export function WeekView() {
   const now = useNow();
   const monday = addDays(mondayOf(today), state.weekOffset * 7);
   const current = state.weekOffset === 0;
-  // This week up to today; earlier and later weeks completely.
-  const days = weekDays(monday).filter((d) => !current || compareDays(d, today) <= 0);
+  const ahead = state.weekOffset > 0;
+  // This week up to today, earlier weeks completely; a week still to come shows only its head.
+  const days = ahead ? [] : weekDays(monday).filter((d) => !current || compareDays(d, today) <= 0);
   const events = visibleEvents(useWeekEvents(monday), hiddenKeys(snap.hides));
   const scrollRef = useRef<HTMLDivElement>(null);
   const index = entriesByTask(snap.entries);
@@ -45,21 +46,23 @@ export function WeekView() {
   }, [today, monday]);
 
   return (
-    <div class="week">
+    <div class={`week ${ahead ? 'ahead' : ''}`}>
       <WeekHead monday={monday} today={today} events={events} now={now} />
-      <div class="days paper" data-paper={snap.settings.paperMain} ref={scrollRef} data-scroll>
-        {days.map((day) => (
-          <DaySection
-            key={day}
-            day={day}
-            today={today}
-            items={compareDays(day, today) > 0 ? upcomingDayItems(snap, day) : dayItems(snap, day, today, index)}
-            events={events.filter((e) => eventOnDay(e, day))}
-            now={now}
-          />
-        ))}
-        <div class="days-tail" aria-hidden="true" />
-      </div>
+      {!ahead && (
+        <div class="days paper" data-paper={snap.settings.paperMain} ref={scrollRef} data-scroll>
+          {days.map((day) => (
+            <DaySection
+              key={day}
+              day={day}
+              today={today}
+              items={dayItems(snap, day, today, index)}
+              events={events.filter((e) => eventOnDay(e, day))}
+              now={now}
+            />
+          ))}
+          <div class="days-tail" aria-hidden="true" />
+        </div>
+      )}
     </div>
   );
 }
@@ -198,7 +201,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
 
   return (
     <section
-      class={`day ${isToday ? 'today' : ''} ${compareDays(props.day, props.today) < 0 ? 'past' : ''} ${compareDays(props.day, props.today) > 0 ? 'ahead' : ''}`}
+      class={`day ${isToday ? 'today' : ''} ${compareDays(props.day, props.today) < 0 ? 'past' : ''}`}
       data-drop={isToday ? 'day' : undefined}
       data-day={props.day}
     >
@@ -298,11 +301,10 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
         state={item.state}
         important={task.important}
         seed={item.key}
-        label={item.state === 'done' ? 'wieder offen' : item.state === 'upcoming' ? 'fällig an diesem Tag' : 'erledigt'}
+        label={item.state === 'done' ? 'wieder offen' : 'erledigt'}
         onClick={(e) => {
           e.stopPropagation();
-          // a day still to come is only looked at, not ticked
-          if (item.state !== 'upcoming') store.toggleDone(task.id, props.day);
+          store.toggleDone(task.id, props.day);
         }}
       />
       <span

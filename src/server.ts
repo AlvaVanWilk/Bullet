@@ -8,6 +8,8 @@ export interface User {
   email: string;
   name: string;
   google: boolean;
+  /** May let family members in (Einstellungen → Familie). */
+  admin?: boolean;
 }
 
 export type ServerState =

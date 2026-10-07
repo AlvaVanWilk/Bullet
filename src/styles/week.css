@@ -322,5 +322,7 @@
 .day-title.st-rahmen .today-note { top: 18px; }
 .day-events li > * { position: relative; top: 3px; }
 
-/* days still to come, looked at in advance */
-.day.ahead .day-events, .day.ahead .day-specials { opacity: 0.85; }
+/* a week still to come: only its head, with room for everything in the boxes */
+.week.ahead .week-head { flex: 1 1 auto; overflow-y: auto; }
+.week.ahead .week-head::after { display: none; }
+.week.ahead .wbox .handbox-body { max-height: none; }
