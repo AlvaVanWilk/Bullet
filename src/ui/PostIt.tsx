@@ -7,8 +7,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CATEGORY_COLORS, categoryColor } from '../lib/colors';
 import { eventStartDay } from '../google/events';
 import { compareDays, parseDay, shortWeekday, timeLabel, type DayKey } from '../lib/dates';
-import { linkedTasks, liveCategories, seriesKey, specialLinkKey } from '../lib/logic';
-import type { CalEvent, Special, TaskLink } from '../lib/model';
+import { linkedTasks, liveCategories, prepSuggestions, seriesKey, specialLinkKey } from '../lib/logic';
+import type { CalEvent, Special, Task, TaskLink } from '../lib/model';
 import { store } from '../store/store';
 import { ui, useStore, useToday, useUi, type PostItTarget } from './state';
 
@@ -228,18 +228,27 @@ function shortDate(day: DayKey): string {
 
 /**
  * What has to be done before an appointment. Each line becomes an ordinary task
- * in the master list, with the appointment's day as its deadline.
+ * in the master list, with the appointment's day as its deadline. While typing,
+ * matching tasks that already exist are offered; picking one adds it instead.
  */
 function PrepList(props: { link: TaskLink }) {
   const snap = useStore();
   const today = useToday();
   const [text, setText] = useState('');
+  const [pick, setPick] = useState(-1);
   const latest = useRef(text);
   latest.current = text;
   const add = (value: string) => store.addTask(value, null, { deadline: props.link.day, link: props.link });
   // As everywhere on the post-its, what was written counts when the note goes away.
   useEffect(() => () => { add(latest.current); }, []);
   const tasks = linkedTasks(snap, props.link.key);
+  const found = prepSuggestions(snap, props.link.key, text, Date.now());
+  const done = () => { setText(''); setPick(-1); };
+  const take = (t: Task) => { store.linkTask(t.id, props.link); done(); };
+  const submit = () => {
+    if (pick >= 0 && found[pick]) take(found[pick]);
+    else if (add(text)) done();
+  };
   // Once the day is over there is nothing left to prepare (a new task would be overdue at once).
   const over = compareDays(props.link.day, today) < 0;
   if (over && !tasks.length) return null;
@@ -267,14 +276,38 @@ function PrepList(props: { link: TaskLink }) {
           value={text}
           placeholder={tasks.length ? 'noch etwas …' : 'Was ist vorher zu tun?'}
           enterKeyHint="enter"
-          onInput={(e) => setText((e.target as HTMLInputElement).value)}
+          autoComplete="off"
+          onInput={(e) => { setText((e.target as HTMLInputElement).value); setPick(-1); }}
           onKeyDown={(e) => {
+            if (e.key === 'ArrowDown') { e.preventDefault(); setPick((p) => Math.min(found.length - 1, p + 1)); }
+            if (e.key === 'ArrowUp') { e.preventDefault(); setPick((p) => Math.max(-1, p - 1)); }
             if (e.key !== 'Enter' || e.isComposing) return;
             e.preventDefault();
-            if (add(text)) setText('');
+            submit();
           }}
           aria-label="Aufgabe zum Vorbereiten"
         />
+      )}
+      {!over && found.length > 0 && (
+        <ul class="prep-suggest" role="listbox">
+          <li class={`suggest-new ${pick === -1 ? 'on' : ''}`} onPointerDown={(e) => { e.preventDefault(); if (add(text)) done(); }}>
+            <span class="suggest-plus">+</span> „{text.trim()}“ neu anlegen
+          </li>
+          <li class="suggest-head">schon da – antippen zum Dazunehmen:</li>
+          {found.map((t, i) => (
+            <li
+              key={t.id}
+              role="option"
+              aria-selected={pick === i}
+              class={`suggest-item ${pick === i ? 'on' : ''}`}
+              // pointerdown keeps the keyboard open for the next one
+              onPointerDown={(e) => { e.preventDefault(); take(t); }}
+            >
+              <span>{t.important && <span class="bang">!</span>}{t.text}</span>
+              <small>{whereFrom(t)}</small>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -396,6 +429,12 @@ function SpecialNote(props: { id: string | null; date?: string; close: () => voi
       </div>
     </div>
   );
+}
+
+/** Where a suggested task stands now: for another appointment, in a category, or just in the list. */
+function whereFrom(t: Task): string {
+  if (t.link) return `für: ${t.link.title}`;
+  return store.category(t.categoryId)?.name ?? 'Masterliste';
 }
 
 /** A yearly special is prepared anew each year, so the link names the day it falls on. */

@@ -20,6 +20,14 @@ describe('store', () => {
     expect(s.addTask('   ', null, { deadline: link.day, link })).toBeNull();
   });
 
+  it('takes an existing task up for an appointment', () => {
+    const s = makeStore();
+    const link = { key: 'cal|ev1', title: 'Zahnarzt', day: '2026-10-13' };
+    const t = s.addTask('Bonusheft suchen')!;
+    s.linkTask(t.id, link);
+    expect(s.task(t.id)).toMatchObject({ link, deadline: '2026-10-13' });
+  });
+
   it('copies a task into a day only once', () => {
     const s = makeStore();
     const t = s.addTask('Brot kaufen')!;

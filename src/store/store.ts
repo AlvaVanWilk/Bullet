@@ -5,10 +5,10 @@ import { createStore, get, set } from 'idb-keyval';
 import { dayKey, type DayKey } from '../lib/dates';
 import { newId, stableId } from '../lib/ids';
 import { nextFreeColor } from '../lib/colors';
-import type { Snapshot } from '../lib/logic';
+import { deadlineFor, type Snapshot } from '../lib/logic';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
-  type AnyRecord, type Category, type Entry, type Hide, type Settings, type Special, type Task,
+  type AnyRecord, type Category, type Entry, type Hide, type Settings, type Special, type Task, type TaskLink,
 } from '../lib/model';
 import { STORAGE_PREFIX } from '../stage';
 import { isNewer } from './merge';
@@ -155,6 +155,13 @@ export class Store {
     if (!task) return;
     this.put({ ...task, ...patch });
     this.changed(true);
+  }
+
+  /** An existing task now prepares this appointment (see deadlineFor). */
+  linkTask(id: string, link: TaskLink) {
+    const task = this.task(id);
+    if (!task) return;
+    this.updateTask(id, { link, deadline: deadlineFor(task, link) });
   }
 
   /** Tick or untick a task on a given day. Ticking the box of the day it is done on undoes it. */

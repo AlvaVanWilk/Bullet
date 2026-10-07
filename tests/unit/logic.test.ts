@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  archive, dayItems, entriesByTask, hiddenKeys, isOpenToday, linkedTasks, masterTasks, openLinkCounts, specialLinkKey, specialsOn, suggestions,
-  visibleEvents, weekDeadlines, type Snapshot,
+  archive, dayItems, deadlineFor, entriesByTask, hiddenKeys, isOpenToday, linkedTasks, masterTasks, openLinkCounts, prepSuggestions,
+  specialLinkKey, specialsOn, suggestions, visibleEvents, weekDeadlines, type Snapshot,
 } from '../../src/lib/logic';
 import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Special, type Task } from '../../src/lib/model';
 
@@ -180,6 +180,25 @@ describe('tasks that prepare an appointment', () => {
 
   it('keeps each year of a yearly special apart', () => {
     expect(specialLinkKey('sp1', '2026-10-10')).not.toBe(specialLinkKey('sp1', '2027-10-10'));
+  });
+
+  it('offers matching open tasks that do not belong to this appointment yet', () => {
+    const s = snap([
+      task('a', { text: 'Fragen aufschreiben', link: zahnarzt }),
+      task('b', { text: 'Bonusheft suchen' }),
+      task('c', { text: 'Geschenk suchen', link: party }),
+      task('d', { text: 'Rezept suchen', doneDay: TODAY, doneAt: NOW }),
+      task('e', { text: 'Suchen: Ladekabel' }),
+    ]);
+    expect(prepSuggestions(s, zahnarzt.key, 'such', NOW).map((t) => t.id)).toEqual(['e', 'b', 'c']);
+    expect(prepSuggestions(s, zahnarzt.key, 'fragen', NOW)).toEqual([]);
+    expect(prepSuggestions(s, zahnarzt.key, 's', NOW)).toEqual([]);
+  });
+
+  it('makes a task taken up due by the appointment, unless it was due earlier anyway', () => {
+    expect(deadlineFor(task('a'), zahnarzt)).toBe('2026-10-13');
+    expect(deadlineFor(task('a', { deadline: '2026-10-20' }), zahnarzt)).toBe('2026-10-13');
+    expect(deadlineFor(task('a', { deadline: '2026-10-09' }), zahnarzt)).toBe('2026-10-09');
   });
 
   it('finds finished ones by the appointment', () => {

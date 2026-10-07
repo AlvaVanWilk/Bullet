@@ -2,7 +2,7 @@
 // rules can be tested without any interface.
 
 import { addDays, compareDays, daySearchText, parseDay, weekDays, type DayKey } from './dates';
-import type { CalEvent, Category, Entry, Hide, Settings, Special, Task } from './model';
+import type { CalEvent, Category, Entry, Hide, Settings, Special, Task, TaskLink } from './model';
 
 export interface Snapshot {
   tasks: Task[];
@@ -179,10 +179,20 @@ export function archive(s: Snapshot, query: string, onDay?: DayKey | null): Arch
 
 /** Existing tasks that match what is being typed in a category page. */
 export function suggestions(s: Snapshot, categoryId: string, text: string, now: number, limit = 6): Task[] {
+  return matching(s, text, now, (t) => t.categoryId === categoryId, limit);
+}
+
+/** Existing tasks that match what is being typed under "Vorbereiten" of an appointment. */
+export function prepSuggestions(s: Snapshot, linkKey: string, text: string, now: number, limit = 5): Task[] {
+  return matching(s, text, now, (t) => t.link?.key === linkKey, limit);
+}
+
+/** Open tasks of the master list containing the typed text, those starting with it first. */
+function matching(s: Snapshot, text: string, now: number, there: (t: Task) => boolean, limit: number): Task[] {
   const q = text.trim().toLowerCase();
   if (q.length < 2) return [];
   return masterTasks(s, now)
-    .filter((t) => t.doneAt == null && t.categoryId !== categoryId && t.text.toLowerCase().includes(q))
+    .filter((t) => t.doneAt == null && !there(t) && t.text.toLowerCase().includes(q))
     .sort((a, b) => {
       const as = a.text.toLowerCase().startsWith(q) ? 0 : 1;
       const bs = b.text.toLowerCase().startsWith(q) ? 0 : 1;
@@ -210,6 +220,11 @@ export function visibleEvents(events: CalEvent[], hidden: Set<string>): CalEvent
 
 export function specialLinkKey(specialId: string, day: DayKey): string {
   return `special|${specialId}|${day}`;
+}
+
+/** A task taken up for an appointment is due by the appointment's day; an earlier deadline stays. */
+export function deadlineFor(task: Task, link: TaskLink): DayKey {
+  return task.deadline && compareDays(task.deadline, link.day) < 0 ? task.deadline : link.day;
 }
 
 export function linkedTasks(s: Snapshot, key: string): Task[] {

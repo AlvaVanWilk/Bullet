@@ -83,6 +83,22 @@
   outline: none;
 }
 .prep-new::placeholder { color: var(--ink-faint); }
+.prep-suggest {
+  margin-top: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.4);
+  font-size: 18px;
+}
+.prep-suggest li { padding: 2px 8px; border-radius: 6px; line-height: 24px; }
+.prep-suggest .on { background: rgba(43, 43, 48, 0.08); }
+.prep-suggest .suggest-item { align-items: baseline; }
+.prep-suggest .suggest-item small {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .note-row { display: flex; align-items: center; gap: 10px; }
 .note-label { font-family: var(--clean); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
 .note-bang { display: inline-flex; align-items: center; gap: 6px; font-size: 19px; color: var(--ink-soft); padding: 2px 0; }
