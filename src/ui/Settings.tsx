@@ -1,14 +1,18 @@
-// Settings, as a sheet laid over the page.
+// Settings, on a sheet that lies beside the page instead of over it: it can be
+// dragged anywhere by its head, and the page stays visible and usable, so every
+// change shows at once.
 
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { GoogleCalendar } from '../google/calendar';
 import { cachedCalendars, calendarName, loadCalendars, roleOf } from '../google/events';
 import { FONTS } from '../lib/fonts';
-import type { CalendarRole, ColorMode, DayFormat, DayStyle, PaperStyle, ReminderMode } from '../lib/model';
+import type { CalendarRole, ColorMode, DayFormat, DayStyle, PaperStyle, ReminderMode, Settings } from '../lib/model';
 import { api, ApiError, signIn, signOut } from '../server';
 import { STAGE } from '../stage';
+import { readLocal, writeLocal } from '../store/local';
 import { store } from '../store/store';
-import { ui, useStore, useUi } from './state';
+import { DayHeading } from './DayHeading';
+import { ui, useStore, useToday, useUi } from './state';
 import { useGoogleStatus, useServerState } from './useEvents';
 
 function Choice<T extends string>(props: { value: T; options: [T, string][]; onChange: (v: T) => void; class?: string }) {
@@ -28,6 +32,17 @@ function Choice<T extends string>(props: { value: T; options: [T, string][]; onC
   );
 }
 
+/** One thing to set: a name, the choice, and a word of explanation if needed. */
+function Field(props: { label: string; note?: preact.ComponentChildren; children?: preact.ComponentChildren }) {
+  return (
+    <section class="field">
+      <h3 class="field-label">{props.label}</h3>
+      {props.children}
+      {props.note && <p class="set-note">{props.note}</p>}
+    </section>
+  );
+}
+
 const PAPERS: [PaperStyle, string][] = [['grid', 'kariert'], ['lines', 'liniert'], ['dots', 'gepunktet']];
 const DAY_STYLES: [DayStyle, string][] = [
   ['marker', 'grauer Marker'], ['woche', 'Marker, jede Woche andere Farbe'], ['linie', 'gerader Strich'],
@@ -35,185 +50,333 @@ const DAY_STYLES: [DayStyle, string][] = [
 ];
 const ROLES: [CalendarRole, string][] = [['termine', 'Termine'], ['besonderes', 'Besonderes'], ['aus', 'aus']];
 
+type Tab = 'aussehen' | 'tage' | 'kalender' | 'konto';
+const TABS: [Tab, string][] = [['aussehen', 'Aussehen'], ['tage', 'Tage und Liste'], ['kalender', 'Kalender'], ['konto', 'Konto']];
+/** Opening the settings again shows the tab that was open last. */
+let lastTab: Tab = 'aussehen';
+
 export function SettingsSheet() {
   const state = useUi();
+  if (!state.settingsOpen) return null;
+  return <SettingsPanel close={() => ui.set({ settingsOpen: false })} />;
+}
+
+function SettingsPanel(props: { close: () => void }) {
+  const snap = useStore();
+  const [tab, setTab] = useState<Tab>(lastTab);
+  const move = useMovable();
+  const s = snap.settings;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') props.close(); };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, []);
+
+  return (
+    <div
+      ref={move.ref}
+      class={`settings-panel sheet-card paper ${move.moving ? 'moving' : ''}`}
+      data-paper="grid"
+      role="dialog"
+      aria-label="Einstellungen"
+      style={move.style}
+    >
+      <header class="card-head movable" {...move.grip}>
+        <span class="grip" aria-hidden="true" />
+        <h2>Einstellungen</h2>
+        <button type="button" class="ghost-btn close-x" onClick={props.close} aria-label="Schließen">✕</button>
+      </header>
+      <nav class="set-tabs" role="tablist">
+        {TABS.map(([t, label]) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tab === t}
+            class={`set-tab ${tab === t ? 'on' : ''}`}
+            onClick={() => { lastTab = t; setTab(t); }}
+          >{label}</button>
+        ))}
+      </nav>
+      <div class="card-body" data-scroll role="tabpanel">
+        {tab === 'aussehen' && <LookTab s={s} />}
+        {tab === 'tage' && <DaysTab s={s} />}
+        {tab === 'kalender' && <CalendarTab s={s} />}
+        {tab === 'konto' && <AccountTab close={props.close} />}
+      </div>
+    </div>
+  );
+}
+
+// --- moving the sheet aside --------------------------------------------------------------
+
+const EDGE = 10;
+type Pos = { x: number; y: number };
+
+/** Where the sheet lies; dragged by its head, kept inside the window, remembered on this device. */
+function useMovable() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<Pos | null>(null);
+  const [moving, setMoving] = useState(false);
+  const latest = useRef(pos);
+  latest.current = pos;
+  const grab = useRef<{ id: number; dx: number; dy: number } | null>(null);
+
+  const inside = (p: Pos): Pos => {
+    const el = ref.current;
+    const w = el?.offsetWidth ?? 0;
+    const h = el?.offsetHeight ?? 0;
+    return {
+      x: Math.round(Math.max(EDGE, Math.min(p.x, innerWidth - w - EDGE))),
+      y: Math.round(Math.max(EDGE, Math.min(p.y, innerHeight - h - EDGE))),
+    };
+  };
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // first time on the right, beside the days, whose headings stay in view
+    setPos(inside(readLocal<Pos | null>('settings-pos', null) ?? { x: innerWidth - el.offsetWidth - 16, y: 16 }));
+    const onResize = () => setPos((p) => p && inside(p));
+    addEventListener('resize', onResize);
+    return () => removeEventListener('resize', onResize);
+  }, []);
+
+  const end = (e: PointerEvent) => {
+    if (!grab.current || grab.current.id !== e.pointerId) return;
+    grab.current = null;
+    setMoving(false);
+    if (latest.current) writeLocal('settings-pos', latest.current);
+  };
+
+  return {
+    ref,
+    moving,
+    style: pos ? { left: `${pos.x}px`, top: `${pos.y}px` } : { left: '-9999px', top: '0px' },
+    grip: {
+      onPointerDown: (e: PointerEvent) => {
+        if (!pos || (e.target as HTMLElement).closest('button')) return;
+        e.preventDefault();
+        grab.current = { id: e.pointerId, dx: e.clientX - pos.x, dy: e.clientY - pos.y };
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        setMoving(true);
+      },
+      onPointerMove: (e: PointerEvent) => {
+        const g = grab.current;
+        if (!g || g.id !== e.pointerId) return;
+        setPos(inside({ x: e.clientX - g.dx, y: e.clientY - g.dy }));
+      },
+      onPointerUp: end,
+      onPointerCancel: end,
+    },
+  };
+}
+
+// --- the tabs ------------------------------------------------------------------------------
+
+function LookTab(props: { s: Settings }) {
+  const s = props.s;
+  return (
+    <>
+      <Field label="Papier">
+        <div class="set-row"><span>Seitenleiste</span>
+          <Choice value={s.paperSidebar} options={PAPERS} class="papers" onChange={(v) => store.updateSettings({ paperSidebar: v })} />
+        </div>
+        <div class="set-row"><span>Hauptseite</span>
+          <Choice value={s.paperMain} options={PAPERS} class="papers" onChange={(v) => store.updateSettings({ paperMain: v })} />
+        </div>
+      </Field>
+      <Field label="Handschrift">
+        <div class="font-grid" role="radiogroup">
+          {FONTS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              role="radio"
+              aria-checked={s.font === f.key}
+              class={`font-opt ${s.font === f.key ? 'on' : ''}`}
+              style={{ fontFamily: `${f.family}, var(--hand)`, fontSize: `${f.size}px` }}
+              onClick={() => store.updateSettings({ font: f.key })}
+            >
+              Brot kaufen
+              <small>{f.label}</small>
+            </button>
+          ))}
+        </div>
+      </Field>
+      <Field label="Kategorien in der Masterliste">
+        <Choice<ColorMode>
+          value={s.colorMode}
+          options={[['text', 'als Schriftfarbe'], ['marker', 'mit Textmarker']]}
+          onChange={(v) => store.updateSettings({ colorMode: v })}
+        />
+      </Field>
+    </>
+  );
+}
+
+function DaysTab(props: { s: Settings }) {
+  const s = props.s;
+  const today = useToday();
+  const pick = (v: DayStyle) => store.updateSettings({ dayStyle: v });
+  return (
+    <>
+      <Field label="Tage schreiben als">
+        <Choice<DayFormat>
+          value={s.dayFormat}
+          options={[['zahl', '6 Dienstag'], ['tag', 'Dienstag 6']]}
+          class="caps"
+          onChange={(v) => store.updateSettings({ dayFormat: v })}
+        />
+      </Field>
+      <Field label="Tage hervorheben mit">
+        <div class="day-samples" role="radiogroup">
+          {DAY_STYLES.map(([v, label]) => (
+            <div
+              key={v}
+              role="radio"
+              tabIndex={0}
+              aria-checked={s.dayStyle === v}
+              aria-label={label}
+              class={`day-sample ${s.dayStyle === v ? 'on' : ''}`}
+              onClick={() => pick(v)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(v); } }}
+            >
+              <div class="day-sample-ink" aria-hidden="true">
+                <DayHeading day={today} isToday={false} settings={{ dayFormat: s.dayFormat, dayStyle: v }} />
+              </div>
+              <small>{label}</small>
+            </div>
+          ))}
+        </div>
+      </Field>
+      <Field
+        label="Erledigtes verschwindet aus der Masterliste nach"
+        note={
+          <button type="button" class="link quiet" onClick={() => ui.set({ settingsOpen: false, archiveOpen: true })}>
+            Alle erledigten Aufgaben ansehen (Archiv)
+          </button>
+        }
+      >
+        <div class="stepper">
+          <button type="button" class="ghost-btn" aria-label="weniger" onClick={() => store.updateSettings({ hideDoneAfterDays: Math.max(1, s.hideDoneAfterDays - 1) })}>–</button>
+          <span>{s.hideDoneAfterDays} {s.hideDoneAfterDays === 1 ? 'Tag' : 'Tagen'}</span>
+          <button type="button" class="ghost-btn" aria-label="mehr" onClick={() => store.updateSettings({ hideDoneAfterDays: Math.min(90, s.hideDoneAfterDays + 1) })}>+</button>
+        </div>
+      </Field>
+      <Field label="Geräusche" note="Papier beim Blättern der Laschen, Stift beim Durchstreichen.">
+        <Choice<'an' | 'aus'>
+          value={s.sounds ? 'an' : 'aus'}
+          options={[['an', 'an'], ['aus', 'aus']]}
+          onChange={(v) => store.updateSettings({ sounds: v === 'an' })}
+        />
+      </Field>
+    </>
+  );
+}
+
+function CalendarTab(props: { s: Settings }) {
+  const s = props.s;
   const snap = useStore();
   const server = useServerState();
   const google = useGoogleStatus();
   const [calendars, setCalendars] = useState<GoogleCalendar[]>(cachedCalendars());
-  const s = snap.settings;
   const hides = snap.hides.filter((h) => !h.deleted).sort((a, b) => b.createdAt - a.createdAt);
 
   useEffect(() => {
-    if (!state.settingsOpen || server.mode !== 'signedIn') return;
+    if (server.mode !== 'signedIn') return;
     loadCalendars().then(setCalendars).catch(() => { /* keep the cached list */ });
-  }, [state.settingsOpen, server.mode]);
-
-  if (!state.settingsOpen) return null;
-  const close = () => ui.set({ settingsOpen: false });
+  }, [server.mode]);
 
   return (
-    <div class="overlay" onPointerDown={(e) => { if (e.target === e.currentTarget) close(); }}>
-      <div class="sheet-card paper" data-paper="grid" role="dialog" aria-label="Einstellungen">
-        <header class="card-head">
-          <h2>Einstellungen</h2>
-          <button type="button" class="ghost-btn close-x" onClick={close} aria-label="Schließen">✕</button>
-        </header>
-        <div class="card-body" data-scroll>
-          <section class="set">
-            <h3>Papier</h3>
-            <div class="set-row"><span>Seitenleiste</span>
-              <Choice value={s.paperSidebar} options={PAPERS} class="papers" onChange={(v) => store.updateSettings({ paperSidebar: v })} />
-            </div>
-            <div class="set-row"><span>Hauptseite</span>
-              <Choice value={s.paperMain} options={PAPERS} class="papers" onChange={(v) => store.updateSettings({ paperMain: v })} />
-            </div>
-          </section>
-
-          <section class="set">
-            <h3>Schrift und Farben</h3>
-            <div class="set-row stack"><span>Handschrift</span>
-              <div class="font-grid" role="radiogroup">
-                {FONTS.map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    role="radio"
-                    aria-checked={s.font === f.key}
-                    class={`font-opt ${s.font === f.key ? 'on' : ''}`}
-                    style={{ fontFamily: `${f.family}, var(--hand)`, fontSize: `${f.size}px` }}
-                    onClick={() => store.updateSettings({ font: f.key })}
-                  >
-                    Brot kaufen
-                    <small>{f.label}</small>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div class="set-row"><span>Tage</span>
-              <Choice<DayFormat>
-                value={s.dayFormat}
-                options={[['zahl', '6 Dienstag'], ['tag', 'Dienstag 6']]}
-                class="caps"
-                onChange={(v) => store.updateSettings({ dayFormat: v })}
-              />
-            </div>
-            <div class="set-row stack"><span>Tage hervorheben mit</span>
-              <Choice value={s.dayStyle} options={DAY_STYLES} onChange={(v) => store.updateSettings({ dayStyle: v })} />
-            </div>
-            <div class="set-row"><span>Kategorien in der Masterliste</span>
-              <Choice<ColorMode>
-                value={s.colorMode}
-                options={[['text', 'als Schriftfarbe'], ['marker', 'mit Textmarker']]}
-                onChange={(v) => store.updateSettings({ colorMode: v })}
-              />
-            </div>
-            <div class="set-row"><span>Erledigtes verschwindet nach</span>
-              <div class="stepper">
-                <button type="button" class="ghost-btn" onClick={() => store.updateSettings({ hideDoneAfterDays: Math.max(1, s.hideDoneAfterDays - 1) })}>–</button>
-                <span>{s.hideDoneAfterDays} {s.hideDoneAfterDays === 1 ? 'Tag' : 'Tagen'}</span>
-                <button type="button" class="ghost-btn" onClick={() => store.updateSettings({ hideDoneAfterDays: Math.min(90, s.hideDoneAfterDays + 1) })}>+</button>
-              </div>
-            </div>
-          </section>
-
-          <section class="set">
-            <h3>Geräusche</h3>
-            <div class="set-row"><span>Papier beim Blättern, Stift beim Durchstreichen</span>
-              <Choice<'an' | 'aus'>
-                value={s.sounds ? 'an' : 'aus'}
-                options={[['an', 'an'], ['aus', 'aus']]}
-                onChange={(v) => store.updateSettings({ sounds: v === 'an' })}
-              />
-            </div>
-          </section>
-
-          <section class="set">
-            <h3>Google-Kalender</h3>
-            {server.mode === 'local' && <p class="set-note">In der Vorschau ohne Server gibt es keine Kalenderverbindung; die Termine sind Beispiele.</p>}
-            {server.mode === 'signedIn' && (
-              <>
-                <p class="set-note">
-                  {google === 'reconnect'
-                    ? 'Google möchte neu verbunden werden.'
-                    : `Verbunden mit ${server.user.email}.`}{' '}
-                  <button type="button" class="link" onClick={() => signIn(server.user.email)}>neu verbinden</button>
-                </p>
-                <ul class="cal-list">
-                  {calendars.map((cal) => {
-                    const isBullet = cal.id === s.bulletCalendarId;
-                    return (
-                      <li key={cal.id}>
-                        <span class="cal-dot" style={{ background: cal.backgroundColor ?? '#999' }} />
-                        <span class="cal-name">{calendarName(cal)}</span>
-                        {isBullet
-                          ? <span class="set-note">Deadlines aus Bullet</span>
-                          : (
-                            <Choice
-                              value={roleOf(cal, s)}
-                              options={ROLES}
-                              onChange={(v) => store.updateSettings({ calendars: { ...s.calendars, [cal.id]: v } })}
-                            />
-                          )}
-                      </li>
-                    );
-                  })}
-                  {!calendars.length && <li class="set-note">Kalender werden geladen …</li>}
-                </ul>
-              </>
-            )}
-          </section>
-
-          {hides.length > 0 && (
-            <section class="set">
-              <h3>Ausgeblendete Termine</h3>
-              <ul class="hidden-list">
-                {hides.map((h) => (
-                  <li key={h.id}>
-                    <span class="cal-name">{h.title}</span>
-                    <span class="set-note">{h.when}</span>
-                    <button type="button" class="note-btn" onClick={() => store.unhideEvent(h.id)}>wieder zeigen</button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <section class="set">
-            <h3>Erinnerung an Deadlines</h3>
-            <Choice<ReminderMode>
-              value={s.reminders}
-              options={[['google', 'wie im Kalender „Bullet“ eingestellt'], ['eve', 'immer am Vortag um 18 Uhr']]}
-              onChange={(v) => store.updateSettings({ reminders: v })}
-            />
+    <>
+      <Field label="Google-Kalender">
+        {server.mode === 'local' && <p class="set-note">In der Vorschau ohne Server gibt es keine Kalenderverbindung; die Termine sind Beispiele.</p>}
+        {server.mode === 'signedIn' && (
+          <>
             <p class="set-note">
-              Jede Deadline steht als ganztägiger Termin im Kalender „Bullet“. Für zwei Erinnerungen
-              (am Vortag und am Tag selbst) in Google Kalender unter Einstellungen → Bullet →
-              „Benachrichtigungen für ganztägige Termine“ zum Beispiel „1 Tag vorher um 18:00“ und
-              „Am selben Tag um 08:00“ eintragen. Google lässt eine Erinnerung am selben Tag nur so zu.
+              {google === 'reconnect'
+                ? 'Google möchte neu verbunden werden.'
+                : `Verbunden mit ${server.user.email}.`}{' '}
+              <button type="button" class="link" onClick={() => signIn(server.user.email)}>neu verbinden</button>
             </p>
-          </section>
+            <ul class="cal-list">
+              {calendars.map((cal) => (
+                <li key={cal.id}>
+                  <span class="cal-dot" style={{ background: cal.backgroundColor ?? '#999' }} />
+                  <span class="cal-name">{calendarName(cal)}</span>
+                  {cal.id === s.bulletCalendarId
+                    ? <span class="set-note cal-role">Deadlines aus Bullet</span>
+                    : (
+                      <Choice
+                        class="cal-role"
+                        value={roleOf(cal, s)}
+                        options={ROLES}
+                        onChange={(v) => store.updateSettings({ calendars: { ...s.calendars, [cal.id]: v } })}
+                      />
+                    )}
+                </li>
+              ))}
+              {!calendars.length && <li class="set-note">Kalender werden geladen …</li>}
+            </ul>
+          </>
+        )}
+      </Field>
 
-          {server.mode === 'signedIn' && server.user.admin && <FamilySection />}
+      <Field
+        label="Erinnerung an Deadlines"
+        note={
+          <>
+            Jede Deadline steht als ganztägiger Termin im Kalender „Bullet“. Für zwei Erinnerungen
+            (am Vortag und am Tag selbst) in Google Kalender unter Einstellungen → Bullet →
+            „Benachrichtigungen für ganztägige Termine“ zum Beispiel „1 Tag vorher um 18:00“ und
+            „Am selben Tag um 08:00“ eintragen. Google lässt eine Erinnerung am selben Tag nur so zu.
+          </>
+        }
+      >
+        <Choice<ReminderMode>
+          value={s.reminders}
+          options={[['google', 'wie im Kalender „Bullet“ eingestellt'], ['eve', 'immer am Vortag um 18 Uhr']]}
+          onChange={(v) => store.updateSettings({ reminders: v })}
+        />
+      </Field>
 
-          {server.mode === 'signedIn' && (
-            <section class="set">
-              <h3>Konto</h3>
-              <div class="set-row"><span>{server.user.email}</span>
-                <button type="button" class="note-btn" onClick={() => { close(); void signOut(); }}>abmelden</button>
-              </div>
-            </section>
-          )}
+      <Field label="Ausgeblendete Termine" note={hides.length ? undefined : 'Keine. Einen Termin antippen und „ausblenden“ wählen, dann steht er hier.'}>
+        {hides.length > 0 && (
+          <ul class="hidden-list">
+            {hides.map((h) => (
+              <li key={h.id}>
+                <span class="cal-name">{h.title}</span>
+                <span class="set-note">{h.when}</span>
+                <button type="button" class="note-btn" onClick={() => store.unhideEvent(h.id)}>wieder zeigen</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Field>
+    </>
+  );
+}
 
-          <footer class="set-foot">
-            <button type="button" class="link quiet" onClick={() => ui.set({ settingsOpen: false, archiveOpen: true })}>
-              alle erledigten Aufgaben
-            </button>
-            <span>Bullet {STAGE === 'test' ? '· Testfassung' : ''}</span>
-          </footer>
-        </div>
-      </div>
-    </div>
+function AccountTab(props: { close: () => void }) {
+  const server = useServerState();
+  return (
+    <>
+      {server.mode === 'signedIn'
+        ? (
+          <Field label="Angemeldet">
+            <div class="set-row"><span class="cal-name">{server.user.email}</span>
+              <button type="button" class="note-btn" onClick={() => { props.close(); void signOut(); }}>abmelden</button>
+            </div>
+          </Field>
+        )
+        : <Field label="Konto" note="Diese Vorschau läuft ohne Anmeldung; die Daten bleiben auf diesem Gerät." />}
+      {server.mode === 'signedIn' && server.user.admin && <FamilySection />}
+      <footer class="set-foot">
+        <span>Bullet {STAGE === 'test' ? '· Testfassung' : ''}</span>
+      </footer>
+    </>
   );
 }
 
@@ -244,8 +407,8 @@ function FamilySection() {
   const address = `${location.origin}${location.pathname}`.replace(/^https?:\/\//, '');
 
   return (
-    <section class="set">
-      <h3>Familie</h3>
+    <section class="field">
+      <h3 class="field-label">Familie</h3>
       <p class="set-note">
         Wer hier steht, kann sich mit diesem Google-Konto bei Bullet anmelden, unter {address}.
         Jede Person hat ihre eigene Liste, Woche und ihren eigenen Kalender; niemand sieht die

@@ -36,6 +36,9 @@ Bedienung und Einrichtung: `README.md`.
 - Die Schrift sitzt auf den Punktreihen bzw. Linien: Zeilen sind Vielfache von 28 px,
   die Grundlinie der gewählten Schrift wird gemessen (`src/ui/baseline.ts`).
 - Farben gedeckt und „erwachsen“, nicht knallig.
+- Einstellungen: ein Blatt neben der Seite, nicht davor (kein Abdunkeln), am Kopf
+  verschiebbar, Reiter Aussehen / Tage und Liste / Kalender / Konto. Jede Änderung
+  ist sofort auf der Seite zu sehen.
 - Leise Geräusche: Papier über Papier beim Laschenwechsel, Stift beim Durchstreichen
   (abschaltbar). Post-it: „speichern“, Notizfeld; kein „erledigt“ dort.
 - Termine aus Google lassen sich in Bullet ausblenden, ohne sie in Google zu ändern.

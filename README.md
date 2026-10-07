@@ -37,7 +37,7 @@ sich auch so anfühlt, nur ein bisschen magisch.
 | für einen Termin etwas vorbereiten | Termin (oder Besonderes) in der Wochenübersicht antippen, unter „Vorbereiten“ schreiben, Enter. Die Aufgabe steht ganz normal in der Masterliste und hat den Tag des Termins als Deadline; im Post-it der Aufgabe lässt sie sich ändern. Die kleine Zahl neben dem Termin zeigt, wie viel noch offen ist. Wird der Termin in Google verschoben, bleibt die Deadline, wie sie ist. |
 | einen Termin aus Google nicht mehr sehen | Termin antippen → „ausblenden“ (bei Serien auch „alle Wiederholungen“). In Google bleibt er unverändert; zurückholen unter Einstellungen → Ausgeblendete Termine |
 | alle erledigten Aufgaben, mit Suche nach Wort und Datum | die Lasche „Master“ lange gedrückt halten, oder Einstellungen → ganz unten |
-| Papier, Handschrift (12 zur Auswahl), Tage als „6 Dienstag“ oder „Dienstag 6“ und wie sie hervorgehoben werden, Textmarker statt Schriftfarbe, Geräusche, Kalender | Zahnrad oben rechts |
+| Papier, Handschrift (12 zur Auswahl), Tage als „6 Dienstag“ oder „Dienstag 6“ und wie sie hervorgehoben werden, Textmarker statt Schriftfarbe, Geräusche, Kalender | Zahnrad oben rechts. Das Blatt hat vier Reiter (Aussehen, Tage und Liste, Kalender, Konto) und lässt sich an seinem Kopf beiseiteschieben. Die Seite dahinter zeigt jede Änderung sofort. |
 
 ## Testfassung und echte App
 

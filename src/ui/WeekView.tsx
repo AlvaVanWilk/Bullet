@@ -4,16 +4,17 @@
 
 import { useLayoutEffect, useRef } from 'preact/hooks';
 import { eventEndDay, eventIsPast, eventOnDay, eventStartDay } from '../google/events';
-import { categoryColor, weekMarker } from '../lib/colors';
+import { categoryColor } from '../lib/colors';
 import {
-  addDays, compareDays, dayNumber, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekdayName, weekRangeLabel, type DayKey,
+  addDays, compareDays, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekRangeLabel, type DayKey,
 } from '../lib/dates';
 import {
   dayItems, entriesByTask, hiddenKeys, openLinkCounts, specialLinkKey, specialsOn, visibleEvents, weekDeadlines, weekSpecials,
   type DayItem,
 } from '../lib/logic';
-import type { CalEvent, Settings } from '../lib/model';
+import type { CalEvent } from '../lib/model';
 import { store } from '../store/store';
+import { DayHeading } from './DayHeading';
 import { clickSuppressed, startDrag } from './drag';
 import { Checkbox, HandBox, NoteMark, TaskText } from './ink';
 import { StatusNote } from './StatusNote';
@@ -108,7 +109,7 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
         </nav>
         <div class="week-tools">
           <StatusNote />
-          <button type="button" class="ghost-btn gear" aria-label="Einstellungen" onClick={() => ui.set({ settingsOpen: true })}>
+          <button type="button" class="ghost-btn gear" aria-label="Einstellungen" onClick={() => ui.set({ settingsOpen: !state.settingsOpen })}>
             <GearIcon />
           </button>
         </div>
@@ -259,44 +260,6 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
       </ul>
       {isToday && <div class="drop-hint">Aufgaben aus der Liste hierher ziehen</div>}
     </section>
-  );
-}
-
-/** "6 DIENSTAG" (or "DIENSTAG 6") in small capitals, set off as chosen in the settings. */
-function DayHeading(props: { day: DayKey; isToday: boolean; settings: Settings }) {
-  const num = <span class="dt-num">{dayNumber(props.day)}</span>;
-  const name = <span class="dt-name">{weekdayName(props.day)}</span>;
-  const text = (
-    <span class="dt-text">
-      {props.settings.dayFormat === 'tag' ? <>{name} {num}</> : <>{num} {name}</>}
-    </span>
-  );
-  const note = props.isToday && <span class="today-note">heute</span>;
-  const style = props.settings.dayStyle;
-  if (style === 'rahmen') {
-    return (
-      <h2 class="day-title st-rahmen">
-        <HandBox class="dt-box" seed={`day${props.day}`}>{text}</HandBox>
-        {note}
-      </h2>
-    );
-  }
-  if (style === 'striche') {
-    return (
-      <h2 class="day-title st-striche">
-        <span class="dt-rule" aria-hidden="true" />
-        {text}
-        {note}
-        <span class="dt-rule" aria-hidden="true" />
-      </h2>
-    );
-  }
-  const marker = style === 'woche' ? { '--day-marker': weekMarker(isoWeek(props.day)) } : undefined;
-  return (
-    <h2 class={`day-title st-${style === 'woche' ? 'marker' : style}`} style={marker}>
-      {text}
-      {note}
-    </h2>
   );
 }
 
