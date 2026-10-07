@@ -37,7 +37,9 @@ Bedienung und Einrichtung: `README.md`.
 - Leise Geräusche: Papier über Papier beim Laschenwechsel, Stift beim Durchstreichen
   (abschaltbar). Post-it: „speichern“, Notizfeld; kein „erledigt“ dort.
 - Termine aus Google lassen sich in Bullet ausblenden, ohne sie in Google zu ändern.
-- Vorplanen künftiger Tage ist (vorerst) nicht vorgesehen.
+- Vorplanen künftiger Tage ist (vorerst) nicht vorgesehen. Vorausblättern in kommende
+  Wochen geht, nur zum Ansehen: Termine, Besonderes und fällige Deadlines (gestricheltes,
+  nicht abhakbares Kästchen); dort wird nichts hineingezogen oder abgehakt.
 
 ## Technik
 

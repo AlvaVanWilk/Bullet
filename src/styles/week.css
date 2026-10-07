@@ -321,3 +321,6 @@
 
 .day-title.st-rahmen .today-note { top: 18px; }
 .day-events li > * { position: relative; top: 3px; }
+
+/* days still to come, looked at in advance */
+.day.ahead .day-events, .day.ahead .day-specials { opacity: 0.85; }

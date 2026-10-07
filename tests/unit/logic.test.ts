@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { archive, dayItems, entriesByTask, hiddenKeys, isOpenToday, masterTasks, specialsOn, suggestions, visibleEvents, weekDeadlines, type Snapshot } from '../../src/lib/logic';
+import { archive, dayItems, entriesByTask, hiddenKeys, isOpenToday, masterTasks, specialsOn, suggestions, upcomingDayItems, visibleEvents, weekDeadlines, type Snapshot } from '../../src/lib/logic';
 import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Special, type Task } from '../../src/lib/model';
 
 const DAY = 86400000;
@@ -140,5 +140,13 @@ describe('hidden appointments', () => {
   it('finds finished tasks by their note', () => {
     const s = snap([task('n', { text: 'Anruf', note: 'Termin bei Frau Berger', doneDay: TODAY, doneAt: NOW })]);
     expect(archive(s, 'berger').length).toBe(1);
+  });
+});
+
+describe('looking ahead', () => {
+  it('shows a deadline on the day it is due, as long as it is open', () => {
+    const s = snap([task('d', { deadline: '2026-10-13' }), task('x', { deadline: '2026-10-13', doneAt: NOW, doneDay: TODAY }), task('y', { deadline: '2026-10-14' })]);
+    expect(upcomingDayItems(s, '2026-10-13').map((i) => `${i.task.id}:${i.state}`)).toEqual(['d:upcoming']);
+    expect(upcomingDayItems(s, '2026-10-12')).toEqual([]);
   });
 });

@@ -16,13 +16,14 @@ export interface Snapshot {
 const DAY_MS = 86400000;
 
 /**
+ * upcoming    a deadline on a day still to come (looking ahead; cannot be ticked there)
  * open        empty box (today)
  * done        filled box, done on this day
  * doneBefore  the task was done on an earlier day
  * migrated    ">" in the box: the task went on to a later day
  * dropped     a line through the box: left undone, not carried on
  */
-export type BoxState = 'open' | 'done' | 'doneBefore' | 'migrated' | 'dropped';
+export type BoxState = 'open' | 'done' | 'doneBefore' | 'migrated' | 'dropped' | 'upcoming';
 
 export interface DayItem {
   key: string;
@@ -108,6 +109,14 @@ export function dayItems(s: Snapshot, day: DayKey, today: DayKey, index = entrie
       return [{ key: `e-${entry.id}`, task, kind: 'entry' as const, state: entryState(task, entry, today, later), entry }];
     });
   return [...deadlines, ...entries];
+}
+
+/** A day still to come, looked at in advance: only the deadlines due on it. */
+export function upcomingDayItems(s: Snapshot, day: DayKey): DayItem[] {
+  return s.tasks
+    .filter((t) => !t.deleted && t.deadline === day && t.doneAt == null)
+    .sort(byCreated)
+    .map((task) => ({ key: `d-${task.id}`, task, kind: 'deadline' as const, state: 'upcoming' as const }));
 }
 
 /** Whether the task stands open in today's page: the small dot in the master list. */

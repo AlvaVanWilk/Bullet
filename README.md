@@ -31,7 +31,7 @@ sich auch so anfühlt, nur ein bisschen magisch.
 | Farbe einer Kategorie | auf den Farbklecks vor ihrem Namen tippen |
 | abhaken | Kästchen im Tag antippen (geht auch nachträglich in früheren Tagen und Wochen) |
 | unerledigte Aufgabe von gestern weitertragen | aus dem alten Tag in heute ziehen; im alten Tag steht dann „>“ |
-| frühere Wochen | Pfeile neben der Kalenderwoche |
+| frühere und kommende Wochen ansehen | Pfeile neben der Kalenderwoche, „heute“ führt zurück |
 | Besonderes eintragen (z. B. Geburtstag, jährlich) | „+“ an der Box „Besonderes“ |
 | einen Termin aus Google nicht mehr sehen | Termin antippen → „ausblenden“ (bei Serien auch „alle Wiederholungen“). In Google bleibt er unverändert; zurückholen unter Einstellungen → Ausgeblendete Termine |
 | alle erledigten Aufgaben, mit Suche nach Wort und Datum | die Lasche „Master“ lange gedrückt halten, oder Einstellungen → ganz unten |

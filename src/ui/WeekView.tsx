@@ -9,7 +9,7 @@ import {
   addDays, compareDays, dayNumber, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekdayName, weekRangeLabel, type DayKey,
 } from '../lib/dates';
 import {
-  dayItems, entriesByTask, hiddenKeys, specialsOn, visibleEvents, weekDeadlines, weekSpecials, type DayItem,
+  dayItems, entriesByTask, hiddenKeys, specialsOn, upcomingDayItems, visibleEvents, weekDeadlines, weekSpecials, type DayItem,
 } from '../lib/logic';
 import type { CalEvent, Settings } from '../lib/model';
 import { store } from '../store/store';
@@ -19,6 +19,9 @@ import { StatusNote } from './StatusNote';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { useWeekEvents } from './useEvents';
 
+/** How far ahead the weeks can be looked at. */
+const MAX_WEEKS_AHEAD = 52;
+
 export function WeekView() {
   const today = useToday();
   const state = useUi();
@@ -26,6 +29,7 @@ export function WeekView() {
   const now = useNow();
   const monday = addDays(mondayOf(today), state.weekOffset * 7);
   const current = state.weekOffset === 0;
+  // This week up to today; earlier and later weeks completely.
   const days = weekDays(monday).filter((d) => !current || compareDays(d, today) <= 0);
   const events = visibleEvents(useWeekEvents(monday), hiddenKeys(snap.hides));
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -49,7 +53,7 @@ export function WeekView() {
             key={day}
             day={day}
             today={today}
-            items={dayItems(snap, day, today, index)}
+            items={compareDays(day, today) > 0 ? upcomingDayItems(snap, day) : dayItems(snap, day, today, index)}
             events={events.filter((e) => eventOnDay(e, day))}
             now={now}
           />
@@ -79,14 +83,14 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
         <span class="week-range">{weekRangeLabel(props.monday)}</span>
         <nav class="week-nav" aria-label="Wochen">
           <button type="button" class="ghost-btn" onClick={() => ui.set({ weekOffset: state.weekOffset - 1 })} aria-label="Woche davor">‹</button>
-          {state.weekOffset < 0 && (
+          {state.weekOffset !== 0 && (
             <button type="button" class="ghost-btn today-btn" onClick={() => ui.set({ weekOffset: 0 })}>heute</button>
           )}
           <button
             type="button"
             class="ghost-btn"
-            disabled={state.weekOffset >= 0}
-            onClick={() => ui.set({ weekOffset: Math.min(0, state.weekOffset + 1) })}
+            disabled={state.weekOffset >= MAX_WEEKS_AHEAD}
+            onClick={() => ui.set({ weekOffset: Math.min(MAX_WEEKS_AHEAD, state.weekOffset + 1) })}
             aria-label="Woche danach"
           >›</button>
         </nav>
@@ -194,7 +198,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
 
   return (
     <section
-      class={`day ${isToday ? 'today' : ''} ${compareDays(props.day, props.today) < 0 ? 'past' : ''}`}
+      class={`day ${isToday ? 'today' : ''} ${compareDays(props.day, props.today) < 0 ? 'past' : ''} ${compareDays(props.day, props.today) > 0 ? 'ahead' : ''}`}
       data-drop={isToday ? 'day' : undefined}
       data-day={props.day}
     >
@@ -294,10 +298,11 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
         state={item.state}
         important={task.important}
         seed={item.key}
-        label={item.state === 'done' ? 'wieder offen' : 'erledigt'}
+        label={item.state === 'done' ? 'wieder offen' : item.state === 'upcoming' ? 'fällig an diesem Tag' : 'erledigt'}
         onClick={(e) => {
           e.stopPropagation();
-          store.toggleDone(task.id, props.day);
+          // a day still to come is only looked at, not ticked
+          if (item.state !== 'upcoming') store.toggleDone(task.id, props.day);
         }}
       />
       <span

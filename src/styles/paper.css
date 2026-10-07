@@ -180,6 +180,9 @@
 .cb-fill.on path { stroke-dashoffset: 0; }
 .cb-mark { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .cb:active svg { transform: scale(0.9); }
+.cb-upcoming { cursor: default; }
+.cb-upcoming .cb-frame { stroke-dasharray: 2.5 2.5; opacity: 0.6; }
+.cb-upcoming:active svg { transform: none; }
 
 .note-mark {
   flex: none;
