@@ -26,6 +26,7 @@ sich auch so anfühlt, nur ein bisschen magisch.
 | --- | --- |
 | Aufgabe anlegen | unten in der Masterliste schreiben, Enter |
 | Aufgabe bearbeiten (Text, Notiz, „!“, Deadline, Kategorie, löschen) | Aufgabe antippen, dann klebt ein Post-it daneben; „speichern“ oder daneben tippen |
+| eine Deadline von heute auf morgen schieben | Aufgabe im Tag antippen → „> auf morgen schieben“. Heute steht dann „>“ im Kästchen, die Aufgabe ist blass und hat keinen Punkt in der Masterliste; morgen ist sie wie gewohnt wieder da. Die Deadline selbst bleibt, wie sie ist. Noch einmal tippen (oder die Aufgabe doch in heute ziehen) macht es rückgängig. |
 | in den heutigen Tag schreiben | auf der gestrichelten Linie unter heute schreiben, Enter: Die Aufgabe steht dann im Tag und in der Masterliste. Beim Tippen erscheinen passende Aufgaben aus der Liste, antippen schreibt sie hinein. Oder: Aufgabe kurz gedrückt halten und in den heutigen Tag ziehen; das geht auch mit Deadlines aus der Wochenübersicht (früher erledigen, die Deadline bleibt). In anderen Wochen auf den Knopf „heute“ ziehen. |
 | in eine Kategorie legen | Kategorie öffnen (Seite rechts), Aufgabe aus der Masterliste hineinziehen, oder oben in der Kategorie tippen und eine vorgeschlagene Aufgabe wählen |
 | Farbe einer Kategorie | auf den Farbklecks vor ihrem Namen tippen |

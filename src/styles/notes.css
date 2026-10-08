@@ -122,6 +122,10 @@
 .note-bang .bang { opacity: 0.35; transition: opacity 0.2s, transform 0.2s; }
 .note-bang.on { color: var(--red); }
 .note-bang.on .bang { opacity: 1; transform: rotate(-7deg) scale(1.15); }
+/* pushing a deadline of today on to tomorrow: the ">" of the box */
+.note-defer .defer-mark { font-size: 22px; line-height: 1; opacity: 0.35; transition: opacity 0.2s; }
+.note-defer.on { color: var(--ink); }
+.note-defer.on .defer-mark { opacity: 1; }
 .note-date input[type='date'] {
   font-family: var(--clean);
   font-size: 15px;

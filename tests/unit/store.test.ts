@@ -110,6 +110,19 @@ describe('store', () => {
     expect(s.task(b.id)!.link).toBeUndefined();
   });
 
+  it('pushes a deadline on to tomorrow and back, the deadline staying as it is', () => {
+    const s = makeStore();
+    const a = s.addTask('Paket abholen', null, { deadline: '2026-10-08' })!;
+    s.setDeferred(a.id, true, '2026-10-08');
+    expect(s.task(a.id)).toMatchObject({ deferredOn: '2026-10-08', deadline: '2026-10-08' });
+    s.setDeferred(a.id, false, '2026-10-08');
+    expect(s.task(a.id)!.deferredOn).toBeNull();
+    // written into that day after all, it is open there again
+    s.setDeferred(a.id, true, '2026-10-08');
+    s.addEntry(a.id, '2026-10-08');
+    expect(s.task(a.id)!.deferredOn).toBeNull();
+  });
+
   it('copies a task into a day only once', () => {
     const s = makeStore();
     const t = s.addTask('Brot kaufen')!;

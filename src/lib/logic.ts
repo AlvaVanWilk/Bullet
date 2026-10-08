@@ -108,7 +108,7 @@ export function deadlineShowsOn(task: Task, day: DayKey, today: DayKey): boolean
 
 function deadlineState(task: Task, day: DayKey, today: DayKey): BoxState {
   if (task.doneDay === day) return 'done';
-  if (compareDays(day, today) < 0) return 'migrated';
+  if (compareDays(day, today) < 0 || task.deferredOn === day) return 'migrated';
   return 'open';
 }
 
@@ -155,10 +155,10 @@ export function dayItems(s: Snapshot, day: DayKey, today: DayKey, index = entrie
   return [...deadlines, ...entries];
 }
 
-/** Whether the task stands open in today's page: the small dot in the master list. */
+/** Whether the task stands open in today's page: the small dot in the master list (a deadline pushed to tomorrow does not). */
 export function isOpenToday(task: Task, today: DayKey, index: Map<string, Entry[]>): boolean {
   if (task.deleted || task.doneDay) return false;
-  if (deadlineShowsOn(task, today, today)) return true;
+  if (deadlineShowsOn(task, today, today)) return task.deferredOn !== today;
   return (index.get(task.id) ?? []).some((e) => e.day === today);
 }
 

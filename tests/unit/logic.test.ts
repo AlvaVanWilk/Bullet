@@ -158,6 +158,19 @@ describe('hidden appointments', () => {
 });
 
 
+describe('pushing a deadline on to tomorrow', () => {
+  it('shows ">" today and no dot, the next day the deadline is there again', () => {
+    const t = task('a', { deadline: '2026-10-06', deferredOn: TODAY });
+    expect(states(snap([t]), TODAY)).toEqual(['a:deadline:migrated']);
+    expect(isOpenToday(t, TODAY, new Map())).toBe(false);
+    // the day after, it is open again, overdue as before
+    expect(dayItems(snap([t]), '2026-10-08', '2026-10-08').map((i) => i.state)).toEqual(['open']);
+    expect(isOpenToday(t, '2026-10-08', new Map())).toBe(true);
+    // done after all: the box is filled
+    expect(states(snap([{ ...t, doneDay: TODAY, doneAt: NOW }]), TODAY)).toEqual(['a:deadline:done']);
+  });
+});
+
 describe('doing a deadline earlier', () => {
   it('shows it as a normal task today; ticked, it no longer appears on its day', () => {
     const open = snap([task('d', { deadline: '2026-10-09' })], [entry('e1', 'd', TODAY)]);

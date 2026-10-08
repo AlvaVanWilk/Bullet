@@ -176,6 +176,11 @@ export class Store {
     visit(id, true);
   }
 
+  /** A deadline of today pushed on to tomorrow (">" in today's box), or back; the deadline itself stays. */
+  setDeferred(id: string, on: boolean, today: DayKey = dayKey(new Date(this.now()))) {
+    this.updateTask(id, { deferredOn: on ? today : null });
+  }
+
   /** The task no longer prepares its appointment; the deadline it got from there goes too. */
   unlinkTask(id: string) {
     const task = this.task(id);
@@ -266,7 +271,10 @@ export class Store {
 
   /** Write a task into a day. Returns null if it is already there. */
   addEntry(taskId: string, day: DayKey): Entry | null {
-    if (!this.task(taskId)) return null;
+    const task = this.task(taskId);
+    if (!task) return null;
+    // written into the day it was pushed away from: it is open there again
+    if (task.deferredOn === day) this.updateTask(taskId, { deferredOn: null });
     for (const r of this.records.values()) {
       if (r.type === 'entry' && !r.deleted && r.taskId === taskId && r.day === day) return null;
     }

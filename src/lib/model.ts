@@ -43,6 +43,8 @@ export interface Task extends Base {
   pay?: Payment;
   /** The tasks this one comes after: it waits (out of the list) until all are done. */
   after?: string[];
+  /** The day a deadline was pushed on to the next: ">" in its box that day; the deadline stays. */
+  deferredOn?: DayKey | null;
 }
 
 export interface Payment {

@@ -7,7 +7,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CATEGORY_COLORS, categoryColor } from '../lib/colors';
 import { eventStartDay } from '../google/events';
 import { compareDays, parseDay, shortWeekday, timeLabel, type DayKey } from '../lib/dates';
-import { liveCategories, prepRows, prepSuggestions, seriesKey, specialLinkKey } from '../lib/logic';
+import { deadlineShowsOn, isWaiting, liveCategories, prepRows, prepSuggestions, seriesKey, specialLinkKey } from '../lib/logic';
 import type { CalEvent, Special, Task, TaskLink } from '../lib/model';
 import { store } from '../store/store';
 import { ui, useStore, useToday, useUi, type PostItTarget } from './state';
@@ -86,6 +86,10 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
   useEffect(() => () => saveTask(props.target.id, latest.current.text, latest.current.note), []);
   if (!task) return null;
   const cats = liveCategories(snap);
+  // a deadline open in today's page can be pushed on to tomorrow
+  const deferrable = task.doneAt == null && deadlineShowsOn(task, today, today)
+    && !isWaiting(task, new Map(snap.tasks.map((t) => [t.id, t])));
+  const deferred = task.deferredOn === today;
 
   return (
     <div class="note">
@@ -128,6 +132,18 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
           <span class="bang">!</span> {task.important ? 'wichtig' : 'als wichtig markieren'}
         </button>
       </div>
+      {deferrable && (
+        <div class="note-row">
+          <button
+            type="button"
+            class={`note-bang note-defer ${deferred ? 'on' : ''}`}
+            aria-pressed={deferred}
+            onClick={() => store.setDeferred(task.id, !deferred, today)}
+          >
+            <span class="defer-mark">&gt;</span> {deferred ? 'auf morgen geschoben' : 'auf morgen schieben'}
+          </button>
+        </div>
+      )}
 
       <label class="note-row note-date">
         <span class="note-label">Deadline</span>
