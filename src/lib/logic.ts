@@ -315,15 +315,13 @@ function anchorOf(t: Task, byId: Map<string, Task>): string | null {
 
 export interface FollowUp {
   task: Task;
-  /** 1: right after the mother, 2: after that one, … */
-  depth: number;
   /** Other open tasks it also waits for. */
   alsoAfter: Task[];
 }
 
 /**
- * What waits for a task, as a chain folded out under it: each one indented
- * below the one it comes after. Built once per snapshot, asked per task.
+ * What waits right after a task (one level; each of them may have its own).
+ * Built once per snapshot, asked per task.
  */
 export function followUps(s: Snapshot): (motherId: string) => FollowUp[] {
   const live = s.tasks.filter((t) => !t.deleted);
@@ -332,29 +330,20 @@ export function followUps(s: Snapshot): (motherId: string) => FollowUp[] {
   for (const t of live) {
     if (!isWaiting(t, byId)) continue;
     for (const id of new Set(t.after)) {
+      if (id === t.id) continue;
       const list = kids.get(id);
       if (list) list.push(t);
       else kids.set(id, [t]);
     }
   }
-  return (motherId) => {
-    const out: FollowUp[] = [];
-    const seen = new Set([motherId]);
-    const walk = (id: string, depth: number) => {
-      for (const t of (kids.get(id) ?? []).sort(byCreated)) {
-        if (seen.has(t.id)) continue;
-        seen.add(t.id);
-        const alsoAfter = (t.after ?? [])
-          .filter((m) => m !== id)
-          .map((m) => byId.get(m))
-          .filter((m): m is Task => !!m && m.doneAt == null);
-        out.push({ task: t, depth, alsoAfter });
-        walk(t.id, depth + 1);
-      }
-    };
-    walk(motherId, 1);
-    return out;
-  };
+  for (const list of kids.values()) list.sort(byCreated);
+  return (motherId) => (kids.get(motherId) ?? []).map((t) => ({
+    task: t,
+    alsoAfter: (t.after ?? [])
+      .filter((m) => m !== motherId)
+      .map((m) => byId.get(m))
+      .filter((m): m is Task => !!m && m.doneAt == null),
+  }));
 }
 
 /** Whether "task comes after mother" would close a loop (the task is the mother or comes before it). */

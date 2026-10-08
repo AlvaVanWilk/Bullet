@@ -1,8 +1,9 @@
 // Tasks that come after others. In the lists a small hook next to a task folds
-// out what waits for it (indented, one step per link of the chain; never
-// remembered, always folded at first). On the post-it: what comes after this
+// out what waits right after it, indented; those have hooks of their own for
+// the next level. Never remembered, always folded at first. On the post-it: what comes after this
 // task, and what it comes after.
 
+import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
 import { followSuggestions, type FollowUp } from '../lib/logic';
@@ -35,44 +36,82 @@ export function FollowToggle(props: { count: number; open: boolean; onToggle: ()
   );
 }
 
-/** The folded-out chain under a task: rows of the list, indented by their place in it. */
-export function FollowRows(props: { items: FollowUp[]; motherId: string; colorMode: 'text' | 'marker' }) {
+export type Folds = ReturnType<typeof useFolds>;
+
+/**
+ * What waits right after a task, folded out under it as rows of the list,
+ * one step further in. Each of them that has its own follow-ups gets its own
+ * hook, so the chain opens one level at a time.
+ */
+export function FollowRows(props: {
+  motherId: string;
+  /** where in the list this fold hangs ("a/b/c"), so the same task can be open under one mother and closed under another */
+  path: string;
+  depth: number;
+  follow: (motherId: string) => FollowUp[];
+  folds: Folds;
+  colorMode: 'text' | 'marker';
+}) {
   return (
     <>
-      {props.items.map((f) => {
+      {props.follow(props.motherId).map((f) => {
+        const key = `${props.path}/${f.task.id}`;
+        // a broken record could make a loop; never fold out a task inside itself
+        if (props.path.split('/').includes(f.task.id)) return null;
         const cat = store.category(f.task.categoryId);
         const color = cat ? categoryColor(cat.color) : null;
+        const below = props.follow(f.task.id);
+        const open = props.folds.isOpen(key);
         return (
-          <li
-            key={`${props.motherId}-${f.task.id}`}
-            class="row follow"
-            style={{ '--depth': f.depth }}
-            onClick={(e) => openNote(f.task.id, e.currentTarget as HTMLElement)}
-          >
-            <span class="lead follow-hook" aria-hidden="true">↳</span>
-            <TaskText
-              text={f.task.text}
-              color={color && props.colorMode === 'text' ? color.ink : undefined}
-              marker={color && props.colorMode === 'marker' ? color.marker : null}
-            />
-            {f.alsoAfter.length > 0 && (
-              <small class="follow-also">auch nach: {f.alsoAfter.map((t) => t.text).join(', ')}</small>
+          <Fragment key={key}>
+            <li
+              class="row follow"
+              style={{ '--depth': props.depth }}
+              onClick={(e) => openNote(f.task.id, e.currentTarget as HTMLElement)}
+            >
+              <span class="lead follow-guide" aria-hidden="true" />
+              <TaskText
+                text={f.task.text}
+                color={color && props.colorMode === 'text' ? color.ink : undefined}
+                marker={color && props.colorMode === 'marker' ? color.marker : null}
+              />
+              {f.alsoAfter.length > 0 && (
+                <small class="follow-also">auch nach: {f.alsoAfter.map((t) => t.text).join(', ')}</small>
+              )}
+              {below.length > 0 && <FollowToggle count={below.length} open={open} onToggle={() => props.folds.toggle(key)} />}
+            </li>
+            {open && (
+              <FollowRows
+                motherId={f.task.id}
+                path={key}
+                depth={props.depth + 1}
+                follow={props.follow}
+                folds={props.folds}
+                colorMode={props.colorMode}
+              />
             )}
-          </li>
+          </Fragment>
         );
       })}
     </>
   );
 }
 
-/** Which folds are open: only while the list is on screen, never saved. */
+/**
+ * Which folds are open: only while the list is on screen, never saved.
+ * Folding one in folds in everything below it, too.
+ */
 export function useFolds() {
   const [open, setOpen] = useState<Set<string>>(new Set());
   return {
-    isOpen: (id: string) => open.has(id),
-    toggle: (id: string) => setOpen((prev) => {
+    isOpen: (key: string) => open.has(key),
+    toggle: (key: string) => setOpen((prev) => {
       const next = new Set(prev);
-      if (!next.delete(id)) next.add(id);
+      if (next.has(key)) {
+        for (const k of prev) if (k === key || k.startsWith(`${key}/`)) next.delete(k);
+      } else {
+        next.add(key);
+      }
       return next;
     }),
   };

@@ -275,11 +275,12 @@
   flex: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 1px;
   height: var(--grid);
-  min-width: 28px;
-  margin-left: 4px;
-  padding: 0 4px;
+  min-width: 36px;
+  margin-left: 2px;
+  padding: 0 6px;
   border-radius: 8px;
   color: var(--ink-soft);
   font-family: var(--clean);
@@ -295,7 +296,15 @@
   opacity: 0.62;
   animation: fold-out 0.18s ease-out both;
 }
-.row.follow .follow-hook { color: var(--ink-faint); font-family: var(--clean); font-size: 14px; }
+/* a fine line where the hook of the mother stands: indented, not another hook */
+.row.follow .follow-guide::before {
+  content: '';
+  width: 1.5px;
+  height: 18px;
+  border-radius: 1px;
+  background: var(--ink-faint);
+  opacity: 0.6;
+}
 .row.follow .tt { flex: none; }
 /* the task keeps its room; the note gives way */
 .follow-also {

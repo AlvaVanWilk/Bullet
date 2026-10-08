@@ -228,8 +228,10 @@ describe('tasks that come after others', () => {
   it('keeps a follow-up out of the list until its mother is done, then right below it', () => {
     const open = snap([task('a', { createdAt: 1 }), task('b', { createdAt: 2 }), task('c', { createdAt: 3, after: ['a'] }), task('d', { createdAt: 4, after: ['c'] })]);
     expect(ids(open)).toEqual(['a', 'b']);
-    const fold = followUps(open)('a');
-    expect(fold.map((f) => [f.task.id, f.depth])).toEqual([['c', 1], ['d', 2]]);
+    // one level at a time: after a comes c, after c comes d
+    expect(followUps(open)('a').map((f) => f.task.id)).toEqual(['c']);
+    expect(followUps(open)('c').map((f) => f.task.id)).toEqual(['d']);
+    expect(followUps(open)('d')).toEqual([]);
 
     const aDone = snap([task('a', { createdAt: 1, doneAt: NOW, doneDay: TODAY }), task('b', { createdAt: 2 }), task('c', { createdAt: 3, after: ['a'] }), task('d', { createdAt: 4, after: ['c'] })]);
     expect(ids(aDone)).toEqual(['a', 'c', 'b']);

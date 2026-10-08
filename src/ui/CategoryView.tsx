@@ -59,7 +59,7 @@ export function CategoryView(props: { id: string }) {
                   {hasClip(t) && <ClipMark />}
                   {waiting.length > 0 && <FollowToggle count={waiting.length} open={folds.isOpen(t.id)} onToggle={() => folds.toggle(t.id)} />}
                 </li>
-                {folds.isOpen(t.id) && <FollowRows items={waiting} motherId={t.id} colorMode="text" />}
+                {folds.isOpen(t.id) && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode="text" />}
               </Fragment>
             );
           })}
