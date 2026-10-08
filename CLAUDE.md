@@ -28,8 +28,9 @@ Bedienung und Einrichtung: `README.md`.
 - Erledigt → Seitenleiste leuchtet auf. Beim Öffnen der Masterliste werden die seither
   erledigten Aufgaben nacheinander (in Erledigungsreihenfolge) dick durchgestrichen.
   Die Reihenfolge der Liste ändert sich nie. Nach 7 Tagen (einstellbar) verschwinden sie;
-  alle bleiben im versteckten Archiv (Suche nach Wort und Datum). Der Besen neben
-  „Masterliste“ räumt Durchgestrichenes sofort weg (`settings.listClearedAt`).
+  alle bleiben im Archiv (Suche nach Wort und Datum; Eintrag antippen → Post-it). Neben
+  „Masterliste“ stehen eine kleine Archivkiste (öffnet das Archiv) und der Besen, der
+  Durchgestrichenes sofort wegräumt (`settings.listClearedAt`).
 - Folgeaufgaben (`task.after`): Eine Aufgabe, die noch auf offene „Mütter“ wartet, steht
   nicht in der Masterliste. Ein kleines, mit Fineliner gezeichnetes Dreieck neben der
   Mutter (zu: nach rechts, offen: nach unten) klappt nur die nächste Ebene eingerückt

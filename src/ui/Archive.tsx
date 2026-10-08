@@ -1,11 +1,14 @@
 // Every finished task with the day it was done, searchable by words and by
-// date. Reached quietly: in the settings, or by holding the "Master" tab.
+// date. Reached by the little box beside "Masterliste", in the settings, or by
+// holding the "Master" tab. A task tapped here opens its post-it (note,
+// photos, transfer).
 
 import { useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
 import { longDate } from '../lib/dates';
 import { archive } from '../lib/logic';
 import { store } from '../store/store';
+import { ClipMark, hasClip, NoteMark } from './ink';
 import { ui, useStore, useUi } from './state';
 
 const PAGE = 60;
@@ -47,8 +50,13 @@ export function ArchiveSheet() {
                 {g.tasks.map((t) => {
                   const cat = store.category(t.categoryId);
                   return (
-                    <li key={t.id}>
+                    <li
+                      key={t.id}
+                      onClick={(e) => ui.set({ postIt: { kind: 'task', id: t.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
+                    >
                       <span class="arch-text">{t.text}</span>
+                      {t.note && <NoteMark />}
+                      {hasClip(t) && <ClipMark />}
                       {cat && <span class="cat-dot" style={{ '--dot': categoryColor(cat.color).marker }} title={cat.name} />}
                     </li>
                   );

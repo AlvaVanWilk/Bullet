@@ -501,6 +501,7 @@
 }
 .arch-day { padding-top: 10px; }
 .arch-day h3 { font-size: 21px; color: var(--ink-soft); }
-.arch-day li { display: flex; align-items: center; line-height: var(--grid); padding-left: 18px; position: relative; }
+.arch-day li { display: flex; align-items: center; line-height: var(--grid); padding-left: 18px; position: relative; cursor: pointer; border-radius: 4px; }
+.arch-day li:active { background: rgba(43, 43, 48, 0.05); }
 .arch-day li::before { content: '×'; position: absolute; left: 0; color: var(--ink-faint); }
 .arch-text { text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: rgba(43, 43, 48, 0.45); }

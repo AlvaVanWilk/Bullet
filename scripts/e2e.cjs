@@ -157,6 +157,12 @@ async function device(browser, name) {
     await phone.waitForTimeout(2500);
     const swept = await phone.$$eval('.sheet.front .task-list > li.row:not(.follow) .tt-text', (els) => els.map((e) => e.textContent));
     check('the broom sweeps struck tasks off the list, on both devices', !swept.includes('Milch kaufen') && swept.includes('Paket abholen'), swept);
+    await phone.locator('.title-tool').click();
+    await phone.waitForSelector('.archive');
+    await phone.locator('.archive-search input[type=search]').fill('milch');
+    await phone.waitForTimeout(200);
+    const kept = await phone.$$eval('.arch-day li .arch-text', (els) => els.map((e) => e.textContent));
+    check('the archive (box beside the heading) keeps what was swept, searchable', kept.join() === 'Milch kaufen', kept);
   } catch (err) {
     failed = true;
     console.log('✗', err.message);
