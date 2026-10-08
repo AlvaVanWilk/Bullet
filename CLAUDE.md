@@ -72,7 +72,10 @@ Bedienung und Einrichtung: `README.md`.
   sich den Termin (`task.link`). Neben dem Termin steht die Zahl der offenen. Für
   vergangene Termine gibt es keine neuen. Beim Tippen werden vorhandene offene Aufgaben
   vorgeschlagen; dazugenommen bekommt eine Aufgabe den Tag des Termins als Deadline,
-  außer ihre Deadline ist früher.
+  außer ihre Deadline ist früher. Folgeaufgaben gehören zum Termin ihrer Mutter (nur
+  bei kommenden Terminen): im Termin-Post-it eingerückt darunter, blass solange sie
+  warten, zählen mit. Eine wartende Aufgabe zeigt ihre Deadline nirgends (Tag, Kopf,
+  Google), erst wenn sie dran ist. × an „für: …“ löst eine Aufgabe vom Termin.
 - Fotos zu Aufgaben (Post-it „+ Foto“): verkleinert (JPEG, 2000 px), auf dem Gerät
   (IndexedDB) und in `bullet-daten/users/<uid>.photos/`, nur für angemeldete Geräte der
   Person. Aufgaben mit Foto oder Überweisung tragen eine Büroklammer.

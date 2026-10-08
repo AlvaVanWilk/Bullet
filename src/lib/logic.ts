@@ -136,8 +136,9 @@ export function entriesByTask(entries: Entry[]): Map<string, Entry[]> {
 /** Deadlines first (in red), then the tasks written into the day. */
 export function dayItems(s: Snapshot, day: DayKey, today: DayKey, index = entriesByTask(s.entries)): DayItem[] {
   const tasksById = new Map(s.tasks.map((t) => [t.id, t]));
+  // a task still waiting for another shows up only once it is its turn
   const deadlines: DayItem[] = s.tasks
-    .filter((t) => deadlineShowsOn(t, day, today))
+    .filter((t) => deadlineShowsOn(t, day, today) && !isWaiting(t, tasksById))
     .sort((a, b) => compareDays(a.deadline!, b.deadline!) || byCreated(a, b))
     .map((task) => ({ key: `d-${task.id}`, task, kind: 'deadline', state: deadlineState(task, day, today) }));
   const shownAsDeadline = new Set(deadlines.map((d) => d.task.id));
@@ -165,8 +166,10 @@ export type DeadlineMark = 'done' | 'overdue' | 'due';
 
 export function weekDeadlines(s: Snapshot, monday: DayKey, today: DayKey): { task: Task; mark: DeadlineMark }[] {
   const sunday = addDays(monday, 6);
+  const byId = new Map(s.tasks.map((t) => [t.id, t]));
   return s.tasks
     .filter((t) => !t.deleted && t.deadline && compareDays(t.deadline, monday) >= 0 && compareDays(t.deadline, sunday) <= 0)
+    .filter((t) => !isWaiting(t, byId))
     .sort((a, b) => compareDays(a.deadline!, b.deadline!) || byCreated(a, b))
     .map((task) => ({
       task,
@@ -291,6 +294,42 @@ export function deadlineFor(task: Task, link: TaskLink): DayKey {
 
 export function linkedTasks(s: Snapshot, key: string): Task[] {
   return s.tasks.filter((t) => !t.deleted && t.link?.key === key).sort(byCreated);
+}
+
+export interface PrepRow {
+  task: Task;
+  /** 0 for a task of its own, 1 for what comes after it, and so on */
+  depth: number;
+  waiting: boolean;
+}
+
+/**
+ * The tasks preparing an appointment, each followed by what comes after it
+ * (one step further in). A task with several mothers here hangs under the first.
+ */
+export function prepRows(s: Snapshot, key: string): PrepRow[] {
+  const tasks = linkedTasks(s, key);
+  const here = new Set(tasks.map((t) => t.id));
+  const byId = new Map(s.tasks.map((t) => [t.id, t]));
+  const below = new Map<string, Task[]>();
+  const roots: Task[] = [];
+  for (const t of tasks) {
+    const mother = t.after?.find((id) => id !== t.id && here.has(id));
+    if (!mother) roots.push(t);
+    else below.set(mother, [...(below.get(mother) ?? []), t]);
+  }
+  const rows: PrepRow[] = [];
+  const seen = new Set<string>();
+  const visit = (t: Task, depth: number) => {
+    if (seen.has(t.id)) return;
+    seen.add(t.id);
+    rows.push({ task: t, depth, waiting: isWaiting(t, byId) });
+    for (const next of below.get(t.id) ?? []) visit(next, depth + 1);
+  };
+  roots.forEach((t) => visit(t, 0));
+  // whatever a loop left out still shows
+  tasks.forEach((t) => visit(t, 0));
+  return rows;
 }
 
 /** How many open tasks each appointment still has. */

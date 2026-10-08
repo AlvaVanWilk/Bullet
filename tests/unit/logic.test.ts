@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_DONE, archiveList, dayItems, deadlineFor, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
-  openLinkCounts, prepSuggestions, wouldLoop,
+  openLinkCounts, prepRows, prepSuggestions, wouldLoop,
   specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type ArchiveQuery, type Snapshot,
 } from '../../src/lib/logic';
 import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Special, type Task } from '../../src/lib/model';
@@ -210,6 +210,31 @@ describe('tasks that prepare an appointment', () => {
     expect(deadlineFor(task('a'), zahnarzt)).toBe('2026-10-13');
     expect(deadlineFor(task('a', { deadline: '2026-10-20' }), zahnarzt)).toBe('2026-10-13');
     expect(deadlineFor(task('a', { deadline: '2026-10-09' }), zahnarzt)).toBe('2026-10-09');
+  });
+
+  it('shows what comes after a task under it, and counts it while open', () => {
+    const s = snap([
+      task('a', { link: zahnarzt, deadline: zahnarzt.day, createdAt: 2 }),
+      task('b', { link: zahnarzt, deadline: zahnarzt.day, createdAt: 3, after: ['a'] }),
+      task('c', { link: zahnarzt, deadline: zahnarzt.day, createdAt: 4, after: ['b'] }),
+      task('d', { link: zahnarzt, deadline: zahnarzt.day, createdAt: 5 }),
+      // comes after "a" too, but prepares something else: not here
+      task('e', { createdAt: 6, after: ['a'] }),
+    ]);
+    expect(prepRows(s, zahnarzt.key).map((r) => `${r.task.id}${r.depth}${r.waiting ? 'w' : ''}`)).toEqual(['a0', 'b1w', 'c2w', 'd0']);
+    expect(openLinkCounts(s).get(zahnarzt.key)).toBe(4);
+  });
+
+  it('shows the deadline of a waiting task only once it is its turn', () => {
+    const tasks = [
+      task('a', { link: zahnarzt, deadline: TODAY }),
+      task('b', { link: zahnarzt, deadline: TODAY, after: ['a'] }),
+    ];
+    expect(states(snap(tasks), TODAY)).toEqual(['a:deadline:open']);
+    expect(weekDeadlines(snap(tasks), '2026-10-05', TODAY).map((d) => d.task.id)).toEqual(['a']);
+    const done = [{ ...tasks[0], doneDay: TODAY, doneAt: NOW }, tasks[1]];
+    expect(states(snap(done), TODAY)).toEqual(['a:deadline:done', 'b:deadline:open']);
+    expect(weekDeadlines(snap(done), '2026-10-05', TODAY).map((d) => d.task.id)).toEqual(['a', 'b']);
   });
 
   it('finds finished ones by the appointment', () => {

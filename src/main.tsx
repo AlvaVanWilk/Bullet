@@ -40,6 +40,9 @@ async function start() {
   });
   // After each sync, bring the calendar "Bullet" in line with the deadlines.
   onSynced(() => {
+    // once, with everything from the server there: follow-ups written before
+    // they belonged to the appointment of their mother
+    store.adoptFollowUps();
     if (googleStatus() !== 'reconnect') void syncDeadlines();
   });
 

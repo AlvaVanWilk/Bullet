@@ -2,7 +2,7 @@
 // next sync whenever they change.
 
 import { createStore, get, set } from 'idb-keyval';
-import { dayKey, type DayKey } from '../lib/dates';
+import { compareDays, dayKey, type DayKey } from '../lib/dates';
 import { newId, stableId } from '../lib/ids';
 import { nextFreeColor } from '../lib/colors';
 import { deadlineFor, wouldLoop, type Snapshot } from '../lib/logic';
@@ -157,24 +157,69 @@ export class Store {
     this.changed(true);
   }
 
-  /** An existing task now prepares this appointment (see deadlineFor). */
+  /**
+   * An existing task now prepares this appointment (see deadlineFor), and so
+   * does what comes after it, as far as it is open and prepares nothing else.
+   */
   linkTask(id: string, link: TaskLink) {
-    const task = this.task(id);
-    if (!task) return;
-    this.updateTask(id, { link, deadline: deadlineFor(task, link) });
+    const seen = new Set<string>();
+    const visit = (taskId: string, first: boolean) => {
+      const task = this.task(taskId);
+      if (!task || seen.has(taskId)) return;
+      seen.add(taskId);
+      if (!first && (task.doneAt != null || (task.link && task.link.key !== link.key))) return;
+      if (task.link?.key !== link.key) this.updateTask(taskId, { link, deadline: deadlineFor(task, link) });
+      for (const next of this.records.values()) {
+        if (next.type === 'task' && !next.deleted && next.after?.includes(taskId)) visit(next.id, false);
+      }
+    };
+    visit(id, true);
   }
 
-  /** A new task that comes after another (in its category); it waits until that one is done. */
+  /** The task no longer prepares its appointment; the deadline it got from there goes too. */
+  unlinkTask(id: string) {
+    const task = this.task(id);
+    if (!task?.link) return;
+    this.updateTask(id, { link: undefined, deadline: task.deadline === task.link.day ? null : task.deadline });
+  }
+
+  /** An appointment still to come (what follows a past one is not its preparation). */
+  private ahead(link: TaskLink | undefined): link is TaskLink {
+    return !!link && compareDays(link.day, dayKey(new Date(this.now()))) >= 0;
+  }
+
+  /**
+   * A new task that comes after another (in its category); it waits until that
+   * one is done. If that one prepares an appointment, this one does, too.
+   */
   addFollowUp(motherId: string, text: string): Task | null {
-    return this.addTask(text, this.task(motherId)?.categoryId ?? null, { after: [motherId] });
+    const mother = this.task(motherId);
+    const link = this.ahead(mother?.link) ? { link: mother!.link, deadline: mother!.link!.day } : {};
+    return this.addTask(text, mother?.categoryId ?? null, { after: [motherId], ...link });
   }
 
   /** An existing task now (also) comes after another; false if that would close a loop. */
   linkFollowUp(motherId: string, taskId: string): boolean {
     const task = this.task(taskId);
-    if (!task || !this.task(motherId) || wouldLoop(this.snapshot(), motherId, taskId)) return false;
+    const mother = this.task(motherId);
+    if (!task || !mother || wouldLoop(this.snapshot(), motherId, taskId)) return false;
     if (!task.after?.includes(motherId)) this.updateTask(taskId, { after: [...(task.after ?? []), motherId] });
+    if (this.ahead(mother.link) && !task.link && task.doneAt == null) this.linkTask(taskId, mother.link);
     return true;
+  }
+
+  /**
+   * Once per person, for what was written before follow-ups belonged to the
+   * appointment of their mother: open follow-ups of tasks preparing an
+   * appointment still to come now prepare it, too. Remembered in the settings,
+   * so a new device does not hang a task back on that was taken off.
+   */
+  adoptFollowUps() {
+    if (this.settings.followUpsAdopted) return;
+    for (const t of this.snapshot().tasks) {
+      if (!t.deleted && this.ahead(t.link)) this.linkTask(t.id, t.link);
+    }
+    this.updateSettings({ followUpsAdopted: true });
   }
 
   unlinkFollowUp(motherId: string, taskId: string) {

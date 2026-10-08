@@ -111,6 +111,8 @@ export interface Settings extends Base {
   listClearedAt: number;
   /** The colour of the cover the pages lie on: a key of COVER_COLORS or "#rrggbb". */
   cover: string;
+  /** Follow-ups written before they belonged to the appointment of their mother have been taken up (once per person). */
+  followUpsAdopted: boolean;
 }
 
 export type AnyRecord = Task | Category | Entry | Special | Settings | Hide;
@@ -136,6 +138,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sounds: true,
   listClearedAt: 0,
   cover: 'nachtblau',
+  followUpsAdopted: false,
 };
 
 /** An appointment read from Google (not synced, cached per week). */

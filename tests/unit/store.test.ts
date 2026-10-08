@@ -53,6 +53,63 @@ describe('store', () => {
     expect(s.task(t.id)).toMatchObject({ link, deadline: '2026-10-13' });
   });
 
+  it('lets follow-ups of a task for an appointment prepare it, too', () => {
+    const s = makeStore();
+    const link = { key: 'cal|ev1', title: 'Zahnarzt', day: '2026-10-13' };
+    const a = s.addTask('Überweisung holen', null, { deadline: link.day, link })!;
+    const b = s.addFollowUp(a.id, 'Überweisung abgeben')!;
+    expect(s.task(b.id)).toMatchObject({ after: [a.id], link, deadline: link.day });
+    // an existing task put after it comes along, keeping an earlier deadline of its own
+    const c = s.addTask('Bonusheft suchen', null, { deadline: '2026-10-09' })!;
+    s.linkFollowUp(a.id, c.id);
+    expect(s.task(c.id)).toMatchObject({ link, deadline: '2026-10-09' });
+    // taken up for an appointment, a task brings what waits for it
+    const other = { key: 'cal|ev2', title: 'Elternabend', day: '2026-10-20' };
+    const d = s.addTask('Fragen sammeln')!;
+    const e = s.addFollowUp(d.id, 'Fragen ausdrucken')!;
+    const f = s.addFollowUp(e.id, 'Fragen mitnehmen')!;
+    s.linkTask(d.id, other);
+    expect([d, e, f].map((t) => s.task(t.id)!.link?.key)).toEqual(['cal|ev2', 'cal|ev2', 'cal|ev2']);
+    // but not what prepares another appointment already
+    const g = s.addTask('Termin bestätigen', null, { deadline: link.day, link })!;
+    s.linkFollowUp(d.id, g.id);
+    expect(s.task(g.id)!.link).toEqual(link);
+  });
+
+  it('no longer counts a task for its appointment once it is taken off', () => {
+    const s = makeStore();
+    const link = { key: 'cal|ev1', title: 'Zahnarzt', day: '2026-10-13' };
+    const a = s.addTask('Rezept einlösen', null, { deadline: link.day, link })!;
+    s.unlinkTask(a.id);
+    expect(s.task(a.id)!.link).toBeUndefined();
+    expect(s.task(a.id)!.deadline).toBeNull();
+    // a deadline set by hand stays
+    const b = s.addTask('Fragen aufschreiben', null, { deadline: '2026-10-11', link })!;
+    s.unlinkTask(b.id);
+    expect(s.task(b.id)!.deadline).toBe('2026-10-11');
+  });
+
+  it('takes up follow-ups written before, but not for appointments that are over', () => {
+    let t = new Date(2026, 9, 8, 12).getTime();
+    const s = new Store(() => (t += 10));
+    s.persist = false;
+    const coming = { key: 'cal|ev1', title: 'Zahnarzt', day: '2026-10-13' };
+    const past = { key: 'cal|ev0', title: 'Physio', day: '2026-10-05' };
+    const a = s.addTask('Überweisung holen', null, { deadline: coming.day, link: coming })!;
+    const b = s.addTask('Überweisung abgeben', null, { after: [a.id] })!;
+    const c = s.addTask('Übungen notieren', null, { deadline: past.day, link: past })!;
+    const d = s.addTask('Übungen machen', null, { after: [c.id] })!;
+    // a follow-up of a task for a past appointment is no preparation either
+    expect(s.addFollowUp(c.id, 'Rechnung zahlen')!.link).toBeUndefined();
+    s.adoptFollowUps();
+    expect(s.task(b.id)).toMatchObject({ link: coming, deadline: coming.day });
+    expect(s.task(d.id)!.link).toBeUndefined();
+    // only once: what was taken off later stays off
+    s.unlinkTask(b.id);
+    s.adoptFollowUps();
+    expect(s.task(b.id)!.link).toBeUndefined();
+  });
+
   it('copies a task into a day only once', () => {
     const s = makeStore();
     const t = s.addTask('Brot kaufen')!;

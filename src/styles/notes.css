@@ -55,6 +55,7 @@
 .note-hint { font-family: var(--clean); font-size: 13px; line-height: 1.4; color: var(--ink-soft); margin: 2px 0 0; }
 .note-btn.save { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .note-for { font-family: var(--clean); font-size: 13px; line-height: 1.35; color: var(--ink-soft); margin-top: -4px; }
+.note-for-x { margin-left: 4px; padding: 2px 8px; font-size: 16px; line-height: 1; color: var(--ink-faint); vertical-align: -1px; }
 /* tasks that prepare an appointment */
 .prep { display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
 .prep-list li {
@@ -68,6 +69,20 @@
   cursor: pointer;
 }
 .prep-list li::before { content: '–'; position: absolute; left: 0; color: var(--ink-faint); }
+/* what comes after a task hangs under it, one step in, with a thin guide line
+   as in the master list; while it waits it is a little paler */
+.prep-list li.after { padding-left: calc(16px + var(--depth) * 16px); }
+.prep-list li.after::before {
+  content: '';
+  left: calc(var(--depth) * 16px + 4px);
+  top: 5px;
+  width: 1.5px;
+  height: 16px;
+  border-radius: 1px;
+  background: var(--ink-faint);
+  opacity: 0.6;
+}
+.prep-list li.waiting .prep-text { color: var(--ink-faint); }
 .prep-list li.done .prep-text {
   color: var(--ink-faint);
   text-decoration: line-through;

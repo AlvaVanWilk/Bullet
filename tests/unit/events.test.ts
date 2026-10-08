@@ -44,5 +44,7 @@ describe('deadline events', () => {
     expect(wantedSig({ ...t, deadline: null }, 'google')).toBeNull();
     expect(wantedSig({ ...t, deleted: true }, 'google')).toBeNull();
     expect(wantedSig({ ...t, important: true }, 'google')).toBe(sig);
+    // a task waiting for another gets its event once it is its turn
+    expect(wantedSig(t, 'google', true)).toBeNull();
   });
 });

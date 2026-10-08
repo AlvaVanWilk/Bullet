@@ -7,7 +7,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CATEGORY_COLORS, categoryColor } from '../lib/colors';
 import { eventStartDay } from '../google/events';
 import { compareDays, parseDay, shortWeekday, timeLabel, type DayKey } from '../lib/dates';
-import { linkedTasks, liveCategories, prepSuggestions, seriesKey, specialLinkKey } from '../lib/logic';
+import { liveCategories, prepRows, prepSuggestions, seriesKey, specialLinkKey } from '../lib/logic';
 import type { CalEvent, Special, Task, TaskLink } from '../lib/model';
 import { store } from '../store/store';
 import { ui, useStore, useToday, useUi, type PostItTarget } from './state';
@@ -102,7 +102,12 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         }}
         aria-label="Aufgabe"
       />
-      {task.link && <div class="note-for">für: {task.link.title} · {shortDate(task.link.day)}</div>}
+      {task.link && (
+        <div class="note-for">
+          für: {task.link.title} · {shortDate(task.link.day)}
+          <button type="button" class="note-for-x" onClick={() => store.unlinkTask(task.id)} aria-label="Vom Termin lösen" title="vom Termin lösen">×</button>
+        </div>
+      )}
 
       <textarea
         class="note-memo"
@@ -254,7 +259,7 @@ function PrepList(props: { link: TaskLink }) {
   const add = (value: string) => store.addTask(value, null, { deadline: props.link.day, link: props.link });
   // As everywhere on the post-its, what was written counts when the note goes away.
   useEffect(() => () => { add(latest.current); }, []);
-  const tasks = linkedTasks(snap, props.link.key);
+  const rows = prepRows(snap, props.link.key);
   const found = prepSuggestions(snap, props.link.key, text, Date.now());
   const done = () => { setText(''); setPick(-1); };
   const take = (t: Task) => { store.linkTask(t.id, props.link); done(); };
@@ -264,17 +269,18 @@ function PrepList(props: { link: TaskLink }) {
   };
   // Once the day is over there is nothing left to prepare (a new task would be overdue at once).
   const over = compareDays(props.link.day, today) < 0;
-  if (over && !tasks.length) return null;
+  if (over && !rows.length) return null;
 
   return (
     <div class="prep">
       <div class="note-label">Vorbereiten</div>
-      {tasks.length > 0 && (
+      {rows.length > 0 && (
         <ul class="prep-list">
-          {tasks.map((t) => (
+          {rows.map(({ task: t, depth, waiting }) => (
             <li
               key={t.id}
-              class={t.doneAt != null ? 'done' : ''}
+              class={`${t.doneAt != null ? 'done' : ''} ${waiting ? 'waiting' : ''} ${depth ? 'after' : ''}`}
+              style={{ '--depth': depth }}
               onClick={(e) => ui.set({ postIt: { kind: 'task', id: t.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
             >
               {t.important && <span class="bang">!</span>}
@@ -287,7 +293,7 @@ function PrepList(props: { link: TaskLink }) {
         <input
           class="prep-new"
           value={text}
-          placeholder={tasks.length ? 'noch etwas …' : 'Was ist vorher zu tun?'}
+          placeholder={rows.length ? 'noch etwas …' : 'Was ist vorher zu tun?'}
           enterKeyHint="enter"
           autoComplete="off"
           onInput={(e) => { setText((e.target as HTMLInputElement).value); setPick(-1); }}
