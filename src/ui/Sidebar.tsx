@@ -78,50 +78,55 @@ export function Sidebar() {
   const openCount = masterTasks(snap, Date.now()).filter((t) => t.doneAt == null).length;
 
   return (
-    <aside ref={asideRef} class={`sidebar ${dev.sidebarOpen ? 'open' : 'closed'} ${moved ? 'moved' : ''}`} onAnimationEnd={(e) => {
-      const name = (e as AnimationEvent).animationName;
-      if (name === 'list-shine' || name === 'spine-twitch') asideRef.current?.classList.remove('glow');
-    }}>
-      <div class={`sheets ${swapping ? 'swapping' : ''}`}>
-        <section
-          ref={(el) => { sheets.current.master = el; }}
-          class={`sheet paper ${front === 'master' ? 'front' : 'back'}`}
-          data-paper={snap.settings.paperSidebar}
-          aria-hidden={front !== 'master'}
-        >
-          <MasterList active={dev.sidebarOpen && settled && front === 'master' && !swapping} />
-        </section>
-        <section
-          ref={(el) => { sheets.current.categories = el; }}
-          class={`sheet paper ${front === 'categories' ? 'front' : 'back'}`}
-          data-paper={snap.settings.paperSidebar}
-          aria-hidden={front !== 'categories'}
-        >
-          <CategoryList />
-        </section>
-      </div>
-      <div class="tabs" role="tablist">
-        <button
-          type="button" role="tab" aria-selected={front === 'master'}
-          class={`tab tab-master ${front === 'master' ? 'on' : ''}`}
-          onClick={() => switchTo('master')}
-          onContextMenu={(e) => { e.preventDefault(); ui.set({ archiveOpen: true }); }}
-          {...longPress(() => ui.set({ archiveOpen: true }))}
-        >
-          Master
+    <>
+      <aside ref={asideRef} class={`sidebar ${dev.sidebarOpen ? 'open' : 'closed'} ${moved ? 'moved' : ''}`} onAnimationEnd={(e) => {
+        const name = (e as AnimationEvent).animationName;
+        if (name === 'list-shine' || name === 'spine-twitch') asideRef.current?.classList.remove('glow');
+      }}>
+        <div class={`sheets ${swapping ? 'swapping' : ''}`}>
+          <section
+            ref={(el) => { sheets.current.master = el; }}
+            class={`sheet paper ${front === 'master' ? 'front' : 'back'}`}
+            data-paper={snap.settings.paperSidebar}
+            aria-hidden={front !== 'master'}
+          >
+            <MasterList active={dev.sidebarOpen && settled && front === 'master' && !swapping} />
+          </section>
+          <section
+            ref={(el) => { sheets.current.categories = el; }}
+            class={`sheet paper ${front === 'categories' ? 'front' : 'back'}`}
+            data-paper={snap.settings.paperSidebar}
+            aria-hidden={front !== 'categories'}
+          >
+            <CategoryList />
+          </section>
+        </div>
+        <div class="tabs" role="tablist">
+          <button
+            type="button" role="tab" aria-selected={front === 'master'}
+            class={`tab tab-master ${front === 'master' ? 'on' : ''}`}
+            onClick={() => switchTo('master')}
+            onContextMenu={(e) => { e.preventDefault(); ui.set({ archiveOpen: true }); }}
+            {...longPress(() => ui.set({ archiveOpen: true }))}
+          >
+            Master
+          </button>
+          <button
+            type="button" role="tab" aria-selected={front === 'categories'}
+            class={`tab tab-categories ${front === 'categories' ? 'on' : ''}`}
+            onClick={() => switchTo('categories')}
+          >
+            Kategorien
+          </button>
+        </div>
+        <button type="button" class="spine" onClick={toggle} aria-label={dev.sidebarOpen ? 'Liste einfahren' : 'Liste ausfahren'}>
+          <span class="spine-tab">Liste{openCount ? <small> {openCount}</small> : null}</span>
         </button>
-        <button
-          type="button" role="tab" aria-selected={front === 'categories'}
-          class={`tab tab-categories ${front === 'categories' ? 'on' : ''}`}
-          onClick={() => switchTo('categories')}
-        >
-          Kategorien
-        </button>
-      </div>
-      <button type="button" class="spine" onClick={toggle} aria-label={dev.sidebarOpen ? 'Liste einfahren' : 'Liste ausfahren'}>
-        <span class="spine-tab">Liste{openCount ? <small> {openCount}</small> : null}</span>
-      </button>
-    </aside>
+      </aside>
+      {/* Where the list lies over the page (phone), a tap on the page folds it away
+          and does nothing else; only shown there (screens.css). */}
+      {dev.sidebarOpen && <div class="sidebar-scrim" aria-hidden="true" onClick={toggle} />}
+    </>
   );
 }
 

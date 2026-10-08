@@ -8,6 +8,7 @@
   z-index: 5;
 }
 .sidebar.closed { width: var(--spine-w); }
+.sidebar-scrim { display: none; }
 
 .sheets {
   position: absolute;

@@ -31,7 +31,7 @@ sich auch so anfühlt, nur ein bisschen magisch.
 | Farbe einer Kategorie | auf den Farbklecks vor ihrem Namen tippen |
 | abhaken | Kästchen im Tag antippen (geht auch nachträglich in früheren Tagen und Wochen) |
 | unerledigte Aufgabe von gestern weitertragen | aus dem alten Tag in heute ziehen; im alten Tag steht dann „>“ |
-| auf dem Handy | Die Liste ist schmaler und anfangs eingeklappt (Lasche „Liste“ antippen). Die Wochenübersicht ist kleiner, Pfeile und Zahnrad stehen in der Zeile der Kalenderwoche. |
+| auf dem Handy | Die Liste ist schmaler und anfangs eingeklappt (Lasche „Liste“ antippen); ein Tipp auf die Seite klappt sie wieder ein. Die Wochenübersicht ist kleiner, Pfeile und Zahnrad stehen in der Zeile der Kalenderwoche. |
 | frühere und kommende Wochen ansehen | Pfeile neben der Kalenderwoche, „heute“ führt zurück; in kommenden Wochen steht nur die Wochenübersicht |
 | Familie dazuholen | Einstellungen → Familie → Google-Adresse eintragen → „freigeben“. Jede Person hat ihre eigene Liste und ihren eigenen Kalender. |
 | Besonderes eintragen (z. B. Geburtstag, jährlich) | „+“ an der Box „Besonderes“ |

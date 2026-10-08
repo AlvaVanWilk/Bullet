@@ -17,6 +17,10 @@
   .days { padding: var(--grid) 14px 0 18px; }
   .cat-page { padding: 14px 16px 40vh 20px; }
   .postit { width: min(312px, calc(100vw - 24px)); }
+  /* while the list lies open over the page, a tap on the page folds it away; a task
+     dragged out of the list still reaches the day below */
+  .sidebar-scrim { display: block; position: fixed; inset: 0; z-index: 4; }
+  .is-dragging .sidebar-scrim { pointer-events: none; }
   /* the tab of the folded list sits beside the days, not over the boxes of the week */
   .spine { top: 250px; }
   /* the four tabs of the settings in one line */

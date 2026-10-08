@@ -40,7 +40,8 @@ Bedienung und Einrichtung: `README.md`.
   die Grundlinie der gewählten Schrift wird gemessen (`src/ui/baseline.ts`).
 - Farben gedeckt und „erwachsen“, nicht knallig.
 - Handy (`src/styles/screens.css`): dieselbe Ansicht, nur kleiner. Liste schmaler und
-  anfangs eingeklappt, Wochenübersicht als schmaler Streifen mit kleiner Schrift,
+  anfangs eingeklappt; liegt sie offen über der Seite, klappt ein Tipp auf die Seite sie
+  ein (der Tipp löst sonst nichts aus, Ziehen in den Tag geht weiter). Wochenübersicht als schmaler Streifen mit kleiner Schrift,
   Pfeile und Zahnrad in der Zeile der Kalenderwoche. Das iPad bleibt, wie es ist.
 - Einstellungen: ein Blatt neben der Seite, nicht davor (kein Abdunkeln), am Kopf
   verschiebbar, Reiter Aussehen / Tage und Liste / Kalender / Konto. Jede Änderung
