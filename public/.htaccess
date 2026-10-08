@@ -23,6 +23,13 @@ AddType font/woff2 .woff2
 # Not public: the data, the server code and its settings.
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  # Pages always over https: Google sends the sign-in back only to the https
+  # address. (Only GET and HEAD: a redirect would turn a POST into a GET.)
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+  RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
   RewriteRule (^|/)(bullet-daten|lib|\.git|\.github)(/|$) - [F,L]
   RewriteRule (^|/)bullet-config\.php$ - [F,L]
   RewriteRule \.(md|lock|tmp[0-9a-f]*)$ - [F,L]

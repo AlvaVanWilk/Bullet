@@ -79,6 +79,9 @@ Wie bei Envoy gibt es zwei Fassungen auf dem Webspace:
 
      Wenn du die Seite manchmal mit `www.` öffnest, trag beide Adressen zusätzlich
      mit `www.` ein.
+     Mit `http://` geöffnet leitet Bullet von selbst auf `https://` um (`.htaccess`);
+     Google nimmt die Anmeldung nur über die https-Adresse an, sonst meldet es
+     „Fehler 400: redirect_uri_mismatch“.
    - Speichern. Google zeigt dann **Client-ID** und **Clientschlüssel**. Beide gleich
      notieren.
 
