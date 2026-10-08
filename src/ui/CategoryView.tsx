@@ -10,6 +10,7 @@ import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
 import { Bang, NoteMark, ScheduledDot, TaskText } from './ink';
 import { ui, useNow, useStore, useToday } from './state';
+import { movePick, SuggestList } from './Suggest';
 
 export function CategoryView(props: { id: string }) {
   const snap = useStore();
@@ -98,36 +99,19 @@ function SuggestLine(props: { categoryId: string }) {
           autoComplete="off"
           onInput={(e) => { setValue((e.target as HTMLInputElement).value); setPick(-1); }}
           onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') { e.preventDefault(); setPick((p) => Math.min(found.length - 1, p + 1)); }
-            if (e.key === 'ArrowUp') { e.preventDefault(); setPick((p) => Math.max(-1, p - 1)); }
+            if (movePick(e, found.length, setPick)) return;
             if (e.key === 'Escape') setValue('');
           }}
         />
       </form>
-      {found.length > 0 && (
-        <ul class="suggest-list" role="listbox">
-          <li class={`suggest-new ${pick === -1 ? 'on' : ''}`} onPointerDown={(e) => { e.preventDefault(); submit(); }}>
-            <span class="suggest-plus">+</span> „{value.trim()}“ neu anlegen <kbd>Enter</kbd>
-          </li>
-          <li class="suggest-head">schon vorhanden – antippen zum Herholen:</li>
-          {found.map((t, i) => {
-            const cat = store.category(t.categoryId);
-            const color = cat ? categoryColor(cat.color) : null;
-            return (
-              <li
-                key={t.id}
-                role="option"
-                aria-selected={pick === i}
-                class={`suggest-item ${pick === i ? 'on' : ''}`}
-                onPointerDown={(e) => { e.preventDefault(); take(t); }}
-              >
-                <span style={color ? { color: color.ink } : undefined}>{t.text}</span>
-                <small>{cat ? cat.name : 'Masterliste'}</small>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <SuggestList
+        text={value}
+        found={found}
+        pick={pick}
+        head="schon vorhanden – antippen zum Herholen:"
+        onNew={submit}
+        onTake={take}
+      />
     </div>
   );
 }

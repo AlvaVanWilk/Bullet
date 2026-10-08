@@ -2,23 +2,25 @@
 // Termine, Deadlines and Besonderes, and below it one section per day from
 // Monday up to today.
 
-import { useLayoutEffect, useRef } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { eventEndDay, eventIsPast, eventOnDay, eventStartDay } from '../google/events';
 import { categoryColor } from '../lib/colors';
 import {
   addDays, compareDays, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekRangeLabel, type DayKey,
 } from '../lib/dates';
 import {
-  dayItems, entriesByTask, hiddenKeys, openLinkCounts, specialLinkKey, specialsOn, visibleEvents, weekDeadlines, weekSpecials,
-  type DayItem,
+  dayItems, entriesByTask, hiddenKeys, openLinkCounts, specialLinkKey, specialsOn, todaySuggestions, visibleEvents, weekDeadlines,
+  weekSpecials, type DayItem,
 } from '../lib/logic';
-import type { CalEvent } from '../lib/model';
+import type { CalEvent, Task } from '../lib/model';
 import { store } from '../store/store';
+import { GRID } from './baseline';
 import { DayHeading } from './DayHeading';
 import { clickSuppressed, startDrag } from './drag';
 import { Checkbox, HandBox, NoteMark, TaskText } from './ink';
 import { StatusNote } from './StatusNote';
 import { ui, useNow, useStore, useToday, useUi } from './state';
+import { movePick, SuggestList } from './Suggest';
 import { useWeekEvents } from './useEvents';
 
 /** How far ahead the weeks can be looked at. */
@@ -258,9 +260,80 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
       <ul class="day-tasks">
         {props.items.map((item) => <DayTaskRow key={item.key} item={item} day={props.day} today={props.today} />)}
       </ul>
-      {isToday && <div class="drop-hint">Aufgaben aus der Liste hierher ziehen</div>}
+      {isToday && <TodayLine day={props.day} />}
     </section>
   );
+}
+
+/** The dashed line under today: a task is written here (and so into the master list), or dragged here from the list. */
+function TodayLine(props: { day: DayKey }) {
+  const snap = useStore();
+  const [text, setText] = useState('');
+  const [pick, setPick] = useState(-1);
+  // few, so they fit above the keyboard
+  const found = todaySuggestions(snap, props.day, text, Date.now(), 3);
+  const done = () => { setText(''); setPick(-1); };
+  const create = () => { if (store.addTaskOn(text, props.day)) done(); };
+  const take = (t: Task) => { store.addEntry(t.id, props.day); done(); };
+
+  return (
+    <div class="today-write">
+      <form
+        class="drop-hint today-line"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (pick >= 0 && found[pick]) take(found[pick]);
+          else create();
+        }}
+      >
+        <span class="new-line-mark" aria-hidden="true">+</span>
+        <input
+          value={text}
+          placeholder="Aufgabe für heute schreiben oder aus der Liste hierher ziehen"
+          enterKeyHint="enter"
+          autoComplete="off"
+          autoCorrect="on"
+          spellcheck={true}
+          onInput={(e) => { setText((e.target as HTMLInputElement).value); setPick(-1); }}
+          onKeyDown={(e) => {
+            if (movePick(e, found.length, setPick)) return;
+            if (e.key === 'Escape') done();
+          }}
+          onFocus={(e) => roomBelow(e.currentTarget)}
+          aria-label="Aufgabe für heute"
+        />
+      </form>
+      <SuggestList
+        class="inline compact"
+        text={text}
+        found={found}
+        pick={pick}
+        head="schon in der Liste – antippen zum Hineinschreiben:"
+        onNew={create}
+        onTake={take}
+      />
+    </div>
+  );
+}
+
+/**
+ * On the iPad the keyboard covers the lower part of the page. Once it is up, the
+ * days move just far enough for the line and a few offers below it to stay in view.
+ */
+function roomBelow(input: HTMLElement) {
+  const box = input.closest<HTMLElement>('[data-scroll]');
+  if (!box) return;
+  const fit = () => {
+    const vv = window.visualViewport;
+    const visibleBottom = vv ? vv.offsetTop + vv.height : innerHeight;
+    const line = input.getBoundingClientRect();
+    const short = line.bottom + 5 * GRID - visibleBottom;
+    // never further than the top of the days
+    const room = line.top - box.getBoundingClientRect().top - GRID;
+    if (short > 0 && room > 0) box.scrollTop += Math.min(short, room);
+  };
+  fit();
+  window.visualViewport?.addEventListener('resize', fit, { once: true });
 }
 
 function startOnDay(ev: CalEvent, day: DayKey): string {

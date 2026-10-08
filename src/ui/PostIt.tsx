@@ -11,6 +11,7 @@ import { linkedTasks, liveCategories, prepSuggestions, seriesKey, specialLinkKey
 import type { CalEvent, Special, Task, TaskLink } from '../lib/model';
 import { store } from '../store/store';
 import { ui, useStore, useToday, useUi, type PostItTarget } from './state';
+import { movePick, SuggestList } from './Suggest';
 
 const WIDTH = 312;
 
@@ -279,8 +280,7 @@ function PrepList(props: { link: TaskLink }) {
           autoComplete="off"
           onInput={(e) => { setText((e.target as HTMLInputElement).value); setPick(-1); }}
           onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') { e.preventDefault(); setPick((p) => Math.min(found.length - 1, p + 1)); }
-            if (e.key === 'ArrowUp') { e.preventDefault(); setPick((p) => Math.max(-1, p - 1)); }
+            if (movePick(e, found.length, setPick)) return;
             if (e.key !== 'Enter' || e.isComposing) return;
             e.preventDefault();
             submit();
@@ -288,26 +288,15 @@ function PrepList(props: { link: TaskLink }) {
           aria-label="Aufgabe zum Vorbereiten"
         />
       )}
-      {!over && found.length > 0 && (
-        <ul class="prep-suggest" role="listbox">
-          <li class={`suggest-new ${pick === -1 ? 'on' : ''}`} onPointerDown={(e) => { e.preventDefault(); if (add(text)) done(); }}>
-            <span class="suggest-plus">+</span> „{text.trim()}“ neu anlegen
-          </li>
-          <li class="suggest-head">schon da – antippen zum Dazunehmen:</li>
-          {found.map((t, i) => (
-            <li
-              key={t.id}
-              role="option"
-              aria-selected={pick === i}
-              class={`suggest-item ${pick === i ? 'on' : ''}`}
-              // pointerdown keeps the keyboard open for the next one
-              onPointerDown={(e) => { e.preventDefault(); take(t); }}
-            >
-              <span>{t.important && <span class="bang">!</span>}{t.text}</span>
-              <small>{whereFrom(t)}</small>
-            </li>
-          ))}
-        </ul>
+      {!over && (
+        <SuggestList
+          text={text}
+          found={found}
+          pick={pick}
+          head="schon da – antippen zum Dazunehmen:"
+          onNew={() => { if (add(text)) done(); }}
+          onTake={take}
+        />
       )}
     </div>
   );
@@ -429,12 +418,6 @@ function SpecialNote(props: { id: string | null; date?: string; close: () => voi
       </div>
     </div>
   );
-}
-
-/** Where a suggested task stands now: for another appointment, in a category, or just in the list. */
-function whereFrom(t: Task): string {
-  if (t.link) return `für: ${t.link.title}`;
-  return store.category(t.categoryId)?.name ?? 'Masterliste';
 }
 
 /** A yearly special is prepared anew each year, so the link names the day it falls on. */

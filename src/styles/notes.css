@@ -83,110 +83,22 @@
   outline: none;
 }
 .prep-new::placeholder { color: var(--ink-faint); }
-.prep-suggest {
-  margin-top: 4px;
+/* offers under "Vorbereiten": plain, the post-it is paper enough */
+.postit .suggest-list {
+  position: static;
+  margin: 4px 0 0;
   padding: 4px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.4);
+  box-shadow: none;
+  transform: none;
   font-size: 18px;
 }
-.prep-suggest li { padding: 2px 8px; border-radius: 6px; line-height: 24px; }
-.prep-suggest .on { background: rgba(43, 43, 48, 0.08); }
-.prep-suggest .suggest-item { align-items: baseline; }
-.prep-suggest .suggest-item small {
-  flex: none;
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.note-row { display: flex; align-items: center; gap: 10px; }
-.note-label { font-family: var(--clean); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
-.note-bang { display: inline-flex; align-items: center; gap: 6px; font-size: 19px; color: var(--ink-soft); padding: 2px 0; }
-.note-bang .bang { opacity: 0.35; transition: opacity 0.2s, transform 0.2s; }
-.note-bang.on { color: var(--red); }
-.note-bang.on .bang { opacity: 1; transform: rotate(-7deg) scale(1.15); }
-.note-date input[type='date'] {
-  font-family: var(--clean);
-  font-size: 15px;
-  padding: 5px 8px;
-  border: 1px solid rgba(43, 43, 48, 0.25);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.45);
-  min-height: 34px;
-}
-.note-clear { font-size: 24px; color: var(--ink-soft); width: 32px; height: 32px; }
-.note-check { font-size: 19px; }
-.note-check input { width: 20px; height: 20px; accent-color: var(--ink); }
-.note-cats { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip {
-  font-size: 18px;
-  padding: 1px 10px;
-  border-radius: 14px;
-  border: 1px solid rgba(43, 43, 48, 0.18);
-  background: rgba(255, 255, 255, 0.3);
-  transition: background-color 0.15s;
-}
-.chip.on {
-  background: color-mix(in srgb, var(--chip, #fff) 70%, transparent);
-  border-color: rgba(43, 43, 48, 0.55);
-  color: var(--ink) !important;
-}
-.note-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.note-btn {
-  font-size: 18px;
-  padding: 3px 12px 1px;
-  border: 1.5px solid rgba(43, 43, 48, 0.6);
-  border-radius: 10px 13px 11px 9px;
-  background: rgba(255, 255, 255, 0.35);
-}
-.note-btn:active { transform: translateY(1px); }
-.note-btn.danger { border-color: rgba(204, 58, 46, 0.5); color: var(--red); }
-.note-btn.sure { background: var(--red); color: #fff; border-color: var(--red); }
-.palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
-.swatch { width: 44px; height: 40px; border-radius: 10px; }
-.swatch.on { box-shadow: inset 0 0 0 1.5px var(--ink); }
-.swatch::before { width: 28px; height: 24px; }
+.postit .suggest-list li { padding: 2px 8px; line-height: 24px; }
+.postit .suggest-item { align-items: baseline; }
+.postit .suggest-item small { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
+.postit .suggest-new kbd { display: none; }
 
-/* sheets laid over the page */
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(60, 50, 35, 0.22);
-  animation: fade 0.2s ease-out;
-}
-@keyframes fade { from { opacity: 0; } }
-@keyframes lay-down {
-  from { opacity: 0; transform: translateY(30px) rotate(1.5deg); }
-  to { opacity: 1; transform: rotate(-0.4deg); }
-}
-.sheet-card {
-  width: min(760px, 100%);
-  max-height: min(860px, 100%);
-  display: flex;
-  flex-direction: column;
-  border-radius: 3px 5px 4px 3px;
-  box-shadow: var(--sheet-shadow-lifted);
-  animation: lay-down 0.32s var(--ease-paper) both;
-  overflow: hidden;
-}
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 18px 6px 30px;
-}
-.card-head h2 { font-size: 34px; }
-.card-body {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 0 30px 26px;
-  background: inherit;
-  background-attachment: local;
-}
 /* settings: a sheet beside the page that can be dragged aside by its head */
 .settings-panel {
   position: fixed;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   archive, dayItems, deadlineFor, entriesByTask, hiddenKeys, isOpenToday, linkedTasks, masterTasks, openLinkCounts, prepSuggestions,
-  specialLinkKey, specialsOn, suggestions, visibleEvents, weekDeadlines, type Snapshot,
+  specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type Snapshot,
 } from '../../src/lib/logic';
 import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Special, type Task } from '../../src/lib/model';
 
@@ -204,5 +204,19 @@ describe('tasks that prepare an appointment', () => {
   it('finds finished ones by the appointment', () => {
     const s = snap([task('a', { text: 'Fragen aufschreiben', link: zahnarzt, doneDay: TODAY, doneAt: NOW })]);
     expect(archive(s, 'zahnarzt').map((g) => g.tasks.map((t) => t.id))).toEqual([['a']]);
+  });
+});
+
+describe('writing into today', () => {
+  it('offers matching tasks that are not open today yet', () => {
+    const s = snap([
+      task('a', { text: 'Brot kaufen', createdAt: 2 }),
+      task('b', { text: 'Brot backen', createdAt: 3 }),
+      task('c', { text: 'Brotdose spülen', createdAt: 4, deadline: '2026-10-05' }),
+      task('d', { text: 'Brötchen holen', createdAt: 5 }),
+      task('e', { text: 'Altbrot entsorgen', createdAt: 6, doneDay: TODAY, doneAt: NOW }),
+    ], [entry('e1', 'b', TODAY), entry('e2', 'a', '2026-10-06')]);
+    // b stands in today, c is an overdue deadline (so in today as well), e is done
+    expect(todaySuggestions(s, TODAY, 'brot', NOW).map((t) => t.id)).toEqual(['a']);
   });
 });

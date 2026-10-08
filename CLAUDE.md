@@ -13,6 +13,9 @@ Bedienung und Einrichtung: `README.md`.
 - Ein kleiner schwarzer Punkt vor einer Aufgabe der Masterliste heißt: Sie steht heute
   offen im Tag. Der Punkt verschwindet, wenn der Tag vorbei ist und sie nicht erledigt wurde.
 - Ziehen schreibt immer nur hinüber. Das Original bleibt, auch im alten Tag.
+- Unter heute liegt eine gestrichelte Linie: Dort Geschriebenes wird eine neue Aufgabe
+  der Masterliste und steht im Tag. Beim Tippen werden Aufgaben aus der Liste
+  vorgeschlagen, die heute noch nicht offen stehen (antippen = hineinschreiben).
 - Im Tag: Kästchen vor der Aufgabe. Wichtig → Kästchen rot getönt, kein „!“. Kein
   Textmarker, die Kategoriefarbe nur als Klecks hinter der Aufgabe.
 - Unerledigte Aufgaben vergangener Tage: verblasst, waagerechter Strich durchs

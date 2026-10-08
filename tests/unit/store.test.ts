@@ -20,6 +20,16 @@ describe('store', () => {
     expect(s.addTask('   ', null, { deadline: link.day, link })).toBeNull();
   });
 
+  it('writes a new task straight into a day and into the master list', () => {
+    const s = makeStore();
+    const t = s.addTaskOn(' Paket abholen ', '2026-10-08')!;
+    const snap = s.snapshot();
+    expect(snap.tasks.map((x) => x.text)).toEqual(['Paket abholen']);
+    expect(snap.entries.map((e) => [e.taskId, e.day])).toEqual([[t.id, '2026-10-08']]);
+    expect(s.addTaskOn('  ', '2026-10-08')).toBeNull();
+    expect(s.snapshot().entries).toHaveLength(1);
+  });
+
   it('takes an existing task up for an appointment', () => {
     const s = makeStore();
     const link = { key: 'cal|ev1', title: 'Zahnarzt', day: '2026-10-13' };

@@ -3,7 +3,8 @@
 // baseline is measured in the browser and handed to the CSS as --baseline.
 // Day headings are moved so their baseline falls on the second dot row.
 
-const GRID = 28;
+/** One row of the paper, in px (--grid). */
+export const GRID = 28;
 
 function baselineOf(fontSize: string, lineHeight: string): number {
   const probe = document.createElement('div');

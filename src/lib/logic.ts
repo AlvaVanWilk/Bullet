@@ -187,6 +187,12 @@ export function prepSuggestions(s: Snapshot, linkKey: string, text: string, now:
   return matching(s, text, now, (t) => t.link?.key === linkKey, limit);
 }
 
+/** Existing tasks that match what is being typed into today; those already open today are left out. */
+export function todaySuggestions(s: Snapshot, today: DayKey, text: string, now: number, limit = 5): Task[] {
+  const index = entriesByTask(s.entries);
+  return matching(s, text, now, (t) => isOpenToday(t, today, index), limit);
+}
+
 /** Open tasks of the master list containing the typed text, those starting with it first. */
 function matching(s: Snapshot, text: string, now: number, there: (t: Task) => boolean, limit: number): Task[] {
   const q = text.trim().toLowerCase();

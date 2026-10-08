@@ -212,6 +212,13 @@ export class Store {
     return entry;
   }
 
+  /** A task written straight into a day: it is a new task of the master list, standing in that day. */
+  addTaskOn(text: string, day: DayKey): Task | null {
+    const task = this.addTask(text);
+    if (task) this.addEntry(task.id, day);
+    return task;
+  }
+
   /** Remember what the Google calendar now holds for a task, also for deleted ones. */
   markCalendarSynced(taskId: string, sig: string | null) {
     const r = this.records.get(taskId);
