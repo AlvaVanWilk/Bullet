@@ -108,6 +108,9 @@
   text-decoration-thickness: 1.2px;
   text-decoration-color: rgba(43, 43, 48, 0.55);
 }
+/* just done: struck through for a moment, then it fades out of the box */
+@keyframes deadline-leave { to { opacity: 0; } }
+.deadline.done { animation: deadline-leave 0.5s ease-in 0.8s forwards; }
 .deadline.overdue .what { color: var(--red); }
 @keyframes overdue-glow {
   0%, 100% { text-shadow: 0 0 0 rgba(204, 58, 46, 0); opacity: 1; }

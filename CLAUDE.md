@@ -48,8 +48,9 @@ Bedienung und Einrichtung: `README.md`.
   unter der zuletzt erledigten. Schleifen werden verhindert.
 - Hauptseite: Kopf (Kalenderwoche, Boxen Termine/Deadlines/Besonderes) scrollt nicht.
   Tage von Montag bis heute; heute nie unterhalb der Fenstermitte. Vergangene Termine
-  blass. Deadlines im Kopf in normaler Schrift; nur überfällige rot und leuchtend,
-  erledigte dünn durchgestrichen (nicht mit dem dicken Marker).
+  blass. Deadlines im Kopf in normaler Schrift; nur überfällige rot und leuchtend.
+  Erledigte verschwinden aus dem Kopf (beim Abhaken kurz dünn durchgestrichen, dann
+  ausgeblendet; auch in früheren Wochen), Folgeaufgaben rücken nach.
 - Tage als „6 DIENSTAG“ (oder „DIENSTAG 6“) in Kapitälchen; Hervorhebung wählbar
   (grauer Marker, Marker in Wochenfarbe, gerader Strich, Striche links/rechts, Rahmen).
 - Besonderes in Grau, ohne Sternchen.

@@ -162,14 +162,23 @@ export function isOpenToday(task: Task, today: DayKey, index: Map<string, Entry[
   return (index.get(task.id) ?? []).some((e) => e.day === today);
 }
 
+/** "done": ticked a moment ago, struck through on its way out of the head of the week. */
 export type DeadlineMark = 'done' | 'overdue' | 'due';
 
-export function weekDeadlines(s: Snapshot, monday: DayKey, today: DayKey): { task: Task; mark: DeadlineMark }[] {
+/** How long a deadline just done stays in the head of the week (struck, then fading). */
+export const DEADLINE_LEAVE_MS = 1400;
+
+/**
+ * The deadlines of a week for its head: what is still to do. A task waiting for
+ * another comes once it is its turn; one done goes (after a moment, see DEADLINE_LEAVE_MS).
+ */
+export function weekDeadlines(s: Snapshot, monday: DayKey, today: DayKey, now: number): { task: Task; mark: DeadlineMark }[] {
   const sunday = addDays(monday, 6);
   const byId = new Map(s.tasks.map((t) => [t.id, t]));
   return s.tasks
     .filter((t) => !t.deleted && t.deadline && compareDays(t.deadline, monday) >= 0 && compareDays(t.deadline, sunday) <= 0)
     .filter((t) => !isWaiting(t, byId))
+    .filter((t) => t.doneAt == null || now - t.doneAt < DEADLINE_LEAVE_MS)
     .sort((a, b) => compareDays(a.deadline!, b.deadline!) || byCreated(a, b))
     .map((task) => ({
       task,

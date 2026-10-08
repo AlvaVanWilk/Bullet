@@ -16,7 +16,9 @@ sich auch so anfühlt, nur ein bisschen magisch.
   durchgestrichen.
 - **Deadlines** stehen als ganztägiger Termin im Google-Kalender „Bullet“ und
   erscheinen am Tag selbst von allein in Rot. Bis sie erledigt sind, wandern sie
-  jeden Tag weiter.
+  jeden Tag weiter. In der Box „Deadlines“ steht nur, was noch ansteht: Eine
+  erledigte wird kurz durchgestrichen und verschwindet dann (im Tag und im Archiv
+  bleibt sie); eine Folgeaufgabe rückt nach.
 - **Abgleich zwischen Geräten** über den eigenen Webspace. Die Anmeldung läuft über
   Google.
 

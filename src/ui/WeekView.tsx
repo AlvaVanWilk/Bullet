@@ -2,15 +2,15 @@
 // Termine, Deadlines and Besonderes, and below it one section per day from
 // Monday up to today.
 
-import { useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { eventEndDay, eventIsPast, eventOnDay, eventStartDay } from '../google/events';
 import { categoryColor } from '../lib/colors';
 import {
   addDays, compareDays, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekRangeLabel, type DayKey,
 } from '../lib/dates';
 import {
-  dayItems, entriesByTask, hiddenKeys, openLinkCounts, specialLinkKey, specialsOn, todaySuggestions, visibleEvents, weekDeadlines,
-  weekSpecials, type DayItem,
+  DEADLINE_LEAVE_MS, dayItems, entriesByTask, hiddenKeys, openLinkCounts, specialLinkKey, specialsOn, todaySuggestions, visibleEvents,
+  weekDeadlines, weekSpecials, type DayItem,
 } from '../lib/logic';
 import type { CalEvent, Task } from '../lib/model';
 import { store } from '../store/store';
@@ -80,7 +80,15 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
   const termine = props.events.filter((e) => e.kind === 'termin');
   const besondere = props.events.filter((e) => e.kind === 'besonderes');
   const specials = weekSpecials(snap.specials, props.monday);
-  const deadlines = weekDeadlines(snap, props.monday, props.today);
+  const deadlines = weekDeadlines(snap, props.monday, props.today, Date.now());
+  // a deadline just done is struck through and fades; then it leaves the box
+  const [, refresh] = useState(0);
+  const leaving = deadlines.some((d) => d.mark === 'done');
+  useEffect(() => {
+    if (!leaving) return;
+    const timer = setTimeout(() => refresh((n) => n + 1), DEADLINE_LEAVE_MS);
+    return () => clearTimeout(timer);
+  });
   const special = props.monday === mondayOf(props.today) ? props.today : props.monday;
   const prep = openLinkCounts(snap);
 

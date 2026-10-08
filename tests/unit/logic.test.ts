@@ -71,14 +71,15 @@ describe('deadlines', () => {
     expect(states(s, TODAY)).toEqual(['d:deadline:open', 'w:entry:open']);
   });
 
-  it('are listed for the week with their mark', () => {
+  it('are listed for the week with their mark, those done only for a moment', () => {
     const s = snap([
       task('past', { deadline: '2026-10-05' }),
       task('done', { deadline: '2026-10-06', doneDay: '2026-10-06', doneAt: NOW }),
       task('next', { deadline: '2026-10-09' }),
       task('other', { deadline: '2026-10-20' }),
     ]);
-    expect(weekDeadlines(s, '2026-10-05', TODAY).map((d) => `${d.task.id}:${d.mark}`)).toEqual(['past:overdue', 'done:done', 'next:due']);
+    expect(weekDeadlines(s, '2026-10-05', TODAY, NOW + 500).map((d) => `${d.task.id}:${d.mark}`)).toEqual(['past:overdue', 'done:done', 'next:due']);
+    expect(weekDeadlines(s, '2026-10-05', TODAY, NOW + 5000).map((d) => d.task.id)).toEqual(['past', 'next']);
   });
 });
 
@@ -180,7 +181,8 @@ describe('doing a deadline earlier', () => {
     const done = snap([task('d', { deadline: '2026-10-09', doneDay: TODAY, doneAt: NOW })], [entry('e1', 'd', TODAY)]);
     expect(states(done, TODAY)).toEqual(['d:entry:done']);
     expect(dayItems(done, '2026-10-09', '2026-10-09')).toEqual([]);
-    expect(weekDeadlines(done, '2026-10-05', TODAY).map((x) => x.mark)).toEqual(['done']);
+    expect(weekDeadlines(done, '2026-10-05', TODAY, NOW).map((x) => x.mark)).toEqual(['done']);
+    expect(weekDeadlines(done, '2026-10-05', TODAY, NOW + DAY)).toEqual([]);
   });
 });
 
@@ -244,10 +246,12 @@ describe('tasks that prepare an appointment', () => {
       task('b', { link: zahnarzt, deadline: TODAY, after: ['a'] }),
     ];
     expect(states(snap(tasks), TODAY)).toEqual(['a:deadline:open']);
-    expect(weekDeadlines(snap(tasks), '2026-10-05', TODAY).map((d) => d.task.id)).toEqual(['a']);
+    expect(weekDeadlines(snap(tasks), '2026-10-05', TODAY, NOW).map((d) => d.task.id)).toEqual(['a']);
     const done = [{ ...tasks[0], doneDay: TODAY, doneAt: NOW }, tasks[1]];
     expect(states(snap(done), TODAY)).toEqual(['a:deadline:done', 'b:deadline:open']);
-    expect(weekDeadlines(snap(done), '2026-10-05', TODAY).map((d) => d.task.id)).toEqual(['a', 'b']);
+    // the mother just done leaves the head of the week, the follow-up comes
+    expect(weekDeadlines(snap(done), '2026-10-05', TODAY, NOW).map((d) => d.task.id)).toEqual(['a', 'b']);
+    expect(weekDeadlines(snap(done), '2026-10-05', TODAY, NOW + DAY).map((d) => d.task.id)).toEqual(['b']);
   });
 
   it('finds finished ones by the appointment', () => {
