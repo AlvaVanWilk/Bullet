@@ -481,26 +481,3 @@
 .cal-list .choice-opt { font-size: 16px; }
 
 /* archive */
-.archive-search input[type='search'] {
-  flex: 1;
-  min-width: 0;
-  font-size: 19px;
-  padding: 6px 12px 4px;
-  border: 1.5px solid rgba(43, 43, 48, 0.3);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.6);
-}
-.archive-search input[type='date'] {
-  font-family: var(--clean);
-  font-size: 15px;
-  padding: 7px 8px;
-  border: 1.5px solid rgba(43, 43, 48, 0.3);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.6);
-}
-.arch-day { padding-top: 10px; }
-.arch-day h3 { font-size: 21px; color: var(--ink-soft); }
-.arch-day li { display: flex; align-items: center; line-height: var(--grid); padding-left: 18px; position: relative; cursor: pointer; border-radius: 4px; }
-.arch-day li:active { background: rgba(43, 43, 48, 0.05); }
-.arch-day li::before { content: '×'; position: absolute; left: 0; color: var(--ink-faint); }
-.arch-text { text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: rgba(43, 43, 48, 0.45); }

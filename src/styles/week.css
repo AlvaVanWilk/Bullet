@@ -427,7 +427,29 @@
 
 /* --- the archive as a page --- */
 .archive { --cat-marker: #cfc8b9; }
-.archive-search { display: flex; gap: 8px; padding: 0 40px 10px 38px; align-items: center; }
+.arch-tools { flex: none; display: flex; flex-direction: column; gap: 6px; padding: 0 40px 12px 38px; }
+.arch-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: min(340px, 100%);
+  padding: 2px 8px 2px 10px;
+  border: 1.5px solid rgba(43, 43, 48, 0.3);
+  border-radius: 14px 18px 15px 13px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.arch-search:focus-within { border-color: var(--ink); background: rgba(255, 255, 255, 0.8); }
+.arch-search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 19px; height: 34px; padding: 0; }
+.arch-search input::-webkit-search-cancel-button { display: none; }
+.lens { flex: none; }
+.lens path { fill: none; stroke: var(--ink-soft); stroke-width: 1.5; stroke-linecap: round; }
+.arch-clear { font-size: 22px; color: var(--ink-faint); width: 28px; height: 28px; }
+.arch-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.arch-row .note-label { width: 80px; flex: none; }
+.arch-row .chip { font-size: 16px; padding: 0 10px; --chip: #d6cfbf; }
+.arch-row .chip .bang { margin: 0 1px 0 0; }
+.arch-gap { width: 10px; }
+.arch-reset { font-size: 16px; margin-left: 6px; }
 .arch-page {
   position: relative;
   flex: 1 1 auto;
@@ -435,5 +457,15 @@
   overflow-y: auto;
   padding: 0 40px 40vh 38px;
 }
-.arch-page > .set-note { line-height: var(--grid); margin: 0; }
-.arch-page .arch-day { max-width: 720px; }
+.arch-count { font-family: var(--clean); font-size: 13px; color: var(--ink-soft); line-height: var(--grid); margin: 0; }
+.arch-list { max-width: 760px; padding: 0; overflow: visible; background: none; }
+.arch-date {
+  flex: none;
+  margin-left: auto;
+  padding-left: 14px;
+  font-family: var(--clean);
+  font-size: 13px;
+  line-height: var(--grid);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}

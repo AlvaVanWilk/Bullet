@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  archive, dayItems, deadlineFor, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
+  ALL_DONE, archiveList, dayItems, deadlineFor, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
   openLinkCounts, prepSuggestions, wouldLoop,
-  specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type Snapshot,
+  specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type ArchiveQuery, type Snapshot,
 } from '../../src/lib/logic';
 import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Special, type Task } from '../../src/lib/model';
 
@@ -102,22 +102,32 @@ describe('lists', () => {
 
 describe('archive', () => {
   const s = snap([
-    task('a', { text: 'Steuer abgeben', doneDay: '2026-10-06', doneAt: NOW }),
-    task('b', { text: 'Fenster putzen', doneDay: '2026-09-01', doneAt: NOW - 30 * DAY }),
-    task('c', { text: 'Steuer Belege sortieren', doneDay: '2026-09-01', doneAt: NOW - 31 * DAY }),
+    task('a', { text: 'Steuer abgeben', doneDay: '2026-10-06', doneAt: NOW, important: true, deadline: '2026-10-07' }),
+    task('b', { text: 'Fenster putzen', doneDay: '2026-09-01', doneAt: NOW - 30 * DAY, categoryId: 'haus', photos: ['p1'] }),
+    task('c', { text: 'steuer Belege sortieren', doneDay: '2026-09-01', doneAt: NOW - 31 * DAY, categoryId: 'haus' }),
     task('d', { text: 'offen' }),
   ]);
-  it('groups finished tasks by day, newest first', () => {
-    expect(archive(s, '').map((g) => [g.day, g.tasks.map((t) => t.id)])).toEqual([
-      ['2026-10-06', ['a']],
-      ['2026-09-01', ['b', 'c']],
-    ]);
+  const ids = (q: Partial<ArchiveQuery>) => archiveList(s, { ...ALL_DONE, ...q }).map((t) => t.id);
+
+  it('lists finished tasks one after the other, newest first, or oldest, or A–Z', () => {
+    expect(ids({})).toEqual(['a', 'b', 'c']);
+    expect(ids({ sort: 'old' })).toEqual(['c', 'b', 'a']);
+    expect(ids({ sort: 'az' })).toEqual(['b', 'a', 'c']);
   });
   it('finds by words and by date', () => {
-    expect(archive(s, 'steuer').flatMap((g) => g.tasks.map((t) => t.id))).toEqual(['a', 'c']);
-    expect(archive(s, '1.9.').flatMap((g) => g.tasks.map((t) => t.id))).toEqual(['b', 'c']);
-    expect(archive(s, 'steuer september').flatMap((g) => g.tasks.map((t) => t.id))).toEqual(['c']);
-    expect(archive(s, '', '2026-10-06').flatMap((g) => g.tasks.map((t) => t.id))).toEqual(['a']);
+    expect(ids({ text: 'steuer' })).toEqual(['a', 'c']);
+    expect(ids({ text: '1.9.' })).toEqual(['b', 'c']);
+    expect(ids({ text: 'steuer september' })).toEqual(['c']);
+    expect(ids({ text: '06.10.2026' })).toEqual(['a']);
+  });
+  it('filters by category, deadline, importance and photos or transfers', () => {
+    expect(ids({ category: 'haus' })).toEqual(['b', 'c']);
+    expect(ids({ category: 'none' })).toEqual(['a']);
+    expect(ids({ deadline: 'with' })).toEqual(['a']);
+    expect(ids({ deadline: 'without' })).toEqual(['b', 'c']);
+    expect(ids({ important: true })).toEqual(['a']);
+    expect(ids({ clip: true })).toEqual(['b']);
+    expect(ids({ category: 'haus', text: 'steuer' })).toEqual(['c']);
   });
 });
 
@@ -143,7 +153,7 @@ describe('hidden appointments', () => {
   });
   it('finds finished tasks by their note', () => {
     const s = snap([task('n', { text: 'Anruf', note: 'Termin bei Frau Berger', doneDay: TODAY, doneAt: NOW })]);
-    expect(archive(s, 'berger').length).toBe(1);
+    expect(archiveList(s, { ...ALL_DONE, text: 'berger' }).length).toBe(1);
   });
 });
 
@@ -204,7 +214,7 @@ describe('tasks that prepare an appointment', () => {
 
   it('finds finished ones by the appointment', () => {
     const s = snap([task('a', { text: 'Fragen aufschreiben', link: zahnarzt, doneDay: TODAY, doneAt: NOW })]);
-    expect(archive(s, 'zahnarzt').map((g) => g.tasks.map((t) => t.id))).toEqual([['a']]);
+    expect(archiveList(s, { ...ALL_DONE, text: 'zahnarzt' }).map((t) => t.id)).toEqual(['a']);
   });
 });
 
@@ -281,7 +291,7 @@ describe('sweeping the list', () => {
     const s = snap([task('a', { doneAt: NOW - 10, doneDay: TODAY }), task('b')]);
     const swept = { ...s, settings: { ...s.settings, listClearedAt: NOW } };
     expect(masterTasks(swept, NOW).map((t) => t.id)).toEqual(['b']);
-    expect(archive(swept, '').flatMap((g) => g.tasks.map((t) => t.id))).toEqual(['a']);
+    expect(archiveList(swept, ALL_DONE).map((t) => t.id)).toEqual(['a']);
     const doneLater = { ...swept, tasks: [...swept.tasks, task('c', { doneAt: NOW + 5, doneDay: TODAY })] };
     expect(masterTasks(doneLater, NOW + 10).map((t) => t.id)).toEqual(['b', 'c']);
   });

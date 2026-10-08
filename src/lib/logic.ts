@@ -195,30 +195,42 @@ export function weekSpecials(specials: Special[], monday: DayKey): { day: DayKey
   return weekDays(monday).flatMap((day) => specialsOn(specials, day).map((special) => ({ day, special })));
 }
 
-export interface ArchiveGroup {
-  day: DayKey;
-  tasks: Task[];
+export type ArchiveSort = 'new' | 'old' | 'az';
+
+export interface ArchiveQuery {
+  /** words; each must appear in the task, its note, its appointment, its category or any spelling of the day it was done */
+  text: string;
+  /** a category id, 'none' for tasks without one, or null for all */
+  category: string | null;
+  deadline: 'with' | 'without' | null;
+  important: boolean;
+  /** only tasks with a photo or a transfer */
+  clip: boolean;
+  sort: ArchiveSort;
 }
 
-/** All finished tasks, newest day first; the query matches words of the task or any spelling of the day. */
-export function archive(s: Snapshot, query: string, onDay?: DayKey | null): ArchiveGroup[] {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+export const ALL_DONE: ArchiveQuery = { text: '', category: null, deadline: null, important: false, clip: false, sort: 'new' };
+
+/** All finished tasks as one list: searched, filtered and sorted as asked. */
+export function archiveList(s: Snapshot, q: ArchiveQuery): Task[] {
+  const words = q.text.toLowerCase().split(/\s+/).filter(Boolean);
   const categories = new Map(s.categories.map((c) => [c.id, c.name.toLowerCase()]));
   const hits = s.tasks.filter((t) => {
     if (t.deleted || !t.doneDay || t.doneAt == null) return false;
-    if (onDay && t.doneDay !== onDay) return false;
+    if (q.category === 'none' ? t.categoryId != null : q.category != null && t.categoryId !== q.category) return false;
+    if (q.deadline === 'with' && !t.deadline) return false;
+    if (q.deadline === 'without' && t.deadline) return false;
+    if (q.important && !t.important) return false;
+    if (q.clip && !t.photos?.length && !t.pay) return false;
     if (!words.length) return true;
     const hay = `${t.text.toLowerCase()} | ${(t.note ?? '').toLowerCase()} | ${(t.link?.title ?? '').toLowerCase()} | ${daySearchText(t.doneDay)} | ${categories.get(t.categoryId ?? '') ?? ''}`;
     return words.every((w) => hay.includes(w));
   });
-  hits.sort((a, b) => compareDays(b.doneDay!, a.doneDay!) || b.doneAt! - a.doneAt!);
-  const groups: ArchiveGroup[] = [];
-  for (const t of hits) {
-    const last = groups[groups.length - 1];
-    if (last && last.day === t.doneDay) last.tasks.push(t);
-    else groups.push({ day: t.doneDay!, tasks: [t] });
-  }
-  return groups;
+  const newest = (a: Task, b: Task) => compareDays(b.doneDay!, a.doneDay!) || b.doneAt! - a.doneAt!;
+  if (q.sort === 'az') hits.sort((a, b) => a.text.localeCompare(b.text, 'de', { sensitivity: 'base' }) || newest(a, b));
+  else if (q.sort === 'old') hits.sort((a, b) => -newest(a, b));
+  else hits.sort(newest);
+  return hits;
 }
 
 /** Existing tasks that match what is being typed in a category page. */
