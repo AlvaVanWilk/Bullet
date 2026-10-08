@@ -31,9 +31,10 @@ Bedienung und Einrichtung: `README.md`.
   alle bleiben im versteckten Archiv (Suche nach Wort und Datum). Der Besen neben
   „Masterliste“ räumt Durchgestrichenes sofort weg (`settings.listClearedAt`).
 - Folgeaufgaben (`task.after`): Eine Aufgabe, die noch auf offene „Mütter“ wartet, steht
-  nicht in der Masterliste. Ein ↳ neben der Mutter klappt nur die nächste Ebene
-  eingerückt aus; jede Folgeaufgabe mit eigenen Folgeaufgaben hat ihr eigenes ↳. Noch
-  ein Tipp klappt ein (alles darunter mit). Nie gespeichert, anfangs immer zu. Ist die Mutter durchgestrichen, erscheint die
+  nicht in der Masterliste. Ein kleines, mit Fineliner gezeichnetes Dreieck neben der
+  Mutter (zu: nach rechts, offen: nach unten) klappt nur die nächste Ebene eingerückt
+  aus; jede Folgeaufgabe mit eigenen Folgeaufgaben hat ihr eigenes. Noch ein Tipp
+  klappt ein (alles darunter mit). Nie gespeichert, anfangs immer zu. Ist die Mutter durchgestrichen, erscheint die
   Folgeaufgabe vollständig darunter (nach dem Durchstreichen, mit Schreib-Animation).
   Mehrere Mütter: wartet auf alle, hängt unter jeder offenen („auch nach: …“), erscheint
   unter der zuletzt erledigten. Schleifen werden verhindert.

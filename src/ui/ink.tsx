@@ -95,6 +95,20 @@ export function Checkbox(props: { state: BoxState; important: boolean; seed: str
   );
 }
 
+/**
+ * A small triangle drawn with the fineliner: points right while what follows is
+ * folded away, down while it is folded out.
+ */
+export function FoldMark(props: { open: boolean; seed: string }) {
+  const s = seedOf(props.seed);
+  const tri = paths(`fold|${s}`, () => gen.polygon([[5, 3.2], [12.6, 8], [5, 12.8]], { roughness: 0.85, bowing: 0.8, strokeWidth: 1.35, seed: s }));
+  return (
+    <svg class={`fold-mark ${props.open ? 'open' : ''}`} width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      {tri.map((p, i) => <path key={i} d={p.d} />)}
+    </svg>
+  );
+}
+
 export function Bang() {
   return <span class="bang" aria-label="wichtig">!</span>;
 }

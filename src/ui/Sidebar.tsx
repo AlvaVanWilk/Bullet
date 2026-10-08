@@ -267,7 +267,7 @@ function MasterList(props: { active: boolean }) {
                 />
                 {t.note && <NoteMark />}
                 {hasClip(t) && <ClipMark />}
-                {waiting.length > 0 && <FollowToggle count={waiting.length} open={!folded} onToggle={() => folds.toggle(t.id)} />}
+                {waiting.length > 0 && <FollowToggle count={waiting.length} open={!folded} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
               </li>
               {!folded && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode={mode} />}
             </Fragment>

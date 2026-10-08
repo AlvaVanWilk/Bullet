@@ -270,25 +270,24 @@
 .sidebar.open.glow .sheet.front { animation: list-glow 0.95s var(--ease-paper), list-shine 1.1s ease-out; }
 .sidebar.glow .spine-tab { animation: spine-twitch 0.9s ease-out; }
 
-/* the hook beside a task: folds out what waits for it */
+/* the little triangle beside a task: folds out what waits for it */
 .follow-toggle {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 2px;
   height: var(--grid);
   min-width: 36px;
   margin-left: 2px;
   padding: 0 6px;
-  border-radius: 8px;
   color: var(--ink-soft);
-  font-family: var(--clean);
-  transition: background-color 0.15s;
 }
-.follow-toggle svg path { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.follow-toggle small { font-size: 11px; }
-.follow-toggle.open { background: rgba(43, 43, 48, 0.07); color: var(--ink); }
+.follow-toggle small { font-size: 15px; line-height: 1; color: var(--ink-soft); }
+.fold-mark { flex: none; transition: transform 0.22s var(--ease-paper); }
+.fold-mark.open { transform: rotate(90deg); }
+.fold-mark path { fill: none; stroke: var(--ink-soft); stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; }
+.follow-toggle:active .fold-mark path { stroke: var(--ink); }
 /* the waiting ones, folded out: indented one step per link, a little paler */
 @keyframes fold-out { from { opacity: 0; transform: translateY(-6px); } }
 .row.follow {

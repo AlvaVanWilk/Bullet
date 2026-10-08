@@ -1,6 +1,6 @@
-// Tasks that come after others. In the lists a small hook next to a task folds
-// out what waits right after it, indented; those have hooks of their own for
-// the next level. Never remembered, always folded at first. On the post-it: what comes after this
+// Tasks that come after others. In the lists a small hand-drawn triangle next
+// to a task folds out what waits right after it, indented; those have
+// triangles of their own for the next level. Never remembered, always folded at first. On the post-it: what comes after this
 // task, and what it comes after.
 
 import { Fragment } from 'preact';
@@ -9,15 +9,15 @@ import { categoryColor } from '../lib/colors';
 import { followSuggestions, type FollowUp } from '../lib/logic';
 import type { Task } from '../lib/model';
 import { store } from '../store/store';
-import { TaskText } from './ink';
+import { FoldMark, TaskText } from './ink';
 import { ui, useStore } from './state';
 import { movePick, SuggestList } from './Suggest';
 
 const openNote = (id: string, el: HTMLElement) =>
   ui.set({ postIt: { kind: 'task', id, rect: el.getBoundingClientRect() } });
 
-/** The hook next to a task in a list; tapping folds the waiting ones out or in. */
-export function FollowToggle(props: { count: number; open: boolean; onToggle: () => void }) {
+/** The little triangle next to a task in a list; tapping folds the next ones out or in. */
+export function FollowToggle(props: { count: number; open: boolean; seed: string; onToggle: () => void }) {
   return (
     <button
       type="button"
@@ -28,9 +28,7 @@ export function FollowToggle(props: { count: number; open: boolean; onToggle: ()
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); props.onToggle(); }}
     >
-      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-        <path d="M3.5 2.5c-.2 3.6-.1 6.4.4 8.3.6.5 3.8.5 8.2.2M9.6 8.4l2.6 2.6-2.7 2.4" />
-      </svg>
+      <FoldMark open={props.open} seed={props.seed} />
       {props.count > 1 && <small>{props.count}</small>}
     </button>
   );
@@ -78,7 +76,7 @@ export function FollowRows(props: {
               {f.alsoAfter.length > 0 && (
                 <small class="follow-also">auch nach: {f.alsoAfter.map((t) => t.text).join(', ')}</small>
               )}
-              {below.length > 0 && <FollowToggle count={below.length} open={open} onToggle={() => props.folds.toggle(key)} />}
+              {below.length > 0 && <FollowToggle count={below.length} open={open} seed={key} onToggle={() => props.folds.toggle(key)} />}
             </li>
             {open && (
               <FollowRows

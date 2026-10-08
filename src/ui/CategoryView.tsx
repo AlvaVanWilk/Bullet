@@ -57,7 +57,7 @@ export function CategoryView(props: { id: string }) {
                   <TaskText text={t.text} color={color.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
                   {t.note && <NoteMark />}
                   {hasClip(t) && <ClipMark />}
-                  {waiting.length > 0 && <FollowToggle count={waiting.length} open={folds.isOpen(t.id)} onToggle={() => folds.toggle(t.id)} />}
+                  {waiting.length > 0 && <FollowToggle count={waiting.length} open={folds.isOpen(t.id)} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
                 </li>
                 {folds.isOpen(t.id) && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode="text" />}
               </Fragment>
