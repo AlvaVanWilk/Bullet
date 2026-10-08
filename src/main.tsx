@@ -26,7 +26,10 @@ import { connect, onServerState, onSynced, serverState } from './server';
 import { STAGE } from './stage';
 import { store } from './store/store';
 import { App } from './ui/App';
+import { applyKnownCover } from './ui/cover';
 import { currentDay } from './ui/state';
+
+applyKnownCover();
 
 async function start() {
   await store.load();

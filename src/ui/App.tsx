@@ -8,6 +8,7 @@ import { store } from '../store/store';
 import { ArchiveView } from './Archive';
 import { alignToPaper, watchPaperAlignment } from './baseline';
 import { CategoryView } from './CategoryView';
+import { applyCover } from './cover';
 import { configureDrops } from './drag';
 import { Login } from './Login';
 import { uploadPending } from '../photos';
@@ -54,6 +55,7 @@ export function App() {
     document.fonts?.load(`${font.size}px ${font.family}`).then(alignToPaper).catch(() => {});
   }, [snap.settings.font]);
 
+  useEffect(() => applyCover(snap.settings.cover), [snap.settings.cover]);
   useEffect(() => watchPaperAlignment(), []);
   // photos taken without a connection go up with the next sync
   useEffect(() => onSynced(() => void uploadPending()), []);

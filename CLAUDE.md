@@ -54,6 +54,8 @@ Bedienung und Einrichtung: `README.md`.
 - Die Schrift sitzt auf den Punktreihen bzw. Linien: Zeilen sind Vielfache von 28 px,
   die Grundlinie der gewählten Schrift wird gemessen (`src/ui/baseline.ts`).
 - Farben gedeckt und „erwachsen“, nicht knallig.
+- Einband: Die Fläche unter den Seiten ist ein Buchleinen in wählbarer Farbe (Einstellungen
+  → Aussehen; zehn gedeckte Farben oder eine eigene, Standard Nachtblau, `settings.cover`).
 - Handy (`src/styles/screens.css`): dieselbe Ansicht, nur kleiner. Liste schmaler und
   anfangs eingeklappt; liegt sie offen über der Seite, klappt ein Tipp auf die Seite sie
   ein (der Tipp löst sonst nichts aus, Ziehen in den Tag geht weiter). Wochenübersicht

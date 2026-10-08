@@ -430,6 +430,45 @@
 .font-opt small { font-family: var(--clean); font-size: 11px; color: var(--ink-faint); margin-top: 2px; }
 .font-opt.on { border-color: var(--ink); background: var(--paper); box-shadow: 0 1px 3px rgba(60, 45, 20, 0.2); }
 .choice.caps .choice-opt { font-variant-caps: small-caps; letter-spacing: 0.04em; }
+.covers { display: flex; flex-direction: column; gap: 4px; }
+.cover-grid { display: grid; grid-template-columns: repeat(6, 36px); gap: 10px 9px; }
+/* each colour a little closed notebook: cloth, the spine darker, pages at the edge */
+.cover-opt {
+  position: relative;
+  width: 36px;
+  height: 46px;
+  border-radius: 2px 5px 5px 2px;
+  background-color: var(--c, #ccc);
+  background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.22), transparent 7px),
+    linear-gradient(270deg, #f3ede0 2px, rgba(120, 110, 90, 0.4) 2px 3px, transparent 3px),
+    var(--cloth);
+  box-shadow: 0 1px 2px rgba(40, 30, 15, 0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.cover-opt.on {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--ink), 0 4px 8px rgba(40, 30, 15, 0.3);
+}
+/* a colour of her own: all of them together until one is chosen */
+.cover-opt.own:not(.on) {
+  background-color: transparent;
+  background-image:
+    linear-gradient(270deg, #f3ede0 2px, rgba(120, 110, 90, 0.4) 2px 3px, transparent 3px),
+    conic-gradient(from 200deg, #2c3a52, #2e5256, #33473a, #8a9982, #ad8884, #7a5034, #5a2f37, #2c3a52);
+}
+.cover-opt.own::after {
+  content: '+';
+  position: absolute;
+  inset: 0 3px 0 0;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.cover-opt.own.on::after { content: ''; }
+.cover-opt input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.cover-name { font-family: var(--clean); font-size: 13px; color: var(--ink-soft); }
 .hidden-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 44px; padding: 3px 0; font-family: var(--clean); font-size: 15px; }
 .hidden-list .cal-name { flex: 1 1 150px; }
 .hidden-list .set-note { margin: 0; white-space: nowrap; }

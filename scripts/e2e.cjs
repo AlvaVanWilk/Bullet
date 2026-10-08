@@ -97,6 +97,10 @@ async function device(browser, name) {
     await ipad.waitForSelector('.settings-panel');
     const head = await ipad.evaluate(() => getComputedStyle(document.querySelector('.settings-panel .card-head')).display);
     check('settings sheet is styled', head === 'flex', head);
+    await ipad.locator('.cover-opt[aria-label="Bordeaux"]').click();
+    await ipad.waitForFunction(() => document.querySelector('meta[name=theme-color]').content === '#5a2f37', null, { timeout: 2000 }).catch(() => {});
+    const cover = await ipad.evaluate(() => [getComputedStyle(document.body).backgroundColor, document.querySelector('meta[name=theme-color]').content]);
+    check('the cover takes the chosen colour at once', cover[0] === 'rgb(90, 47, 55)' && cover[1] === '#5a2f37', cover);
 
     // "Hey Siri, Bullet": set up the letterbox, send a task as the shortcut would
     await ipad.locator('.set-tab', { hasText: 'Konto' }).click();
@@ -165,6 +169,8 @@ async function device(browser, name) {
     check('the archive (tab on the right) keeps what was swept, searchable', kept.join() === 'Milch kaufen', kept);
     await phone.locator('.page-tab.tab-planner').click();
     check('the planner tab leads back to the week', (await phone.locator('.week-head').count()) === 1);
+    const phoneCover = await phone.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    check('the cover is the same on the other device', phoneCover === 'rgb(90, 47, 55)', phoneCover);
   } catch (err) {
     failed = true;
     console.log('✗', err.message);

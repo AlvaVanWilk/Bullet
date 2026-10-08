@@ -109,6 +109,8 @@ export interface Settings extends Base {
   sounds: boolean;
   /** "Aufräumen": tasks done up to this time are off the list (they stay in the archive). */
   listClearedAt: number;
+  /** The colour of the cover the pages lie on: a key of COVER_COLORS or "#rrggbb". */
+  cover: string;
 }
 
 export type AnyRecord = Task | Category | Entry | Special | Settings | Hide;
@@ -133,6 +135,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dayStyle: 'marker',
   sounds: true,
   listClearedAt: 0,
+  cover: 'nachtblau',
 };
 
 /** An appointment read from Google (not synced, cached per week). */

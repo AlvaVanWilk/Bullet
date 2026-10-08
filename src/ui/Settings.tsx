@@ -5,6 +5,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { GoogleCalendar } from '../google/calendar';
 import { cachedCalendars, calendarName, loadCalendars, roleOf } from '../google/events';
+import { COVER_COLORS, coverColor } from '../lib/colors';
 import { FONTS } from '../lib/fonts';
 import type { CalendarRole, ColorMode, DayFormat, DayStyle, PaperStyle, ReminderMode, Settings } from '../lib/model';
 import { api, ApiError, signIn, signOut } from '../server';
@@ -187,6 +188,9 @@ function LookTab(props: { s: Settings }) {
           <Choice value={s.paperMain} options={PAPERS} class="papers" onChange={(v) => store.updateSettings({ paperMain: v })} />
         </div>
       </Field>
+      <Field label="Einband">
+        <CoverPicker value={s.cover} />
+      </Field>
       <Field label="Handschrift">
         <div class="font-grid" role="radiogroup">
           {FONTS.map((f) => (
@@ -213,6 +217,40 @@ function LookTab(props: { s: Settings }) {
         />
       </Field>
     </>
+  );
+}
+
+/** The colour of the cover the pages lie on, like swatches of book cloth, or one of her own. */
+function CoverPicker(props: { value: string }) {
+  const known = COVER_COLORS.find((c) => c.key === props.value);
+  const own = known ? null : coverColor(props.value);
+  return (
+    <div class="covers">
+      <div class="cover-grid" role="radiogroup">
+        {COVER_COLORS.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            role="radio"
+            aria-checked={known === c}
+            aria-label={c.name}
+            title={c.name}
+            class={`cover-opt ${known === c ? 'on' : ''}`}
+            style={{ '--c': c.color }}
+            onClick={() => store.updateSettings({ cover: c.key })}
+          />
+        ))}
+        <label class={`cover-opt own ${own ? 'on' : ''}`} style={own ? { '--c': own } : undefined} title="eigene Farbe">
+          <input
+            type="color"
+            value={own ?? coverColor(props.value)}
+            onInput={(e) => store.updateSettings({ cover: (e.target as HTMLInputElement).value })}
+            aria-label="eigene Farbe"
+          />
+        </label>
+      </div>
+      <span class="cover-name">{known ? known.name : 'eigene Farbe'}</span>
+    </div>
   );
 }
 

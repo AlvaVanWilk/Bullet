@@ -36,3 +36,33 @@ export function nextFreeColor(used: string[]): string {
 export function weekMarker(isoWeekNumber: number): string {
   return CATEGORY_COLORS[isoWeekNumber % CATEGORY_COLORS.length].marker;
 }
+
+// The cover the pages lie on ("Einband"), muted like book cloth. A cover is
+// stored as one of these keys or as a colour of its own ("#rrggbb").
+
+export interface CoverColor {
+  key: string;
+  name: string;
+  color: string;
+}
+
+export const COVER_COLORS: CoverColor[] = [
+  { key: 'nachtblau', name: 'Nachtblau', color: '#2c3a52' },
+  { key: 'taubenblau', name: 'Taubenblau', color: '#5b6f87' },
+  { key: 'petrol', name: 'Petrol', color: '#2e5256' },
+  { key: 'tanne', name: 'Tanne', color: '#33473a' },
+  { key: 'salbei', name: 'Salbei', color: '#8a9982' },
+  { key: 'cognac', name: 'Cognac', color: '#7a5034' },
+  { key: 'bordeaux', name: 'Bordeaux', color: '#5a2f37' },
+  { key: 'altrosa', name: 'Altrosa', color: '#ad8884' },
+  { key: 'anthrazit', name: 'Anthrazit', color: '#37363a' },
+  { key: 'leinen', name: 'Leinen', color: '#d8d0c1' },
+];
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/** The colour of a cover setting; anything unknown is the first, the default. */
+export function coverColor(value: string | undefined | null): string {
+  if (value && HEX.test(value)) return value.toLowerCase();
+  return (COVER_COLORS.find((c) => c.key === value) ?? COVER_COLORS[0]).color;
+}

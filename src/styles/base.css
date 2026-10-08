@@ -3,8 +3,9 @@
 :root {
   --paper: #fbf8f1;
   --paper-warm: #f7f2e7;
-  --desk: #d8d0c1;
-  --desk-dark: #c9bfad;
+  /* the cover the pages lie on; chosen in the settings ("Einband") */
+  --desk: #2c3a52;
+  --cloth: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .9' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .16 -.03'/%3E%3C/filter%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9 .012' numOctaves='2' seed='8' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .16 -.035'/%3E%3C/filter%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .12 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23a)'/%3E%3Crect width='100%25' height='100%25' filter='url(%23b)'/%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E");
   --ink: #2b2b30;
   --ink-soft: #55555d;
   --ink-faint: #9b978d;
@@ -43,10 +44,12 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 body {
-  /* a little linen on the desk */
+  /* the cover: book cloth, threads across and down, a little light from the top
+     left and darker towards the edges */
   background-image:
-    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.28), transparent 60%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .22 0 0 0 .11 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.1), transparent 60%),
+    radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(0, 0, 0, 0.16)),
+    var(--cloth);
 }
 #app { height: 100%; }
 .svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
