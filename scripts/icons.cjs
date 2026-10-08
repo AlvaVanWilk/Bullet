@@ -1,4 +1,6 @@
-// Draws the app icons (run once after a change: node scripts/icons.cjs).
+// Draws the app icons (run once after a change: node scripts/icons.cjs, then
+// raise the ?v= of the icons in index.html and manifest.webmanifest, so
+// browsers and home screens fetch them anew).
 // A fineliner box on dotted paper with a dab of turquoise marker behind it,
 // drawn the way the app draws (rough.js, the marker's soft edge).
 // Uses the Playwright that comes with the development machine.

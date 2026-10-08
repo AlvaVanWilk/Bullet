@@ -5,9 +5,10 @@ AddType text/javascript .js
 AddType font/woff2 .woff2
 
 <IfModule mod_headers.c>
-  # The page, the service worker and the manifest are checked on every start,
-  # so a new version arrives at once.
-  <FilesMatch "\.(html|webmanifest)$|^sw\.js$">
+  # The page, the service worker, the manifest and the icons are checked on
+  # every start, so a new version arrives at once (IONOS would otherwise keep
+  # images for four weeks).
+  <FilesMatch "\.(html|webmanifest)$|^sw\.js$|^(apple-touch-icon|icon-[a-z0-9-]+)\.png$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
   Header always set X-Content-Type-Options "nosniff"
