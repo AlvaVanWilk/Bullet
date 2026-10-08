@@ -372,11 +372,107 @@ function AccountTab(props: { close: () => void }) {
           </Field>
         )
         : <Field label="Konto" note="Diese Vorschau läuft ohne Anmeldung; die Daten bleiben auf diesem Gerät." />}
+      {server.mode === 'signedIn' && <SiriSection />}
       {server.mode === 'signedIn' && server.user.admin && <FamilySection />}
       <footer class="set-foot">
         <span>Bullet {STAGE === 'test' ? '· Testfassung' : ''}</span>
       </footer>
     </>
+  );
+}
+
+/**
+ * "Hey Siri, Bullet": a shortcut on the iPhone sends a dictated task to the
+ * letterbox (briefkasten.php), which puts it into this person's master list.
+ */
+function SiriSection() {
+  const [key, setKey] = useState<string | null | undefined>(undefined);
+  const [sure, setSure] = useState<'new' | 'off' | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [problem, setProblem] = useState(false);
+  const address = new URL('briefkasten.php', location.origin + location.pathname).href;
+
+  const call = async (action: 'inbox' | 'inbox_new' | 'inbox_off') => {
+    setSure(null);
+    try {
+      setKey((await api<{ key: string | null }>(action)).key);
+      setProblem(false);
+    } catch {
+      setProblem(true);
+    }
+  };
+  useEffect(() => { void call('inbox'); }, []);
+
+  const copy = async (what: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(what);
+      setTimeout(() => setCopied(null), 1800);
+    } catch {
+      /* the text can still be selected by hand */
+    }
+  };
+  const confirm = (what: 'new' | 'off', action: 'inbox_new' | 'inbox_off') => {
+    if (sure !== what) setSure(what);
+    else void call(action);
+  };
+
+  return (
+    <Field label="Siri: „Hey Siri, Bullet“">
+      <p class="set-note">
+        Mit einem Kurzbefehl auf dem iPhone diktierst du unterwegs eine Aufgabe, und sie steht
+        gleich in deiner Masterliste. Fängt sie mit „wichtig“ an, bekommt sie das rote „!“.
+      </p>
+      {key === undefined && !problem && <p class="set-note">wird geladen …</p>}
+      {key === null && (
+        <button type="button" class="note-btn" onClick={() => void call('inbox_new')}>einrichten</button>
+      )}
+      {key && (
+        <>
+          <div class="copy-row">
+            <span class="copy-label">Adresse</span>
+            <code>{address}</code>
+            <button type="button" class="note-btn" onClick={() => void copy('address', address)}>
+              {copied === 'address' ? 'kopiert ✓' : 'kopieren'}
+            </button>
+          </div>
+          <div class="copy-row">
+            <span class="copy-label">Schlüssel</span>
+            <code>{key}</code>
+            <button type="button" class="note-btn" onClick={() => void copy('key', key)}>
+              {copied === 'key' ? 'kopiert ✓' : 'kopieren'}
+            </button>
+          </div>
+          <details class="howto">
+            <summary>So legst du den Kurzbefehl an</summary>
+            <ol>
+              <li>App „Kurzbefehle“ öffnen und oben rechts auf „+“ tippen.</li>
+              <li>Oben auf den Namen tippen, „Umbenennen“, und „Bullet“ eintragen. Mit diesem Namen startet Siri ihn.</li>
+              <li>„Aktion hinzufügen“, nach „Nach Eingabe fragen“ suchen und antippen. Als Frage eintragen: „Was soll ich aufschreiben?“</li>
+              <li>Die Aktion „Inhalte von URL abrufen“ hinzufügen. Bei „URL“ die Adresse von oben einfügen.</li>
+              <li>In dieser Aktion auf den kleinen Pfeil tippen: „Methode“ auf „POST“, „Anfragetext“ auf „JSON“.</li>
+              <li>„Neues Feld hinzufügen“, „Text“: als Schlüssel <code>schluessel</code> eintragen, als Text den Schlüssel von oben einfügen.</li>
+              <li>Noch ein Feld, wieder „Text“: Schlüssel <code>text</code>, und als Text über der Tastatur das Ergebnis von „Nach Eingabe fragen“ wählen (die blaue Variable).</li>
+              <li>Wer eine Antwort hören möchte: zum Schluss die Aktion „Text sprechen“ hinzufügen. Dann sagt Siri „Steht in Bullet: …“.</li>
+              <li>Fertig. Ausprobieren mit „Hey Siri, Bullet“.</li>
+            </ol>
+          </details>
+          <p class="set-note">
+            Der Schlüssel ist wie der Schlüssel zu deinem Briefkasten: Wer ihn hat, kann dir Aufgaben
+            in die Liste legen, mehr nicht. Gib ihn nicht weiter. Mit „neuer Schlüssel“ hört der alte auf zu gehen.
+          </p>
+          <div class="note-actions">
+            <button type="button" class={`note-btn ${sure === 'new' ? 'sure' : ''}`} onClick={() => confirm('new', 'inbox_new')}>
+              {sure === 'new' ? 'Kurzbefehl muss dann neu – sicher?' : 'neuer Schlüssel'}
+            </button>
+            <button type="button" class={`note-btn danger ${sure === 'off' ? 'sure' : ''}`} onClick={() => confirm('off', 'inbox_off')}>
+              {sure === 'off' ? 'wirklich ausschalten?' : 'ausschalten'}
+            </button>
+          </div>
+        </>
+      )}
+      {problem && <p class="set-note warn">Gerade nicht erreichbar. Bitte später noch einmal.</p>}
+    </Field>
   );
 }
 

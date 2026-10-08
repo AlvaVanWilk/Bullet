@@ -41,8 +41,9 @@ Bedienung und Einrichtung: `README.md`.
 - Farben gedeckt und „erwachsen“, nicht knallig.
 - Handy (`src/styles/screens.css`): dieselbe Ansicht, nur kleiner. Liste schmaler und
   anfangs eingeklappt; liegt sie offen über der Seite, klappt ein Tipp auf die Seite sie
-  ein (der Tipp löst sonst nichts aus, Ziehen in den Tag geht weiter). Wochenübersicht als schmaler Streifen mit kleiner Schrift,
-  Pfeile und Zahnrad in der Zeile der Kalenderwoche. Das iPad bleibt, wie es ist.
+  ein (der Tipp löst sonst nichts aus, Ziehen in den Tag geht weiter). Wochenübersicht
+  als schmaler Streifen mit kleiner Schrift, Pfeile und Zahnrad in der Zeile der
+  Kalenderwoche. Das iPad bleibt, wie es ist.
 - Einstellungen: ein Blatt neben der Seite, nicht davor (kein Abdunkeln), am Kopf
   verschiebbar, Reiter Aussehen / Tage und Liste / Kalender / Konto. Jede Änderung
   ist sofort auf der Seite zu sehen.
@@ -55,6 +56,12 @@ Bedienung und Einrichtung: `README.md`.
   vergangene Termine gibt es keine neuen. Beim Tippen werden vorhandene offene Aufgaben
   vorgeschlagen; dazugenommen bekommt eine Aufgabe den Tag des Termins als Deadline,
   außer ihre Deadline ist früher.
+- Siri: „Hey Siri, Bullet“ ist ein Kurzbefehl auf dem iPhone, der den diktierten Text an
+  `briefkasten.php` schickt (POST, `schluessel` + `text`); jede Zeile wird eine Aufgabe
+  am Ende der Masterliste, „wichtig“ vorne → „!“. Jede Person hat einen eigenen Schlüssel
+  (Einstellungen → Konto), erneuerbar und abschaltbar; wer nicht mehr zur Familie gehört,
+  kommt auch mit dem Schlüssel nicht mehr hinein. Erinnerungen von Apple liest eine
+  Web-App nicht.
 - Vorplanen künftiger Tage ist (vorerst) nicht vorgesehen. Vorausblättern in kommende
   Wochen geht, aber dort steht nur der Kopf (Wochenübersicht mit Terminen, Deadlines,
   Besonderem), keine Tage – Tage gibt es immer nur bis heute.

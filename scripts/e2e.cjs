@@ -97,6 +97,19 @@ async function device(browser, name) {
     await ipad.waitForSelector('.settings-panel');
     const head = await ipad.evaluate(() => getComputedStyle(document.querySelector('.settings-panel .card-head')).display);
     check('settings sheet is styled', head === 'flex', head);
+
+    // "Hey Siri, Bullet": set up the letterbox, send a task as the shortcut would
+    await ipad.locator('.set-tab', { hasText: 'Konto' }).click();
+    await ipad.locator('.note-btn', { hasText: 'einrichten' }).click();
+    await ipad.waitForSelector('.copy-row code');
+    const [address, key] = await ipad.$$eval('.copy-row code', (els) => els.map((e) => e.textContent));
+    const sent = await fetch(address, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schluessel: key, text: 'Wichtig: Zahnarzt anrufen.' }) });
+    check('the letterbox answers for Siri', sent.status === 200 && (await sent.text()) === 'Steht in Bullet: Zahnarzt anrufen', sent.status);
+    await ipad.locator('.close-x').click();
+    await ipad.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await ipad.waitForTimeout(2000);
+    const arrived = ipad.locator('.sheet.front .row', { hasText: 'Zahnarzt anrufen' });
+    check('a task sent by Siri arrives in the master list, with "!"', (await arrived.count()) === 1 && (await arrived.locator('.bang').count()) === 1);
   } catch (err) {
     failed = true;
     console.log('✗', err.message);

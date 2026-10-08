@@ -336,6 +336,25 @@
   background: rgba(255, 255, 255, 0.6);
 }
 .set-note.warn { color: var(--red); }
+/* Siri: address and key to copy into the shortcut */
+.copy-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.copy-label { flex: none; width: 74px; font-size: 17px; }
+.copy-row code, .howto code {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 6px;
+  padding: 3px 6px;
+  overflow-wrap: anywhere;
+  -webkit-user-select: all;
+  user-select: all;
+}
+.copy-row code { flex: 1; min-width: 0; }
+.copy-row .note-btn { flex: none; font-size: 16px; }
+.howto { margin: 8px 0 4px; }
+.howto summary { cursor: pointer; font-size: 18px; color: var(--ink-soft); }
+.howto ol { margin: 6px 0 0; padding-left: 22px; font-family: var(--clean); font-size: 14px; line-height: 1.45; }
+.howto li { margin: 4px 0; }
 .stepper { display: inline-flex; align-items: center; gap: 4px; }
 .stepper .ghost-btn { font-size: 24px; }
 .cal-list li {

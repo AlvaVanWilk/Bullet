@@ -508,3 +508,106 @@ function exchangeRecords(string $uid, int $since, array $changes): array
         return ['seq' => $seq, 'changes' => $out];
     });
 }
+
+/** Put records made on the server (the letterbox) into a person's data. */
+function addRecords(string $uid, array $records): void
+{
+    exchangeRecords($uid, PHP_INT_MAX, $records);
+}
+
+// --- the letterbox ---------------------------------------------------------------
+//
+// Tasks sent from elsewhere, e.g. by Siri through a shortcut on the iPhone
+// (briefkasten.php). Each person may have a key of their own; whoever holds it
+// can add tasks to that person's master list, and do nothing else. The key
+// names its owner ("<uid>.<secret>"), so no list of keys is needed.
+
+const INBOX_MAX_TEXT = 500;
+const INBOX_MAX_LINES = 20;
+
+function inboxKey(string $uid): ?string
+{
+    $secret = (readJson(userFile($uid)) ?? [])['inbox']['secret'] ?? null;
+    return is_string($secret) ? $uid . '.' . $secret : null;
+}
+
+/** A new key for the person; the old one stops working. Null switches the letterbox off. */
+function setInboxKey(string $uid, bool $on): ?string
+{
+    return withLock(userFile($uid), function () use ($uid, $on) {
+        $user = readJson(userFile($uid)) ?? [];
+        if ($on) {
+            $user['inbox'] = ['secret' => bin2hex(random_bytes(16)), 'created' => time()];
+        } else {
+            unset($user['inbox']);
+        }
+        writeJson(userFile($uid), $user);
+        return $on ? $uid . '.' . $user['inbox']['secret'] : null;
+    });
+}
+
+/** Whose letterbox a key opens; null for a wrong key or someone no longer let in. */
+function inboxOwner(string $key): ?string
+{
+    if (!preg_match('/^([a-f0-9]{24})\.([a-f0-9]{32})$/', $key, $m)) {
+        return null;
+    }
+    [$_, $uid, $secret] = $m;
+    $user = readJson(userFile($uid));
+    $known = $user['inbox']['secret'] ?? null;
+    if (!is_string($known) || !hash_equals($known, $secret)) {
+        return null;
+    }
+    return hasAccess((string) ($user['sub'] ?? ''), (string) ($user['email'] ?? '')) ? $uid : null;
+}
+
+/** An id like the app's: base32hex, so it can be part of a Google event id. */
+function newRecordId(): string
+{
+    $alphabet = '0123456789abcdefghijklmnopqrstuv';
+    $id = '';
+    foreach (str_split(random_bytes(16)) as $byte) {
+        $id .= $alphabet[ord($byte) % 32];
+    }
+    return $id;
+}
+
+function nowMs(): int
+{
+    return (int) floor(microtime(true) * 1000);
+}
+
+/**
+ * The tasks in a text sent to the letterbox: one per line. "wichtig" or "!"
+ * in front marks a task important; a full stop at the end (dictation adds
+ * one) is left off.
+ */
+function inboxTasks(string $text, int $now): array
+{
+    $tasks = [];
+    foreach (preg_split('/\R/u', $text) ?: [] as $line) {
+        $line = trim((string) preg_replace('/\s+/u', ' ', $line));
+        $important = false;
+        if (preg_match('/^(?:!+|wichtig\b[:,.!]?)\s*(.*)$/iu', $line, $m)) {
+            $important = true;
+            $line = trim($m[1]);
+        }
+        $line = (string) preg_replace('/(?<!\.)\.$/u', '', $line);
+        // at most INBOX_MAX_TEXT characters (counted as letters, not bytes)
+        $line = preg_match('/^.{0,' . INBOX_MAX_TEXT . '}/us', $line, $cut) ? trim($cut[0]) : '';
+        if ($line === '') {
+            continue;
+        }
+        $stamp = $now + count($tasks);
+        $tasks[] = [
+            'id' => newRecordId(), 'type' => 'task', 'updatedAt' => $stamp,
+            'text' => $line, 'categoryId' => null, 'important' => $important, 'deadline' => null,
+            'createdAt' => $stamp, 'doneAt' => null, 'doneDay' => null,
+        ];
+        if (count($tasks) >= INBOX_MAX_LINES) {
+            break;
+        }
+    }
+    return $tasks;
+}
+

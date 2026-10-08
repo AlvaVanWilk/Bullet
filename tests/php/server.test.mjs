@@ -227,6 +227,52 @@ test('admins let family members in from the app; each has separate data', async 
   assert.equal((await oma.call({ action: 'sync', since: 0, changes: [] })).status, 401);
 });
 
+test('the letterbox takes tasks with the right key only (Siri shortcut)', async () => {
+  const post = (body, form = false) => fetch(base + 'briefkasten.php', {
+    method: 'POST',
+    headers: { 'Content-Type': form ? 'application/x-www-form-urlencoded' : 'application/json' },
+    body: form ? new URLSearchParams(body).toString() : JSON.stringify(body),
+  }).then(async (r) => ({ status: r.status, text: await r.text() }));
+
+  assert.equal((await ipad.call({ action: 'inbox' })).body.key, null);
+  assert.equal((await post({ schluessel: 'x', text: 'Milch' })).status, 403);
+  const key = (await ipad.call({ action: 'inbox_new' })).body.key;
+  assert.match(key, /^[a-f0-9]{24}\.[a-f0-9]{32}$/);
+  assert.equal((await ipad.call({ action: 'inbox' })).body.key, key);
+
+  const one = await post({ schluessel: key, text: 'Wichtig: Steuer abschicken.' });
+  assert.equal(one.status, 200);
+  assert.equal(one.text, 'Steht in Bullet: Steuer abschicken');
+  const two = await post({ schluessel: key, text: 'Brot\n\n Käse  ' }, true);
+  assert.equal(two.text, '2 Aufgaben stehen jetzt in Bullet.');
+  assert.equal((await post({ schluessel: key, text: '  ' })).status, 400);
+  assert.equal((await fetch(base + 'briefkasten.php')).status, 405);
+
+  const all = (await ipad.call({ action: 'sync', since: 0, changes: [] })).body.changes;
+  const steuer = all.find((r) => r.text === 'Steuer abschicken');
+  assert.ok(steuer && steuer.type === 'task' && steuer.important === true && steuer.doneAt === null);
+  assert.match(steuer.id, /^[0-9a-v]{16}$/);
+  assert.ok(all.find((r) => r.text === 'Brot' && r.important === false) && all.find((r) => r.text === 'Käse'));
+
+  // a new key replaces the old one; switched off, the letterbox is closed
+  const key2 = (await ipad.call({ action: 'inbox_new' })).body.key;
+  assert.notEqual(key2, key);
+  assert.equal((await post({ schluessel: key, text: 'alt' })).status, 403);
+  assert.equal((await ipad.call({ action: 'inbox_off' })).body.key, null);
+  assert.equal((await post({ schluessel: key2, text: 'aus' })).status, 403);
+
+  // someone taken off the family list can no longer use their key
+  const opa = new Device();
+  await ipad.call({ action: 'family_add', email: 'opa@example.com' });
+  await opa.call({ action: 'testlogin', email: 'opa@example.com' });
+  const opaKey = (await opa.call({ action: 'inbox_new' })).body.key;
+  assert.equal((await post({ schluessel: opaKey, text: 'Zeitung' })).status, 200);
+  const opaSees = (await opa.call({ action: 'sync', since: 0, changes: [] })).body.changes;
+  assert.deepEqual(opaSees.map((r) => r.text), ['Zeitung']);
+  await ipad.call({ action: 'family_remove', email: 'opa@example.com' });
+  assert.equal((await post({ schluessel: opaKey, text: 'noch was' })).status, 403);
+});
+
 test('broken records are refused', async () => {
   const r = await ipad.call({ action: 'sync', since: 0, changes: [{ id: '../x', type: 'task', updatedAt: 1 }] });
   assert.equal(r.status, 400);

@@ -9,6 +9,9 @@
 //   family                 -> { ok, admins, family }        (admins only)
 //   family_add { email }   -> { ok, admins, family }        (admins only)
 //   family_remove { email } -> { ok, admins, family }       (admins only)
+//   inbox                  -> { ok, key | null }  (key for briefkasten.php)
+//   inbox_new              -> { ok, key }         (a new key; the old one stops working)
+//   inbox_off              -> { ok, key: null }
 //
 // Everything but "status" needs a signed-in device (cookie from oauth.php).
 
@@ -168,6 +171,13 @@ try {
                     : array_filter($list, fn ($e) => $e !== $email));
             }
             familyReply();
+
+        case 'inbox':
+            reply(200, ['ok' => true, 'key' => inboxKey($uid)]);
+
+        case 'inbox_new':
+        case 'inbox_off':
+            reply(200, ['ok' => true, 'key' => setInboxKey($uid, $action === 'inbox_new')]);
 
         default:
             fail(404, 'unknown_action');
