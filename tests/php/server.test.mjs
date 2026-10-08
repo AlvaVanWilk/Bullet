@@ -273,6 +273,27 @@ test('the letterbox takes tasks with the right key only (Siri shortcut)', async 
   assert.equal((await post({ schluessel: opaKey, text: 'noch was' })).status, 403);
 });
 
+test('photos of tasks are kept for the person and shown only to them', async () => {
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from('ein kleines Foto')]);
+  const id = '0123456789abcdefghijklmnopqrstuv'.slice(0, 16);
+  const put = await ipad.call({ action: 'photo_put', id, data: jpeg.toString('base64') });
+  assert.equal(put.status, 200);
+  const got = await phone.get(`api.php?action=photo&id=${id}`);
+  assert.equal(got.status, 200);
+  assert.equal(got.headers.get('content-type'), 'image/jpeg');
+  assert.deepEqual(Buffer.from(await got.arrayBuffer()), jpeg);
+
+  // not without signing in, not for someone else, not outside the data folder
+  assert.equal((await new Device().get(`api.php?action=photo&id=${id}`)).status, 401);
+  assert.equal((await phone.get('api.php?action=photo&id=../../x')).status, 404);
+  assert.equal((await ipad.call({ action: 'photo_put', id: '../x', data: jpeg.toString('base64') })).status, 400);
+  assert.equal((await ipad.call({ action: 'photo_put', id, data: Buffer.from('<?php echo 1;').toString('base64') })).status, 400);
+  assert.equal((await ipad.call({ action: 'photo_put', id, data: '%%%' })).status, 400);
+
+  assert.equal((await ipad.call({ action: 'photo_delete', id })).status, 200);
+  assert.equal((await phone.get(`api.php?action=photo&id=${id}`)).status, 404);
+});
+
 test('broken records are refused', async () => {
   const r = await ipad.call({ action: 'sync', since: 0, changes: [{ id: '../x', type: 'task', updatedAt: 1 }] });
   assert.equal(r.status, 400);

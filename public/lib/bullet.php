@@ -509,6 +509,49 @@ function exchangeRecords(string $uid, int $since, array $changes): array
     });
 }
 
+// --- photos of tasks --------------------------------------------------------------
+//
+// An invoice, a receipt: made smaller on the device (JPEG), kept here next to
+// the person's records, closed to the web like everything in bullet-daten.
+
+const MAX_PHOTO_BYTES = 2500000;
+
+function photoFile(string $uid, string $id): ?string
+{
+    if (!preg_match('/^[0-9a-v]{16,32}$/', $id)) {
+        return null;
+    }
+    return dataDir() . '/users/' . $uid . '.photos/' . $id . '.jpg';
+}
+
+/** Keep a photo; false if it is no JPEG or too large. */
+function putPhoto(string $uid, string $id, string $bytes): bool
+{
+    $file = photoFile($uid, $id);
+    if ($file === null || strlen($bytes) > MAX_PHOTO_BYTES || strncmp($bytes, "\xFF\xD8\xFF", 3) !== 0) {
+        return false;
+    }
+    ensureDirs();
+    $dir = dirname($file);
+    if (!is_dir($dir) && !@mkdir($dir, 0700, true)) {
+        throw new RuntimeException('storage');
+    }
+    $tmp = $file . '.tmp' . bin2hex(random_bytes(4));
+    if (file_put_contents($tmp, $bytes) === false || !rename($tmp, $file)) {
+        @unlink($tmp);
+        throw new RuntimeException('write');
+    }
+    return true;
+}
+
+function deletePhoto(string $uid, string $id): void
+{
+    $file = photoFile($uid, $id);
+    if ($file !== null && is_file($file)) {
+        @unlink($file);
+    }
+}
+
 /** Put records made on the server (the letterbox) into a person's data. */
 function addRecords(string $uid, array $records): void
 {

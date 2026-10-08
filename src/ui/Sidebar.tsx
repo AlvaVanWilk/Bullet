@@ -7,7 +7,7 @@ import { categoryColor } from '../lib/colors';
 import { entriesByTask, isOpenToday, liveCategories, masterTasks } from '../lib/logic';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
-import { Bang, NoteMark, ScheduledDot, TaskText } from './ink';
+import { Bang, ClipMark, hasClip, NoteMark, ScheduledDot, TaskText } from './ink';
 import { playPaperSlide, playStrike } from './sound';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
 
@@ -222,6 +222,7 @@ function MasterList(props: { active: boolean }) {
                 fresh={store.isFresh(t.id)}
               />
               {t.note && <NoteMark />}
+              {hasClip(t) && <ClipMark />}
             </li>
           );
         })}
@@ -302,6 +303,9 @@ export function NewLine(props: { placeholder: string; onEnter: (text: string) =>
       <input
         value={value}
         onInput={(e) => setValue((e.target as HTMLInputElement).value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') { setValue(''); (e.currentTarget as HTMLInputElement).blur(); }
+        }}
         placeholder={props.placeholder}
         enterKeyHint="enter"
         autoComplete="off"

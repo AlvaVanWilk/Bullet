@@ -56,6 +56,14 @@ Bedienung und Einrichtung: `README.md`.
   vergangene Termine gibt es keine neuen. Beim Tippen werden vorhandene offene Aufgaben
   vorgeschlagen; dazugenommen bekommt eine Aufgabe den Tag des Termins als Deadline,
   außer ihre Deadline ist früher.
+- Fotos zu Aufgaben (Post-it „+ Foto“): verkleinert (JPEG, 2000 px), auf dem Gerät
+  (IndexedDB) und in `bullet-daten/users/<uid>.photos/`, nur für angemeldete Geräte der
+  Person. Aufgaben mit Foto oder Überweisung tragen eine Büroklammer.
+- Überweisung an einer Aufgabe (`task.pay`): Empfänger, IBAN (Prüfziffer), Betrag, Zweck
+  → GiroCode (EPC-QR) zum Scannen mit der Banking-App. „aus dem Foto lesen“ füllt leere
+  Felder per Texterkennung im Gerät (tesseract.js, Dateien in `ocr/` auf dem eigenen
+  Webspace, nie von fremden Servern). Bullet überweist nie selbst.
+- Esc verlässt jede Schreibzeile (der angefangene Text verfällt).
 - Siri: „Hey Siri, Bullet“ ist ein Kurzbefehl auf dem iPhone, der den diktierten Text an
   `briefkasten.php` schickt (POST, `schluessel` + `text`); jede Zeile wird eine Aufgabe
   am Ende der Masterliste, „wichtig“ vorne → „!“. Jede Person hat einen eigenen Schlüssel

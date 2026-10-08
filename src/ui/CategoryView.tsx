@@ -8,7 +8,7 @@ import { categoryTasks, entriesByTask, isOpenToday, suggestions } from '../lib/l
 import type { Task } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
-import { Bang, NoteMark, ScheduledDot, TaskText } from './ink';
+import { Bang, ClipMark, hasClip, NoteMark, ScheduledDot, TaskText } from './ink';
 import { ui, useNow, useStore, useToday } from './state';
 import { movePick, SuggestList } from './Suggest';
 
@@ -50,6 +50,7 @@ export function CategoryView(props: { id: string }) {
               </span>
               <TaskText text={t.text} color={color.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
               {t.note && <NoteMark />}
+              {hasClip(t) && <ClipMark />}
             </li>
           ))}
         </ul>
@@ -100,7 +101,7 @@ function SuggestLine(props: { categoryId: string }) {
           onInput={(e) => { setValue((e.target as HTMLInputElement).value); setPick(-1); }}
           onKeyDown={(e) => {
             if (movePick(e, found.length, setPick)) return;
-            if (e.key === 'Escape') setValue('');
+            if (e.key === 'Escape') { setValue(''); setPick(-1); (e.currentTarget as HTMLInputElement).blur(); }
           }}
         />
       </form>

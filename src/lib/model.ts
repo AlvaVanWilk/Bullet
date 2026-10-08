@@ -37,6 +37,18 @@ export interface Task extends Base {
   note?: string;
   /** The appointment this task prepares (its day was the first deadline). */
   link?: TaskLink;
+  /** Photos (ids; the pictures themselves are kept apart, see photos.ts). */
+  photos?: string[];
+  /** A bank transfer the task stands for, e.g. an invoice to pay. */
+  pay?: Payment;
+}
+
+export interface Payment {
+  name: string;
+  iban: string;
+  /** as typed, e.g. "1.234,56" */
+  amount: string;
+  purpose: string;
 }
 
 export interface TaskLink {

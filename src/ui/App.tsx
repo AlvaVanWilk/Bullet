@@ -10,6 +10,10 @@ import { alignToPaper, watchPaperAlignment } from './baseline';
 import { CategoryView } from './CategoryView';
 import { configureDrops } from './drag';
 import { Login } from './Login';
+import { uploadPending } from '../photos';
+import { onSynced } from '../server';
+import { QrSheet } from './Pay';
+import { PhotoViewer } from './Photos';
 import { PostItLayer } from './PostIt';
 import { SettingsSheet } from './Settings';
 import { Sidebar } from './Sidebar';
@@ -50,6 +54,8 @@ export function App() {
   }, [snap.settings.font]);
 
   useEffect(() => watchPaperAlignment(), []);
+  // photos taken without a connection go up with the next sync
+  useEffect(() => onSynced(() => void uploadPending()), []);
 
   if (server.mode === 'checking') return <div class="desk boot" />;
   if (server.mode === 'signedOut') return <Login configured={server.configured} note={server.note} offline={server.offline} />;
@@ -61,6 +67,8 @@ export function App() {
         {state.view.kind === 'category' ? <CategoryView id={state.view.id} /> : <WeekView />}
       </main>
       <PostItLayer />
+      <PhotoViewer />
+      <QrSheet />
       <SettingsSheet />
       <ArchiveSheet />
       {STAGE === 'test' && <div class="test-badge" aria-hidden="true">Test</div>}

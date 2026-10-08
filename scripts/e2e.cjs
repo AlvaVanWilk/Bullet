@@ -110,6 +110,33 @@ async function device(browser, name) {
     await ipad.waitForTimeout(2000);
     const arrived = ipad.locator('.sheet.front .row', { hasText: 'Zahnarzt anrufen' });
     check('a task sent by Siri arrives in the master list, with "!"', (await arrived.count()) === 1 && (await arrived.locator('.bang').count()) === 1);
+
+    // Esc leaves the line under today
+    await ipad.locator('.today-line input').fill('doch nicht');
+    await ipad.locator('.today-line input').press('Escape');
+    const left = await ipad.evaluate(() => document.activeElement?.closest('.today-line') == null && document.querySelector('.today-line input').value === '');
+    check('Esc leaves the line under today', left);
+
+    // a photo of an invoice: taken on one device, seen on the other; IBAN read from it, GiroCode made
+    await ipad.locator('.sheet.front .row', { hasText: 'Zahnarzt anrufen' }).locator('.tt-text').click();
+    await ipad.waitForSelector('.postit.shown');
+    await ipad.locator('.postit input[type=file]').setInputFiles(path.join(root, 'tests/fixtures/rechnung.jpg'));
+    await ipad.waitForSelector('.photo-thumb img');
+    await ipad.locator('.pay-open').click();
+    await ipad.locator('.note-btn', { hasText: 'aus dem Foto lesen' }).click();
+    await ipad.waitForSelector('.pay .note-hint:not(.warn)', { timeout: 120000 });
+    const read = await ipad.$$eval('.pay-field input', (els) => els.map((e) => e.value));
+    check('IBAN and amount are read from the photo', read[1] === 'DE89 3704 0044 0532 0130 00' && read[2] === '123,45', read);
+    check('the GiroCode can be shown', await ipad.locator('.note-btn.save', { hasText: 'QR-Code' }).isEnabled());
+    await ipad.mouse.click(700, 790);
+    await ipad.waitForTimeout(2500);
+    await phone.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await phone.waitForTimeout(2500);
+    await phone.locator('.sheet.front .row', { hasText: 'Zahnarzt anrufen' }).locator('.tt-text').click();
+    await phone.waitForSelector('.postit.shown');
+    const shown = await phone.waitForSelector('.photo-thumb img', { timeout: 10000 }).then(() => true).catch(() => false);
+    const iban = await phone.locator('.pay-field.iban input').inputValue().catch(() => '');
+    check('the other device shows the photo and the transfer', shown && iban === 'DE89 3704 0044 0532 0130 00', iban);
   } catch (err) {
     failed = true;
     console.log('✗', err.message);

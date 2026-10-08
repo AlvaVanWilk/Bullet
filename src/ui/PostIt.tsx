@@ -1,5 +1,5 @@
 // Notes stuck next to what was tapped: a task (text, note, "!", deadline,
-// category, delete), a category (name, colour), something special, or an
+// category, photos, a transfer to make, delete), a category (name, colour), something special, or an
 // appointment from Google (to hide it). Appointments and specials also take
 // the tasks that prepare them.
 
@@ -11,6 +11,9 @@ import { linkedTasks, liveCategories, prepSuggestions, seriesKey, specialLinkKey
 import type { CalEvent, Special, Task, TaskLink } from '../lib/model';
 import { store } from '../store/store';
 import { ui, useStore, useToday, useUi, type PostItTarget } from './state';
+import { forgetPhotosOf } from '../photos';
+import { PaySection } from './Pay';
+import { PhotoStrip } from './Photos';
 import { movePick, SuggestList } from './Suggest';
 
 const WIDTH = 312;
@@ -60,6 +63,7 @@ function Placed(props: { target: PostItTarget; children: preact.ComponentChildre
     <div
       ref={ref}
       class={`postit ${pos ? 'shown' : ''}`}
+      data-scroll
       style={pos ? { left: `${pos.left}px`, top: `${pos.top}px` } : { left: '-9999px', top: '0px' }}
       role="dialog"
     >
@@ -154,6 +158,9 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         })}
       </div>
 
+      <PhotoStrip task={task} />
+      <PaySection task={task} />
+
       <div class="note-actions">
         <button type="button" class="note-btn save" onClick={props.close}>speichern</button>
         {props.target.entryId && props.target.day === today && task.doneAt == null && (
@@ -168,6 +175,7 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
           class={`note-btn danger ${confirmDelete ? 'sure' : ''}`}
           onClick={() => {
             if (!confirmDelete) { setConfirmDelete(true); return; }
+            void forgetPhotosOf(task.id);
             store.deleteTask(task.id);
             props.close();
           }}
@@ -281,6 +289,7 @@ function PrepList(props: { link: TaskLink }) {
           onInput={(e) => { setText((e.target as HTMLInputElement).value); setPick(-1); }}
           onKeyDown={(e) => {
             if (movePick(e, found.length, setPick)) return;
+            if (e.key === 'Escape') { done(); (e.currentTarget as HTMLInputElement).blur(); return; }
             if (e.key !== 'Enter' || e.isComposing) return;
             e.preventDefault();
             submit();

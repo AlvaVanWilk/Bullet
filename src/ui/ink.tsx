@@ -108,6 +108,20 @@ export function NoteMark() {
   );
 }
 
+/** A paper clip: the task carries a photo or a transfer to make. */
+export function ClipMark() {
+  return (
+    <svg class="clip-mark" width="10" height="16" viewBox="0 0 10 16" aria-label="mit Foto oder Überweisung">
+      <path d="M6.6 4.4v7.2a1.7 1.7 0 0 1-3.4 0V3.3a2.6 2.6 0 0 1 5.2 0v8.6a3.6 3.6 0 0 1-7.2 0V5.2" />
+    </svg>
+  );
+}
+
+/** Whether a task shows the paper clip. */
+export function hasClip(t: { photos?: string[]; pay?: unknown }): boolean {
+  return !!t.photos?.length || !!t.pay;
+}
+
 export function ScheduledDot() {
   return <span class="sched-dot" aria-label="steht heute im Tag" />;
 }

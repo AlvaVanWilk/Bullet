@@ -21,6 +21,10 @@ export interface UiState {
   postIt: PostItTarget | null;
   settingsOpen: boolean;
   archiveOpen: boolean;
+  /** A photo of a task, shown large. */
+  photo: { taskId: string; id: string } | null;
+  /** The GiroCode of a task, to scan with the banking app. */
+  qr: string | null;
 }
 
 function observable<T extends object>(initial: T) {
@@ -45,6 +49,8 @@ export const ui = observable<UiState>({
   postIt: null,
   settingsOpen: false,
   archiveOpen: false,
+  photo: null,
+  qr: null,
 });
 
 export const device = observable<DeviceState>(loadDevice());

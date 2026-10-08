@@ -34,6 +34,8 @@ sich auch so anfühlt, nur ein bisschen magisch.
 | auf dem Handy | Die Liste ist schmaler und anfangs eingeklappt (Lasche „Liste“ antippen); ein Tipp auf die Seite klappt sie wieder ein. Die Wochenübersicht ist kleiner, Pfeile und Zahnrad stehen in der Zeile der Kalenderwoche. |
 | frühere und kommende Wochen ansehen | Pfeile neben der Kalenderwoche, „heute“ führt zurück; in kommenden Wochen steht nur die Wochenübersicht |
 | Familie dazuholen | Einstellungen → Familie → Google-Adresse eintragen → „freigeben“. Jede Person hat ihre eigene Liste und ihren eigenen Kalender. |
+| Foto zu einer Aufgabe (z. B. Rechnung) | Aufgabe antippen → „+ Foto“: Kamera oder Fotomediathek. Das Foto antippen zeigt es groß, „vergrößern“ zeigt es in voller Größe, dort lässt es sich auch löschen. Aufgaben mit Foto oder Überweisung tragen eine kleine Büroklammer. |
+| Rechnung bezahlen | Aufgabe antippen → „€ Überweisung“: Empfänger, IBAN, Betrag, Zweck. „aus dem Foto lesen“ füllt die leeren Felder aus dem Foto (auf dem Gerät, nichts wird verschickt); bitte kurz prüfen, ein ✓ zeigt eine stimmige IBAN. „QR-Code zum Überweisen“ zeigt einen GiroCode, den die Banking-App scannt. |
 | unterwegs mit Siri aufschreiben | Einstellungen → Konto → „Siri“ → „einrichten“, dann auf dem iPhone den Kurzbefehl „Bullet“ anlegen, wie es dort Schritt für Schritt steht. Danach: „Hey Siri, Bullet“, Aufgabe diktieren, und sie steht in der Masterliste. Beginnt sie mit „wichtig“, bekommt sie das rote „!“. Jede Person hat ihren eigenen Schlüssel; „neuer Schlüssel“ macht den alten ungültig. |
 | Besonderes eintragen (z. B. Geburtstag, jährlich) | „+“ an der Box „Besonderes“ |
 | für einen Termin etwas vorbereiten | Termin (oder Besonderes) in der Wochenübersicht antippen, unter „Vorbereiten“ schreiben, Enter. Beim Tippen erscheinen passende Aufgaben, die es schon gibt; antippen nimmt sie dazu (die Deadline rückt auf den Tag des Termins, eine frühere bleibt). Die Aufgabe steht ganz normal in der Masterliste und hat den Tag des Termins als Deadline; im Post-it der Aufgabe lässt sie sich ändern. Die kleine Zahl neben dem Termin zeigt, wie viel noch offen ist. Wird der Termin in Google verschoben, bleibt die Deadline, wie sie ist. |
@@ -129,10 +131,11 @@ Ist eine Deadline erledigt, bleibt der Termin mit „✓“ stehen, aber ohne Er
 
 | Ort | Inhalt |
 | --- | --- |
-| `src/lib/` | die Regeln ohne Oberfläche: Daten (`model.ts`), Tage und Wochen (`dates.ts`), was wo steht (`logic.ts`: Kästchen, Deadlines, Archiv, Vorschläge) |
+| `src/lib/` | die Regeln ohne Oberfläche: Daten (`model.ts`), Tage und Wochen (`dates.ts`), was wo steht (`logic.ts`: Kästchen, Deadlines, Archiv, Vorschläge), Überweisungen (`payment.ts`: IBAN, Betrag, GiroCode, Rechnung lesen) |
 | `src/store/` | Speicher auf dem Gerät (IndexedDB) und Zusammenführen beim Abgleich |
 | `src/server.ts` | Anmeldung und Abgleich mit `api.php` |
 | `src/google/` | Google-Kalender: Termine der Woche, Kalender „Bullet“, Deadlines |
+| `src/photos.ts` | Fotos: verkleinern, auf dem Gerät halten, hochladen; die Texterkennung (`src/ui/ocr.ts`, tesseract.js) liegt im Ordner `ocr/` der App |
 | `src/ui/` | die Ansichten: `Sidebar.tsx` (Masterliste, Kategorien, Laschen, Tausch), `WeekView.tsx` (Kopf der Woche, Tage), `CategoryView.tsx`, `PostIt.tsx`, `Settings.tsx`, `Archive.tsx`, `drag.ts` (Ziehen mit dem Finger), `ink.tsx` (handgezeichnete Boxen, Kästchen, Durchstreichen) |
 | `src/styles/` | Papier, Seitenleiste, Woche, Post-its |
 | `public/api.php`, `public/oauth.php`, `public/briefkasten.php`, `public/lib/bullet.php` | der Server: Google-Anmeldung, Kalender-Schlüssel, Abgleich, Briefkasten für Siri. Daten liegen in `bullet-daten/` auf dem Webspace, gesperrt per `.htaccess` |

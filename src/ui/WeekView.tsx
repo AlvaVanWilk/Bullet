@@ -17,7 +17,7 @@ import { store } from '../store/store';
 import { GRID } from './baseline';
 import { DayHeading } from './DayHeading';
 import { clickSuppressed, startDrag } from './drag';
-import { Checkbox, HandBox, NoteMark, TaskText } from './ink';
+import { Checkbox, ClipMark, HandBox, hasClip, NoteMark, TaskText } from './ink';
 import { StatusNote } from './StatusNote';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { movePick, SuggestList } from './Suggest';
@@ -297,7 +297,8 @@ function TodayLine(props: { day: DayKey }) {
           onInput={(e) => { setText((e.target as HTMLInputElement).value); setPick(-1); }}
           onKeyDown={(e) => {
             if (movePick(e, found.length, setPick)) return;
-            if (e.key === 'Escape') done();
+            // Esc: leave the line (what was typed goes)
+            if (e.key === 'Escape') { done(); (e.currentTarget as HTMLInputElement).blur(); }
           }}
           onFocus={(e) => roomBelow(e.currentTarget)}
           aria-label="Aufgabe für heute"
@@ -382,6 +383,7 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
       >
         <TaskText text={task.text} fresh={item.entry ? store.isFresh(item.entry.id) : false} />
         {task.note && <NoteMark />}
+        {hasClip(task) && <ClipMark />}
       </span>
       {color && <span class="cat-dot" style={{ '--dot': color.marker }} aria-label={cat!.name} />}
     </li>

@@ -12,6 +12,9 @@
 //   inbox                  -> { ok, key | null }  (key for briefkasten.php)
 //   inbox_new              -> { ok, key }         (a new key; the old one stops working)
 //   inbox_off              -> { ok, key: null }
+//   photo_put { id, data }  -> { ok }   (data: the JPEG as base64)
+//   photo_delete { id }     -> { ok }
+//   GET ?action=photo&id=   -> the JPEG
 //
 // Everything but "status" needs a signed-in device (cookie from oauth.php).
 
@@ -38,7 +41,7 @@ function fail(int $status, string $error): void
 function request(): array
 {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
-        return ['action' => $_GET['action'] ?? 'status'];
+        return ['action' => $_GET['action'] ?? 'status', 'id' => $_GET['id'] ?? ''];
     }
     $raw = file_get_contents('php://input', false, null, 0, MAX_BODY_BYTES + 1);
     if ($raw === false || strlen($raw) > MAX_BODY_BYTES) {
@@ -171,6 +174,29 @@ try {
                     : array_filter($list, fn ($e) => $e !== $email));
             }
             familyReply();
+
+        case 'photo':
+            $file = photoFile($uid, (string) ($request['id'] ?? ''));
+            if ($file === null || !is_file($file)) {
+                fail(404, 'photo');
+            }
+            // a photo never changes under its id
+            header('Content-Type: image/jpeg');
+            header('Cache-Control: private, max-age=31536000, immutable');
+            header('Content-Length: ' . filesize($file));
+            readfile($file);
+            exit;
+
+        case 'photo_put':
+            $bytes = base64_decode((string) ($request['data'] ?? ''), true);
+            if ($bytes === false || !putPhoto($uid, (string) ($request['id'] ?? ''), $bytes)) {
+                fail(400, 'photo');
+            }
+            reply(200, ['ok' => true]);
+
+        case 'photo_delete':
+            deletePhoto($uid, (string) ($request['id'] ?? ''));
+            reply(200, ['ok' => true]);
 
         case 'inbox':
             reply(200, ['ok' => true, 'key' => inboxKey($uid)]);
