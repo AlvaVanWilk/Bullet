@@ -158,17 +158,39 @@ export function QrSheet() {
         <div class="card-body">
           <div class="qr-code" dangerouslySetInnerHTML={{ __html: renderSVG(code, { ecc: 'M', border: 3 }) }} />
           <dl class="qr-data">
-            <dt>an</dt><dd>{pay.name}</dd>
-            <dt>IBAN</dt><dd class="mono">{formatIban(cleanIban(pay.iban))}</dd>
-            {cents != null && <><dt>Betrag</dt><dd>{formatAmount(cents)} €</dd></>}
-            {pay.purpose && <><dt>Zweck</dt><dd>{pay.purpose}</dd></>}
+            <dt>an</dt><dd><Copy text={pay.name} /></dd>
+            <dt>IBAN</dt><dd class="mono"><Copy text={formatIban(cleanIban(pay.iban))} copy={cleanIban(pay.iban)} /></dd>
+            {cents != null && <><dt>Betrag</dt><dd><Copy text={`${formatAmount(cents)} €`} copy={formatAmount(cents)} /></dd></>}
+            {pay.purpose && <><dt>Zweck</dt><dd><Copy text={pay.purpose} /></dd></>}
           </dl>
           <p class="set-note">
             Mit der Banking-App scannen (dort, wo sie QR-Codes für Überweisungen liest, oft „GiroCode“
             genannt). Die App zeigt alles noch einmal zum Prüfen, bevor du die Überweisung freigibst.
+            Auf demselben Handy geht Scannen nicht: Dann die Angaben antippen, sie werden kopiert, und
+            in der Banking-App einfügen.
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+/** A value that is copied when tapped (for pasting into the banking app). */
+function Copy(props: { text: string; copy?: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      class={`copy-value ${done ? 'copied' : ''}`}
+      onClick={() => {
+        navigator.clipboard.writeText(props.copy ?? props.text).then(() => {
+          setDone(true);
+          setTimeout(() => setDone(false), 1500);
+        }).catch(() => { /* still readable on screen */ });
+      }}
+    >
+      {props.text}
+      <small>{done ? ' kopiert ✓' : ''}</small>
+    </button>
   );
 }

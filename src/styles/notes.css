@@ -275,7 +275,10 @@
 .qr-data { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 8px; font-family: var(--clean); font-size: 15px; }
 .qr-data dt { color: var(--ink-soft); }
 .qr-data dd { margin: 0; overflow-wrap: anywhere; }
-.qr-data .mono { font-family: ui-monospace, Menlo, monospace; font-size: 14px; }
+.qr-data .mono .copy-value { font-family: ui-monospace, Menlo, monospace; font-size: 14px; }
+.copy-value { font: inherit; text-align: left; padding: 1px 4px; margin: -1px -4px; border-radius: 5px; overflow-wrap: anywhere; }
+.copy-value:active, .copy-value.copied { background: rgba(253, 240, 162, 0.8); }
+.copy-value small { color: #4f7a4a; font-size: 12px; }
 
 /* settings: a sheet beside the page that can be dragged aside by its head */
 .settings-panel {
