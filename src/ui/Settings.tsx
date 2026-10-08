@@ -254,7 +254,7 @@ function DaysTab(props: { s: Settings }) {
       <Field
         label="Erledigtes verschwindet aus der Masterliste nach"
         note={
-          <button type="button" class="link quiet" onClick={() => ui.set({ settingsOpen: false, archiveOpen: true })}>
+          <button type="button" class="link quiet" onClick={() => ui.set({ settingsOpen: false, view: { kind: 'archive' } })}>
             Alle erledigten Aufgaben ansehen (Archiv)
           </button>
         }

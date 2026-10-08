@@ -108,8 +108,8 @@ export function Sidebar() {
             type="button" role="tab" aria-selected={front === 'master'}
             class={`tab tab-master ${front === 'master' ? 'on' : ''}`}
             onClick={() => switchTo('master')}
-            onContextMenu={(e) => { e.preventDefault(); ui.set({ archiveOpen: true }); }}
-            {...longPress(() => ui.set({ archiveOpen: true }))}
+            onContextMenu={(e) => { e.preventDefault(); ui.set({ view: { kind: 'archive' } }); }}
+            {...longPress(() => ui.set({ view: { kind: 'archive' } }))}
           >
             Master
           </button>
@@ -227,15 +227,6 @@ function MasterList(props: { active: boolean }) {
         <span class="sheet-title-text">Masterliste</span>
         <button
           type="button"
-          class="title-tool"
-          onClick={() => ui.set({ archiveOpen: true })}
-          aria-label="Archiv: alle erledigten Aufgaben, mit Suche"
-          title="Archiv: alle erledigten Aufgaben, mit Suche"
-        >
-          <ArchiveIcon />
-        </button>
-        <button
-          type="button"
           class="broom"
           disabled={!struckRows.length}
           onClick={sweep}
@@ -292,17 +283,6 @@ function MasterList(props: { active: boolean }) {
         }}
       />
     </div>
-  );
-}
-
-/** A small hand-drawn archive box. */
-function ArchiveIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M3.4 6.2c5.6-.3 11.4-.3 17.3.1l-.2 3.6c-5.7.2-11.4.2-17-.1z" />
-      <path d="M4.7 10.1c-.1 3.4 0 6.6.3 9.6 4.6.3 9.3.3 14 0 .3-3.1.3-6.3.2-9.6" />
-      <path d="M9.6 13.3c1.6.2 3.3.2 4.9 0" />
-    </svg>
   );
 }
 

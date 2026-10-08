@@ -5,7 +5,7 @@ import { handFont } from '../lib/fonts';
 import { entriesByTask, isOpenToday } from '../lib/logic';
 import { STAGE } from '../stage';
 import { store } from '../store/store';
-import { ArchiveSheet } from './Archive';
+import { ArchiveView } from './Archive';
 import { alignToPaper, watchPaperAlignment } from './baseline';
 import { CategoryView } from './CategoryView';
 import { configureDrops } from './drag';
@@ -13,6 +13,7 @@ import { Login } from './Login';
 import { uploadPending } from '../photos';
 import { onSynced } from '../server';
 import { QrSheet } from './Pay';
+import { PageTabs } from './PageTabs';
 import { PhotoViewer } from './Photos';
 import { PostItLayer } from './PostIt';
 import { SettingsSheet } from './Settings';
@@ -64,13 +65,15 @@ export function App() {
     <div class="desk app">
       <Sidebar />
       <main class="page paper" data-paper={snap.settings.paperMain}>
-        {state.view.kind === 'category' ? <CategoryView id={state.view.id} /> : <WeekView />}
+        {state.view.kind === 'category' ? <CategoryView id={state.view.id} />
+          : state.view.kind === 'archive' ? <ArchiveView />
+          : <WeekView />}
       </main>
+      <PageTabs />
       <PostItLayer />
       <PhotoViewer />
       <QrSheet />
       <SettingsSheet />
-      <ArchiveSheet />
       {STAGE === 'test' && <div class="test-badge" aria-hidden="true">Test</div>}
     </div>
   );

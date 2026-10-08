@@ -109,6 +109,27 @@ export function FoldMark(props: { open: boolean; seed: string }) {
   );
 }
 
+/** A small hand-drawn archive box (the tab of the archive). */
+export function ArchiveIcon() {
+  return (
+    <svg class="icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3.4 6.2c5.6-.3 11.4-.3 17.3.1l-.2 3.6c-5.7.2-11.4.2-17-.1z" />
+      <path d="M4.7 10.1c-.1 3.4 0 6.6.3 9.6 4.6.3 9.3.3 14 0 .3-3.1.3-6.3.2-9.6" />
+      <path d="M9.6 13.3c1.6.2 3.3.2 4.9 0" />
+    </svg>
+  );
+}
+
+/** A checkbox drawn with the fineliner (the tab of the planner). */
+export function BoxIcon() {
+  const box = paths('icon-box', () => gen.rectangle(4.5, 4.5, 15, 15, { roughness: 0.8, bowing: 0.7, strokeWidth: 1.5, seed: 7 }));
+  return (
+    <svg class="icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      {box.map((p, i) => <path key={i} d={p.d} />)}
+    </svg>
+  );
+}
+
 export function Bang() {
   return <span class="bang" aria-label="wichtig">!</span>;
 }

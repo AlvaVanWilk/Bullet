@@ -23,6 +23,14 @@
   .is-dragging .sidebar-scrim { pointer-events: none; }
   /* the tab of the folded list sits beside the days, not over the boxes of the week */
   .spine { top: 250px; }
+  /* the tabs of the pages, a little smaller */
+  .page { margin-right: 34px; }
+  .page-tabs { top: 58px; right: 4px; gap: 8px; }
+  .page-tab { width: 40px; height: 46px; padding-left: 10px; }
+  .page-tab .icon { width: 20px; height: 20px; }
+  .archive-search, .arch-page { padding-left: 18px; padding-right: 14px; }
+  .archive-search { flex-wrap: wrap; }
+  .archive-search input[type='search'] { flex-basis: 100%; }
   /* the four tabs of the settings in one line */
   .set-tabs { padding: 0 10px 6px 12px; }
   .set-tab { font-size: 17px; padding: 4px 6px 2px; }
@@ -32,6 +40,9 @@
    and for the three boxes side by side */
 @media (max-height: 520px) and (min-width: 761px) {
   :root { --sidebar-w: 264px; }
+  .page { margin-right: 36px; }
+  .page-tabs { top: 46px; right: 4px; gap: 6px; }
+  .page-tab { width: 42px; height: 42px; padding-left: 10px; }
   .week-boxes { grid-template-columns: 1.35fr 1fr 1fr; }
   .week-boxes .wbox:first-child { grid-column: auto; }
 }

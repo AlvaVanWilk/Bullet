@@ -481,7 +481,6 @@
 .cal-list .choice-opt { font-size: 16px; }
 
 /* archive */
-.archive-search { display: flex; gap: 8px; padding: 4px 30px 10px; align-items: center; }
 .archive-search input[type='search'] {
   flex: 1;
   min-width: 0;

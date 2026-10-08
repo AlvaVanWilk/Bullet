@@ -15,12 +15,11 @@ export type PostItTarget =
   | { kind: 'event'; event: CalEvent; rect: DOMRect };
 
 export interface UiState {
-  view: { kind: 'week' } | { kind: 'category'; id: string };
+  view: { kind: 'week' } | { kind: 'category'; id: string } | { kind: 'archive' };
   /** 0 = this week, -1 = last week … */
   weekOffset: number;
   postIt: PostItTarget | null;
   settingsOpen: boolean;
-  archiveOpen: boolean;
   /** A photo of a task, shown large. */
   photo: { taskId: string; id: string } | null;
   /** The GiroCode of a task, to scan with the banking app. */
@@ -48,7 +47,6 @@ export const ui = observable<UiState>({
   weekOffset: 0,
   postIt: null,
   settingsOpen: false,
-  archiveOpen: false,
   photo: null,
   qr: null,
 });
