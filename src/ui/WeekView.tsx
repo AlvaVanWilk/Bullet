@@ -289,7 +289,7 @@ function TodayLine(props: { day: DayKey }) {
         <span class="new-line-mark" aria-hidden="true">+</span>
         <input
           value={text}
-          placeholder="Aufgabe für heute schreiben oder aus der Liste hierher ziehen"
+          placeholder={narrow() ? 'Aufgabe für heute …' : 'Aufgabe für heute schreiben oder aus der Liste hierher ziehen'}
           enterKeyHint="enter"
           autoComplete="off"
           autoCorrect="on"
@@ -314,6 +314,11 @@ function TodayLine(props: { day: DayKey }) {
       />
     </div>
   );
+}
+
+/** A phone held upright, where only short hints fit. */
+function narrow(): boolean {
+  return matchMedia('(max-width: 760px)').matches;
 }
 
 /**

@@ -18,6 +18,7 @@ import './styles/paper.css';
 import './styles/sidebar.css';
 import './styles/week.css';
 import './styles/notes.css';
+import './styles/screens.css';
 import { seedDemo } from './demo';
 import { googleStatus } from './google/calendar';
 import { syncDeadlines } from './google/deadlines';

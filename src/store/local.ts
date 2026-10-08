@@ -12,7 +12,9 @@ export interface DeviceState {
 
 const KEY = `${STORAGE_PREFIX}device`;
 
-const DEFAULTS: DeviceState = { sidebarOpen: true, sidebarTab: 'master', strikeSeenAt: 0 };
+// On a phone the list would cover the page, so it starts folded away there.
+const narrow = typeof matchMedia !== 'undefined' && matchMedia('(max-width: 760px)').matches;
+const DEFAULTS: DeviceState = { sidebarOpen: !narrow, sidebarTab: 'master', strikeSeenAt: 0 };
 
 export function loadDevice(): DeviceState {
   try {

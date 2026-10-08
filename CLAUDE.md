@@ -39,6 +39,9 @@ Bedienung und Einrichtung: `README.md`.
 - Die Schrift sitzt auf den Punktreihen bzw. Linien: Zeilen sind Vielfache von 28 px,
   die Grundlinie der gewählten Schrift wird gemessen (`src/ui/baseline.ts`).
 - Farben gedeckt und „erwachsen“, nicht knallig.
+- Handy (`src/styles/screens.css`): dieselbe Ansicht, nur kleiner. Liste schmaler und
+  anfangs eingeklappt, Wochenübersicht als schmaler Streifen mit kleiner Schrift,
+  Pfeile und Zahnrad in der Zeile der Kalenderwoche. Das iPad bleibt, wie es ist.
 - Einstellungen: ein Blatt neben der Seite, nicht davor (kein Abdunkeln), am Kopf
   verschiebbar, Reiter Aussehen / Tage und Liste / Kalender / Konto. Jede Änderung
   ist sofort auf der Seite zu sehen.
@@ -71,4 +74,5 @@ Bedienung und Einrichtung: `README.md`.
   `main` kommt nur, was die Nutzerin im Testordner angesehen und mit „freigeben“
   freigegeben hat.
 - UI-Texte auf Deutsch, Bezeichner und Kommentare im Code auf Englisch.
-- Vor dem Pushen: `npm test`, `npm run test:php`, `npm run build`.
+- Vor dem Pushen: `npm test`, `npm run test:php`, `npm run build`, danach
+  `node scripts/e2e.cjs` (zwei Geräte, Abgleich, Stile von Post-it und Einstellungen).

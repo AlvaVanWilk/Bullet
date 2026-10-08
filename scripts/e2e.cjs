@@ -74,6 +74,29 @@ async function device(browser, name) {
     await phone.waitForTimeout(3000);
     const struck = await phone.locator('.sheet.front .row', { hasText: 'Milch kaufen' }).locator('.tt.struck').count();
     check('ticked on one device, struck through on the other', struck === 1);
+
+    await ipad.locator('.today-line input').fill('Paket abholen');
+    await ipad.keyboard.press('Enter');
+    await ipad.waitForTimeout(400);
+    const written = await ipad.$$eval('.day.today .dtask .tt-text', (els) => els.map((e) => e.textContent));
+    const listed = await ipad.locator('.sheet.front .row', { hasText: 'Paket abholen' }).count();
+    check('typed into today, it stands in the day and in the list', written.includes('Paket abholen') && listed === 1, written);
+
+    // the styles of post-its and of the settings sheet are all there
+    await ipad.locator('.sheet.front .row', { hasText: 'Steuer' }).locator('.tt-text').click();
+    await ipad.waitForSelector('.postit.shown');
+    const note = await ipad.evaluate(() => ({
+      actions: getComputedStyle(document.querySelector('.postit .note-actions')).display,
+      button: getComputedStyle(document.querySelector('.postit .note-btn')).borderTopWidth,
+    }));
+    check('post-it buttons are styled', note.actions === 'flex' && note.button !== '0px', note);
+    await ipad.keyboard.press('Escape');
+    await ipad.mouse.click(700, 790);
+    await ipad.waitForTimeout(300);
+    await ipad.locator('.gear').click();
+    await ipad.waitForSelector('.settings-panel');
+    const head = await ipad.evaluate(() => getComputedStyle(document.querySelector('.settings-panel .card-head')).display);
+    check('settings sheet is styled', head === 'flex', head);
   } catch (err) {
     failed = true;
     console.log('✗', err.message);
