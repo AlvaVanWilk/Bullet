@@ -41,6 +41,8 @@ export interface Task extends Base {
   photos?: string[];
   /** A bank transfer the task stands for, e.g. an invoice to pay. */
   pay?: Payment;
+  /** The tasks this one comes after: it waits (out of the list) until all are done. */
+  after?: string[];
 }
 
 export interface Payment {
@@ -105,6 +107,8 @@ export interface Settings extends Base {
   dayFormat: DayFormat;
   dayStyle: DayStyle;
   sounds: boolean;
+  /** "Aufräumen": tasks done up to this time are off the list (they stay in the archive). */
+  listClearedAt: number;
 }
 
 export type AnyRecord = Task | Category | Entry | Special | Settings | Hide;
@@ -128,6 +132,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dayFormat: 'zahl',
   dayStyle: 'marker',
   sounds: true,
+  listClearedAt: 0,
 };
 
 /** An appointment read from Google (not synced, cached per week). */

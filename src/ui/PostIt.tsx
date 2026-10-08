@@ -1,5 +1,5 @@
 // Notes stuck next to what was tapped: a task (text, note, "!", deadline,
-// category, photos, a transfer to make, delete), a category (name, colour), something special, or an
+// category, photos, a transfer to make, follow-ups, delete), a category (name, colour), something special, or an
 // appointment from Google (to hide it). Appointments and specials also take
 // the tasks that prepare them.
 
@@ -12,6 +12,7 @@ import type { CalEvent, Special, Task, TaskLink } from '../lib/model';
 import { store } from '../store/store';
 import { ui, useStore, useToday, useUi, type PostItTarget } from './state';
 import { forgetPhotosOf } from '../photos';
+import { FollowSection } from './Follow';
 import { PaySection } from './Pay';
 import { PhotoStrip } from './Photos';
 import { movePick, SuggestList } from './Suggest';
@@ -158,8 +159,11 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         })}
       </div>
 
-      <PhotoStrip task={task} />
-      <PaySection task={task} />
+      <div class="note-extras">
+        <PhotoStrip task={task} />
+        <PaySection task={task} />
+        <FollowSection task={task} />
+      </div>
 
       <div class="note-actions">
         <button type="button" class="note-btn save" onClick={props.close}>speichern</button>

@@ -2,11 +2,13 @@
 // the categories, with sticky-note tabs at the bottom. It slides in and out;
 // switching tabs pulls the front sheet out and tucks it behind the other.
 
+import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
-import { entriesByTask, isOpenToday, liveCategories, masterTasks } from '../lib/logic';
+import { entriesByTask, followUps, isOpenToday, liveCategories, masterRows, masterTasks } from '../lib/logic';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
+import { FollowRows, FollowToggle, useFolds } from './Follow';
 import { Bang, ClipMark, hasClip, NoteMark, ScheduledDot, TaskText } from './ink';
 import { playPaperSlide, playStrike } from './sound';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
@@ -156,9 +158,13 @@ function MasterList(props: { active: boolean }) {
   const listRef = useRef<HTMLUListElement>(null);
   const [striking, setStriking] = useState<Set<string>>(new Set());
   const struckRef = useRef<Set<string>>(new Set());
-  const tasks = masterTasks(snap, Math.max(now, Date.now()));
+  const allRows = masterRows(snap, Math.max(now, Date.now()));
+  const tasks = allRows.map((r) => r.task);
   const index = entriesByTask(snap.entries);
   const seen = dev.strikeSeenAt;
+  const follow = followUps(snap);
+  const folds = useFolds();
+  const [sweeping, setSweeping] = useState(false);
 
   // Struck through one after the other, in the order they were done.
   const pending = tasks
@@ -191,42 +197,83 @@ function MasterList(props: { active: boolean }) {
     ui.set({ postIt: { kind: 'task', id: taskId, rect: el.getBoundingClientRect() } });
   };
 
+  // A task that waited appears below its mother only once she is struck through on
+  // screen, and is then written in.
+  const unstruck = new Set(pending.filter((t) => !striking.has(t.id)).map((t) => t.id));
+  const held = new Set<string>();
+  const rows = allRows.filter((r) => {
+    if (r.anchor && (unstruck.has(r.anchor) || held.has(r.anchor))) {
+      held.add(r.task.id);
+      return false;
+    }
+    return true;
+  });
+  const struckRows = rows.filter((r) => r.task.doneAt != null && (r.task.doneAt <= seen || striking.has(r.task.id)));
+
+  // "Aufräumen": the struck tasks are swept off the list (the archive keeps them).
+  const sweep = () => {
+    if (!struckRows.length || sweeping) return;
+    setSweeping(true);
+    playPaperSlide(0.3);
+    setTimeout(() => {
+      store.updateSettings({ listClearedAt: Math.max(...struckRows.map((r) => r.task.doneAt!)) });
+      setSweeping(false);
+    }, 520);
+  };
+
   return (
     <div class="sheet-inner">
-      <h2 class="sheet-title">Masterliste</h2>
+      <h2 class="sheet-title">
+        Masterliste
+        <button
+          type="button"
+          class="broom"
+          disabled={!struckRows.length}
+          onClick={sweep}
+          aria-label="Aufräumen: Durchgestrichenes wegräumen"
+          title="Aufräumen: Durchgestrichenes wegräumen (bleibt im Archiv)"
+        >
+          <BroomIcon />
+        </button>
+      </h2>
       <ul class="task-list" ref={listRef} data-scroll>
-        {tasks.map((t) => {
+        {rows.map(({ task: t, anchor }) => {
           const cat = store.category(t.categoryId);
           const color = cat ? categoryColor(cat.color) : null;
           const isStruck = t.doneAt != null && (t.doneAt <= seen || striking.has(t.id));
           const editing = uiState.postIt?.kind === 'task' && uiState.postIt.id === t.id;
+          const waiting = follow(t.id);
+          const folded = !folds.isOpen(t.id);
           return (
-            <li
-              key={t.id}
-              class={`row ${editing ? 'editing' : ''}`}
-              onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, {
-                taskId: t.id, text: t.text, from: 'master', color: color?.ink,
-              })}
-              onClick={(e) => openPostIt(t.id, e.currentTarget as HTMLElement)}
-            >
-              <span class="lead">
-                {isOpenToday(t, today, index) && <ScheduledDot />}
-                {t.important && <Bang />}
-              </span>
-              <TaskText
-                text={t.text}
-                color={color && mode === 'text' ? color.ink : undefined}
-                marker={color && mode === 'marker' ? color.marker : null}
-                struck={isStruck}
-                animate={striking.has(t.id)}
-                fresh={store.isFresh(t.id)}
-              />
-              {t.note && <NoteMark />}
-              {hasClip(t) && <ClipMark />}
-            </li>
+            <Fragment key={t.id}>
+              <li
+                class={`row ${editing ? 'editing' : ''} ${sweeping && isStruck ? 'swept' : ''}`}
+                onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, {
+                  taskId: t.id, text: t.text, from: 'master', color: color?.ink,
+                })}
+                onClick={(e) => openPostIt(t.id, e.currentTarget as HTMLElement)}
+              >
+                <span class="lead">
+                  {isOpenToday(t, today, index) && <ScheduledDot />}
+                  {t.important && <Bang />}
+                </span>
+                <TaskText
+                  text={t.text}
+                  color={color && mode === 'text' ? color.ink : undefined}
+                  marker={color && mode === 'marker' ? color.marker : null}
+                  struck={isStruck}
+                  animate={striking.has(t.id)}
+                  fresh={store.isFresh(t.id) || (!!anchor && striking.has(anchor))}
+                />
+                {t.note && <NoteMark />}
+                {hasClip(t) && <ClipMark />}
+                {waiting.length > 0 && <FollowToggle count={waiting.length} open={!folded} onToggle={() => folds.toggle(t.id)} />}
+              </li>
+              {!folded && <FollowRows items={waiting} motherId={t.id} colorMode={mode} />}
+            </Fragment>
           );
         })}
-        {!tasks.length && <li class="empty-hint">Hier entsteht deine Liste. Schreib unten los und drück Enter.</li>}
+        {!rows.length && <li class="empty-hint">Hier entsteht deine Liste. Schreib unten los und drück Enter.</li>}
       </ul>
       <NewLine
         placeholder="Neue Aufgabe …"
@@ -236,6 +283,17 @@ function MasterList(props: { active: boolean }) {
         }}
       />
     </div>
+  );
+}
+
+/** A small hand-drawn broom. */
+function BroomIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M19.6 3.2 12.4 11.6" />
+      <path d="M11.2 10.4c1.9.4 3.3 1.6 3.9 3.4-1.4 3.4-4.4 6.2-8.8 7.4-1.6-.2-2.9-.7-3.8-1.5 2-1.2 3.4-2.7 4.4-4.6.9-2.1 2.3-3.9 4.3-4.7z" />
+      <path d="M6.7 16.5c-.7 1.2-1.6 2.3-2.6 3.2M9.3 17.4c-.9 1.3-2 2.4-3.2 3.3M11.9 17.9c-.9 1.2-2 2.3-3.2 3.1" />
+    </svg>
   );
 }
 

@@ -28,7 +28,14 @@ Bedienung und Einrichtung: `README.md`.
 - Erledigt → Seitenleiste leuchtet auf. Beim Öffnen der Masterliste werden die seither
   erledigten Aufgaben nacheinander (in Erledigungsreihenfolge) dick durchgestrichen.
   Die Reihenfolge der Liste ändert sich nie. Nach 7 Tagen (einstellbar) verschwinden sie;
-  alle bleiben im versteckten Archiv (Suche nach Wort und Datum).
+  alle bleiben im versteckten Archiv (Suche nach Wort und Datum). Der Besen neben
+  „Masterliste“ räumt Durchgestrichenes sofort weg (`settings.listClearedAt`).
+- Folgeaufgaben (`task.after`): Eine Aufgabe, die noch auf offene „Mütter“ wartet, steht
+  nicht in der Masterliste. Ein ↳ neben der Mutter klappt die wartende Kette eingerückt
+  aus (nie gespeichert, anfangs immer zu). Ist die Mutter durchgestrichen, erscheint die
+  Folgeaufgabe vollständig darunter (nach dem Durchstreichen, mit Schreib-Animation).
+  Mehrere Mütter: wartet auf alle, hängt unter jeder offenen („auch nach: …“), erscheint
+  unter der zuletzt erledigten. Schleifen werden verhindert.
 - Hauptseite: Kopf (Kalenderwoche, Boxen Termine/Deadlines/Besonderes) scrollt nicht.
   Tage von Montag bis heute; heute nie unterhalb der Fenstermitte. Vergangene Termine
   blass. Deadlines im Kopf in normaler Schrift; nur überfällige rot und leuchtend,

@@ -189,6 +189,22 @@
   background: inherit;
   background-attachment: local;
 }
+/* photos, a transfer, follow-ups: closed they are small buttons in one row,
+   opened they take the whole width below */
+.note-extras { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.note-extras > .note-photos { display: contents; }
+.note-extras .set-note.warn { flex-basis: 100%; margin: 0; }
+.note-extras > .pay { flex-basis: 100%; order: 1; }
+.note-extras > .follow-section { flex-basis: 100%; order: 2; }
+
+/* what comes after a task, and what it comes after */
+.follow-section { display: flex; flex-direction: column; gap: 2px; }
+.follow-list li { display: flex; align-items: baseline; gap: 4px; font-size: 19px; line-height: 26px; }
+.follow-list .follow-hook { color: var(--ink-faint); }
+.follow-name { flex: 1; min-width: 0; text-align: left; font: inherit; }
+.follow-list li.done .follow-name { color: var(--ink-faint); text-decoration: line-through; text-decoration-thickness: 1.2px; }
+.follow-x { flex: none; width: 28px; height: 26px; font-size: 20px; color: var(--ink-faint); }
+
 /* photos of a task: small prints in a row */
 .note-photos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 6px; }
 .photo-thumb {

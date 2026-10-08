@@ -30,6 +30,21 @@ describe('store', () => {
     expect(s.snapshot().entries).toHaveLength(1);
   });
 
+  it('links follow-ups, in the category of the mother, and refuses loops', () => {
+    const s = makeStore();
+    const cat = s.addCategory('Haus')!;
+    const a = s.addTask('Angebot einholen', cat.id)!;
+    const b = s.addFollowUp(a.id, 'Angebot prüfen')!;
+    expect(s.task(b.id)).toMatchObject({ after: [a.id], categoryId: cat.id });
+    const c = s.addTask('Unterschreiben')!;
+    expect(s.linkFollowUp(b.id, c.id)).toBe(true);
+    expect(s.linkFollowUp(c.id, a.id)).toBe(false);
+    expect(s.linkFollowUp(a.id, a.id)).toBe(false);
+    expect(s.task(a.id)!.after).toBeUndefined();
+    s.unlinkFollowUp(b.id, c.id);
+    expect(s.task(c.id)!.after).toBeUndefined();
+  });
+
   it('takes an existing task up for an appointment', () => {
     const s = makeStore();
     const link = { key: 'cal|ev1', title: 'Zahnarzt', day: '2026-10-13' };

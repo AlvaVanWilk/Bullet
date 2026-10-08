@@ -35,14 +35,58 @@ export interface DayItem {
 export function isVisibleInLists(task: Task, settings: Settings, now: number): boolean {
   if (task.deleted) return false;
   if (task.doneAt == null) return true;
+  if (task.doneAt <= (settings.listClearedAt ?? 0)) return false;
   return now - task.doneAt < settings.hideDoneAfterDays * DAY_MS;
 }
 
 const byCreated = <T extends { createdAt: number; id: string }>(a: T, b: T) =>
   a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1);
 
+export interface ListRow {
+  task: Task;
+  /** The done task it waited for and now stands under (null: in its own place). */
+  anchor: string | null;
+}
+
+/**
+ * The master list in its order: by when the tasks were written, and a task
+ * that waited for others right below the one of them done last. Tasks still
+ * waiting are not in the list (they hang under their "mothers", see followUps).
+ */
+export function masterRows(s: Snapshot, now: number): ListRow[] {
+  const live = s.tasks.filter((t) => !t.deleted);
+  const byId = new Map(live.map((t) => [t.id, t]));
+  const below = new Map<string, Task[]>();
+  const anchors = new Map<string, string | null>();
+  const free: Task[] = [];
+  for (const t of live) {
+    if (isWaiting(t, byId)) continue;
+    const anchor = anchorOf(t, byId);
+    anchors.set(t.id, anchor);
+    free.push(t);
+    if (anchor) {
+      const list = below.get(anchor);
+      if (list) list.push(t);
+      else below.set(anchor, [t]);
+    }
+  }
+  const rows: ListRow[] = [];
+  const seen = new Set<string>();
+  const visit = (t: Task) => {
+    if (seen.has(t.id)) return;
+    seen.add(t.id);
+    // a task gone from the list (done long ago, swept) still holds the place of what came after it
+    if (isVisibleInLists(t, s.settings, now)) rows.push({ task: t, anchor: anchors.get(t.id) ?? null });
+    for (const next of (below.get(t.id) ?? []).sort(byCreated)) visit(next);
+  };
+  free.filter((t) => !anchors.get(t.id)).sort(byCreated).forEach(visit);
+  // whatever a loop of "after" left out still gets its place
+  free.sort(byCreated).forEach(visit);
+  return rows;
+}
+
 export function masterTasks(s: Snapshot, now: number): Task[] {
-  return s.tasks.filter((t) => isVisibleInLists(t, s.settings, now)).sort(byCreated);
+  return masterRows(s, now).map((r) => r.task);
 }
 
 export function categoryTasks(s: Snapshot, categoryId: string, now: number): Task[] {
@@ -245,4 +289,100 @@ export function openLinkCounts(s: Snapshot): Map<string, number> {
     counts.set(t.link.key, (counts.get(t.link.key) ?? 0) + 1);
   }
   return counts;
+}
+
+// --- tasks that come after others ------------------------------------------------------
+
+/** An open task waits while one of the tasks it comes after is still open. */
+export function isWaiting(t: Task, byId: Map<string, Task>): boolean {
+  if (t.doneAt != null || !t.after?.length) return false;
+  return t.after.some((id) => {
+    const m = byId.get(id);
+    return !!m && !m.deleted && m.doneAt == null && m.id !== t.id;
+  });
+}
+
+/** The task a freed task stands under: of those it came after, the one done last. */
+function anchorOf(t: Task, byId: Map<string, Task>): string | null {
+  let best: Task | null = null;
+  for (const id of t.after ?? []) {
+    const m = byId.get(id);
+    if (!m || m.deleted || m.doneAt == null || m.id === t.id) continue;
+    if (!best || m.doneAt > best.doneAt! || (m.doneAt === best.doneAt && m.id > best.id)) best = m;
+  }
+  return best?.id ?? null;
+}
+
+export interface FollowUp {
+  task: Task;
+  /** 1: right after the mother, 2: after that one, … */
+  depth: number;
+  /** Other open tasks it also waits for. */
+  alsoAfter: Task[];
+}
+
+/**
+ * What waits for a task, as a chain folded out under it: each one indented
+ * below the one it comes after. Built once per snapshot, asked per task.
+ */
+export function followUps(s: Snapshot): (motherId: string) => FollowUp[] {
+  const live = s.tasks.filter((t) => !t.deleted);
+  const byId = new Map(live.map((t) => [t.id, t]));
+  const kids = new Map<string, Task[]>();
+  for (const t of live) {
+    if (!isWaiting(t, byId)) continue;
+    for (const id of new Set(t.after)) {
+      const list = kids.get(id);
+      if (list) list.push(t);
+      else kids.set(id, [t]);
+    }
+  }
+  return (motherId) => {
+    const out: FollowUp[] = [];
+    const seen = new Set([motherId]);
+    const walk = (id: string, depth: number) => {
+      for (const t of (kids.get(id) ?? []).sort(byCreated)) {
+        if (seen.has(t.id)) continue;
+        seen.add(t.id);
+        const alsoAfter = (t.after ?? [])
+          .filter((m) => m !== id)
+          .map((m) => byId.get(m))
+          .filter((m): m is Task => !!m && m.doneAt == null);
+        out.push({ task: t, depth, alsoAfter });
+        walk(t.id, depth + 1);
+      }
+    };
+    walk(motherId, 1);
+    return out;
+  };
+}
+
+/** Whether "task comes after mother" would close a loop (the task is the mother or comes before it). */
+export function wouldLoop(s: Snapshot, motherId: string, taskId: string): boolean {
+  const byId = new Map(s.tasks.map((t) => [t.id, t]));
+  const seen = new Set<string>();
+  const stack = [motherId];
+  while (stack.length) {
+    const id = stack.pop()!;
+    if (id === taskId) return true;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    stack.push(...(byId.get(id)?.after ?? []));
+  }
+  return false;
+}
+
+/** Existing open tasks that could come after this one (also ones already waiting elsewhere). */
+export function followSuggestions(s: Snapshot, motherId: string, text: string, limit = 5): Task[] {
+  const q = text.trim().toLowerCase();
+  if (q.length < 2) return [];
+  return s.tasks
+    .filter((t) => !t.deleted && t.doneAt == null && t.text.toLowerCase().includes(q)
+      && !(t.after ?? []).includes(motherId) && !wouldLoop(s, motherId, t.id))
+    .sort((a, b) => {
+      const as = a.text.toLowerCase().startsWith(q) ? 0 : 1;
+      const bs = b.text.toLowerCase().startsWith(q) ? 0 : 1;
+      return as - bs || byCreated(a, b);
+    })
+    .slice(0, limit);
 }

@@ -122,7 +122,7 @@ async function device(browser, name) {
     await ipad.waitForSelector('.postit.shown');
     await ipad.locator('.postit input[type=file]').setInputFiles(path.join(root, 'tests/fixtures/rechnung.jpg'));
     await ipad.waitForSelector('.photo-thumb img');
-    await ipad.locator('.pay-open').click();
+    await ipad.locator('.pay-open', { hasText: 'Überweisung' }).click();
     await ipad.locator('.note-btn', { hasText: 'aus dem Foto lesen' }).click();
     await ipad.waitForSelector('.pay .note-hint:not(.warn)', { timeout: 120000 });
     const read = await ipad.$$eval('.pay-field input', (els) => els.map((e) => e.value));
@@ -137,6 +137,26 @@ async function device(browser, name) {
     const shown = await phone.waitForSelector('.photo-thumb img', { timeout: 10000 }).then(() => true).catch(() => false);
     const iban = await phone.locator('.pay-field.iban input').inputValue().catch(() => '');
     check('the other device shows the photo and the transfer', shown && iban === 'DE89 3704 0044 0532 0130 00', iban);
+    await phone.mouse.click(700, 790);
+
+    // a follow-up waits out of the list, folded under its mother; the broom sweeps struck tasks away
+    await ipad.locator('.sheet.front .row', { hasText: 'Paket abholen' }).locator('.tt-text').click();
+    await ipad.waitForSelector('.postit.shown');
+    await ipad.locator('.postit .pay-open', { hasText: 'Folgeaufgabe' }).click();
+    await ipad.locator('.follow-section .prep-new').fill('Paket zurückschicken');
+    await ipad.locator('.follow-section .prep-new').press('Enter');
+    await ipad.mouse.click(700, 790);
+    await ipad.waitForTimeout(300);
+    const inList = await ipad.$$eval('.sheet.front .task-list > li.row:not(.follow) .tt-text', (els) => els.map((e) => e.textContent));
+    await ipad.locator('.sheet.front .row', { hasText: 'Paket abholen' }).locator('.follow-toggle').click();
+    const folded = await ipad.$$eval('.row.follow .tt-text', (els) => els.map((e) => e.textContent));
+    check('a follow-up waits folded under its mother, not in the list', !inList.includes('Paket zurückschicken') && folded.join() === 'Paket zurückschicken', { inList, folded });
+    await ipad.locator('.broom').click();
+    await ipad.waitForTimeout(2600);
+    await phone.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await phone.waitForTimeout(2500);
+    const swept = await phone.$$eval('.sheet.front .task-list > li.row:not(.follow) .tt-text', (els) => els.map((e) => e.textContent));
+    check('the broom sweeps struck tasks off the list, on both devices', !swept.includes('Milch kaufen') && swept.includes('Paket abholen'), swept);
   } catch (err) {
     failed = true;
     console.log('✗', err.message);

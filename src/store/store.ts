@@ -5,7 +5,7 @@ import { createStore, get, set } from 'idb-keyval';
 import { dayKey, type DayKey } from '../lib/dates';
 import { newId, stableId } from '../lib/ids';
 import { nextFreeColor } from '../lib/colors';
-import { deadlineFor, type Snapshot } from '../lib/logic';
+import { deadlineFor, wouldLoop, type Snapshot } from '../lib/logic';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
   type AnyRecord, type Category, type Entry, type Hide, type Settings, type Special, type Task, type TaskLink,
@@ -137,7 +137,7 @@ export class Store {
     return t != null && this.clock() - t < withinMs;
   }
 
-  addTask(text: string, categoryId: string | null = null, extra: Partial<Pick<Task, 'deadline' | 'link'>> = {}): Task | null {
+  addTask(text: string, categoryId: string | null = null, extra: Partial<Pick<Task, 'deadline' | 'link' | 'after'>> = {}): Task | null {
     const clean = text.trim();
     if (!clean) return null;
     const task: Task = {
@@ -162,6 +162,26 @@ export class Store {
     const task = this.task(id);
     if (!task) return;
     this.updateTask(id, { link, deadline: deadlineFor(task, link) });
+  }
+
+  /** A new task that comes after another (in its category); it waits until that one is done. */
+  addFollowUp(motherId: string, text: string): Task | null {
+    return this.addTask(text, this.task(motherId)?.categoryId ?? null, { after: [motherId] });
+  }
+
+  /** An existing task now (also) comes after another; false if that would close a loop. */
+  linkFollowUp(motherId: string, taskId: string): boolean {
+    const task = this.task(taskId);
+    if (!task || !this.task(motherId) || wouldLoop(this.snapshot(), motherId, taskId)) return false;
+    if (!task.after?.includes(motherId)) this.updateTask(taskId, { after: [...(task.after ?? []), motherId] });
+    return true;
+  }
+
+  unlinkFollowUp(motherId: string, taskId: string) {
+    const task = this.task(taskId);
+    if (!task?.after?.includes(motherId)) return;
+    const after = task.after.filter((id) => id !== motherId);
+    this.updateTask(taskId, { after: after.length ? after : undefined });
   }
 
   /** Tick or untick a task on a given day. Ticking the box of the day it is done on undoes it. */

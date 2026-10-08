@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  archive, dayItems, deadlineFor, entriesByTask, hiddenKeys, isOpenToday, linkedTasks, masterTasks, openLinkCounts, prepSuggestions,
+  archive, dayItems, deadlineFor, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
+  openLinkCounts, prepSuggestions, wouldLoop,
   specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type Snapshot,
 } from '../../src/lib/logic';
 import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Special, type Task } from '../../src/lib/model';
@@ -218,5 +219,68 @@ describe('writing into today', () => {
     ], [entry('e1', 'b', TODAY), entry('e2', 'a', '2026-10-06')]);
     // b stands in today, c is an overdue deadline (so in today as well), e is done
     expect(todaySuggestions(s, TODAY, 'brot', NOW).map((t) => t.id)).toEqual(['a']);
+  });
+});
+
+describe('tasks that come after others', () => {
+  const ids = (s: Snapshot) => masterTasks(s, NOW).map((t) => t.id);
+
+  it('keeps a follow-up out of the list until its mother is done, then right below it', () => {
+    const open = snap([task('a', { createdAt: 1 }), task('b', { createdAt: 2 }), task('c', { createdAt: 3, after: ['a'] }), task('d', { createdAt: 4, after: ['c'] })]);
+    expect(ids(open)).toEqual(['a', 'b']);
+    const fold = followUps(open)('a');
+    expect(fold.map((f) => [f.task.id, f.depth])).toEqual([['c', 1], ['d', 2]]);
+
+    const aDone = snap([task('a', { createdAt: 1, doneAt: NOW, doneDay: TODAY }), task('b', { createdAt: 2 }), task('c', { createdAt: 3, after: ['a'] }), task('d', { createdAt: 4, after: ['c'] })]);
+    expect(ids(aDone)).toEqual(['a', 'c', 'b']);
+    expect(masterRows(aDone, NOW).find((r) => r.task.id === 'c')!.anchor).toBe('a');
+    expect(followUps(aDone)('c').map((f) => f.task.id)).toEqual(['d']);
+  });
+
+  it('keeps the place even when the mother has left the list', () => {
+    const later = NOW + 30 * DAY;
+    const s = snap([task('a', { createdAt: 1, doneAt: NOW, doneDay: TODAY }), task('b', { createdAt: 2 }), task('c', { createdAt: 3, after: ['a'] })]);
+    expect(masterTasks(s, later).map((t) => t.id)).toEqual(['c', 'b']);
+  });
+
+  it('with several mothers waits for all, hangs under each open one, and comes below the one done last', () => {
+    const base = [task('a', { createdAt: 1 }), task('b', { createdAt: 2 }), task('x', { createdAt: 5, after: ['a', 'b'] })];
+    const s = snap(base);
+    expect(ids(s)).toEqual(['a', 'b']);
+    expect(followUps(s)('a').map((f) => [f.task.id, f.alsoAfter.map((t) => t.id)])).toEqual([['x', ['b']]]);
+    expect(followUps(s)('b').map((f) => [f.task.id, f.alsoAfter.map((t) => t.id)])).toEqual([['x', ['a']]]);
+
+    const oneDone = snap([{ ...base[0], doneAt: NOW, doneDay: TODAY }, base[1], base[2]]);
+    expect(ids(oneDone)).toEqual(['a', 'b']);
+    const bothDone = snap([{ ...base[0], doneAt: NOW, doneDay: TODAY }, { ...base[1], doneAt: NOW + 5, doneDay: TODAY }, base[2]]);
+    expect(ids(bothDone)).toEqual(['a', 'b', 'x']);
+    expect(masterRows(bothDone, NOW).find((r) => r.task.id === 'x')!.anchor).toBe('b');
+  });
+
+  it('frees a follow-up whose mother was deleted, and never loops', () => {
+    expect(ids(snap([task('a', { deleted: true }), task('c', { after: ['a'] })]))).toEqual(['c']);
+    const loop = snap([task('a', { createdAt: 1, doneAt: NOW, doneDay: TODAY, after: ['b'] }), task('b', { createdAt: 2, doneAt: NOW, doneDay: TODAY, after: ['a'] })]);
+    expect(ids(loop).sort()).toEqual(['a', 'b']);
+    const chain = snap([task('a'), task('b', { after: ['a'] }), task('c', { after: ['b'] })]);
+    expect(wouldLoop(chain, 'c', 'a')).toBe(true);
+    expect(wouldLoop(chain, 'a', 'a')).toBe(true);
+    expect(wouldLoop(chain, 'a', 'c')).toBe(false);
+  });
+
+  it('offers open tasks as follow-ups, also waiting ones, but none that would loop', () => {
+    const s = snap([task('a', { text: 'Angebot einholen' }), task('b', { text: 'Angebot prüfen', after: ['a'] }), task('c', { text: 'Angebot unterschreiben', after: ['b'] }), task('d', { text: 'Angebot ablegen', after: ['x'] })]);
+    expect(followSuggestions(s, 'b', 'angebot').map((t) => t.id)).toEqual(['d']);
+    expect(followSuggestions(s, 'c', 'angebot').map((t) => t.id)).toEqual(['d']);
+  });
+});
+
+describe('sweeping the list', () => {
+  it('takes done tasks off the list from that moment, the archive keeps them', () => {
+    const s = snap([task('a', { doneAt: NOW - 10, doneDay: TODAY }), task('b')]);
+    const swept = { ...s, settings: { ...s.settings, listClearedAt: NOW } };
+    expect(masterTasks(swept, NOW).map((t) => t.id)).toEqual(['b']);
+    expect(archive(swept, '').flatMap((g) => g.tasks.map((t) => t.id))).toEqual(['a']);
+    const doneLater = { ...swept, tasks: [...swept.tasks, task('c', { doneAt: NOW + 5, doneDay: TODAY })] };
+    expect(masterTasks(doneLater, NOW + 10).map((t) => t.id)).toEqual(['b', 'c']);
   });
 });
