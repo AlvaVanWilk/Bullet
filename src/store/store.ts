@@ -4,11 +4,11 @@
 import { createStore, get, set } from 'idb-keyval';
 import { compareDays, dayKey, type DayKey } from '../lib/dates';
 import { newId, stableId } from '../lib/ids';
-import { nextFreeColor } from '../lib/colors';
+import { nextFreeColor, PROJECT_COLORS } from '../lib/colors';
 import { deadlineFor, wouldLoop, type Snapshot } from '../lib/logic';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
-  type AnyRecord, type Category, type Entry, type Hide, type Settings, type Special, type Task, type TaskLink,
+  type AnyRecord, type Category, type Entry, type Hide, type Project, type Settings, type Special, type Task, type TaskLink,
 } from '../lib/model';
 import { STORAGE_PREFIX } from '../stage';
 import { isNewer } from './merge';
@@ -57,11 +57,12 @@ export class Store {
 
   snapshot(): Snapshot {
     if (this.snapshotCache?.version === this.version) return this.snapshotCache.snap;
-    const snap: Snapshot = { tasks: [], categories: [], entries: [], specials: [], hides: [], settings: DEFAULT_SETTINGS };
+    const snap: Snapshot = { tasks: [], categories: [], projects: [], entries: [], specials: [], hides: [], settings: DEFAULT_SETTINGS };
     for (const r of this.records.values()) {
       switch (r.type) {
         case 'task': snap.tasks.push(r); break;
         case 'category': snap.categories.push(r); break;
+        case 'project': snap.projects.push(r); break;
         case 'entry': snap.entries.push(r); break;
         case 'special': snap.specials.push(r); break;
         case 'hide': snap.hides.push(r); break;
@@ -89,6 +90,12 @@ export class Store {
     if (!id) return undefined;
     const r = this.records.get(id);
     return r?.type === 'category' && !r.deleted ? r : undefined;
+  }
+
+  project(id: string | null | undefined): Project | undefined {
+    if (!id) return undefined;
+    const r = this.records.get(id);
+    return r?.type === 'project' && !r.deleted ? r : undefined;
   }
 
   isEmpty(): boolean {
@@ -137,7 +144,7 @@ export class Store {
     return t != null && this.clock() - t < withinMs;
   }
 
-  addTask(text: string, categoryId: string | null = null, extra: Partial<Pick<Task, 'deadline' | 'link' | 'after'>> = {}): Task | null {
+  addTask(text: string, categoryId: string | null = null, extra: Partial<Pick<Task, 'deadline' | 'link' | 'after' | 'projectId'>> = {}): Task | null {
     const clean = text.trim();
     if (!clean) return null;
     const task: Task = {
@@ -200,7 +207,8 @@ export class Store {
   addFollowUp(motherId: string, text: string): Task | null {
     const mother = this.task(motherId);
     const link = this.ahead(mother?.link) ? { link: mother!.link, deadline: mother!.link!.day } : {};
-    return this.addTask(text, mother?.categoryId ?? null, { after: [motherId], ...link });
+    const project = mother?.projectId ? { projectId: mother.projectId } : {};
+    return this.addTask(text, mother?.categoryId ?? null, { after: [motherId], ...link, ...project });
   }
 
   /** An existing task now (also) comes after another; false if that would close a loop. */
@@ -345,6 +353,47 @@ export class Store {
     this.put({ ...cat, deleted: true });
     for (const r of this.records.values()) {
       if (r.type === 'task' && r.categoryId === id && !r.deleted) this.put({ ...r, categoryId: null });
+    }
+    this.changed(true);
+  }
+
+  /** A new project, in a colour not taken yet by another one. */
+  addProject(name: string): Project | null {
+    const clean = name.trim();
+    if (!clean) return null;
+    const used = this.snapshot().projects.filter((p) => !p.deleted).map((p) => p.color);
+    const color = (PROJECT_COLORS.find((c) => !used.includes(c.key)) ?? PROJECT_COLORS[0]).key;
+    const project: Project = {
+      id: newId(), type: 'project', updatedAt: 0, name: clean, icon: 'stern', color, createdAt: this.now(),
+    };
+    this.put(project);
+    this.markFresh(project.id);
+    this.changed(true);
+    return project;
+  }
+
+  updateProject(id: string, patch: Partial<Pick<Project, 'name' | 'icon' | 'color' | 'note'>>) {
+    const project = this.project(id);
+    if (!project) return;
+    this.put({ ...project, ...patch });
+    this.changed(true);
+  }
+
+  /** Finished (struck through in the master list like a done task), or open again. */
+  finishProject(id: string, done: boolean) {
+    const project = this.project(id);
+    if (!project) return;
+    this.put({ ...project, doneAt: done ? this.now() : null });
+    this.changed(true);
+  }
+
+  /** The project goes; its tasks stay and stand in the master list again. */
+  deleteProject(id: string) {
+    const project = this.project(id);
+    if (!project) return;
+    this.put({ ...project, deleted: true });
+    for (const r of this.records.values()) {
+      if (r.type === 'task' && r.projectId === id && !r.deleted) this.put({ ...r, projectId: null });
     }
     this.changed(true);
   }

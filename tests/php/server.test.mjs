@@ -196,6 +196,15 @@ test('hidden appointments are records like any other', async () => {
   assert.ok(r.body.changes.some((c) => c.id === 'h0123abcd'));
 });
 
+test('projects are records like any other', async () => {
+  const project = { id: 'p0123abcd', type: 'project', updatedAt: 410, name: 'Gartenhaus', icon: 'garten', color: 'gruen', createdAt: 1 };
+  const task = { id: 't0123abcd', type: 'task', updatedAt: 411, text: 'Holz bestellen', projectId: 'p0123abcd', createdAt: 2 };
+  const r = await ipad.call({ action: 'sync', since: 0, changes: [project, task] });
+  assert.equal(r.status, 200);
+  assert.ok(r.body.changes.some((c) => c.id === 'p0123abcd' && c.icon === 'garten'));
+  assert.ok(r.body.changes.some((c) => c.id === 't0123abcd' && c.projectId === 'p0123abcd'));
+});
+
 test('empty objects survive the round trip', async () => {
   const settings = { id: 'settings', type: 'settings', updatedAt: 300, calendars: {} };
   await ipad.call({ action: 'sync', since: 3, changes: [settings] });

@@ -32,6 +32,16 @@ export function nextFreeColor(used: string[]): string {
   return (free ?? CATEGORY_COLORS[used.length % CATEGORY_COLORS.length]).key;
 }
 
+/** Colours for the icon of a project: black ink and the ink tones of the categories. */
+export const PROJECT_COLORS: { key: string; name: string; ink: string }[] = [
+  { key: 'tinte', name: 'Tinte', ink: '#2b2b30' },
+  ...CATEGORY_COLORS.map((c) => ({ key: c.key, name: c.name, ink: c.ink })),
+];
+
+export function projectInk(key: string | undefined | null): string {
+  return (PROJECT_COLORS.find((c) => c.key === key) ?? PROJECT_COLORS[0]).ink;
+}
+
 /** A marker colour for each week, when day headings change colour weekly. */
 export function weekMarker(isoWeekNumber: number): string {
   return CATEGORY_COLORS[isoWeekNumber % CATEGORY_COLORS.length].marker;

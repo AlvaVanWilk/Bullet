@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_DONE, archiveList, dayItems, deadlineFor, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
-  openLinkCounts, prepRows, prepSuggestions, wouldLoop,
+  openLinkCounts, prepRows, prepSuggestions, wouldLoop, masterEntries, projectMarks, projectProgress, projectRows, projectSuggestions, categoryTasks,
   specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type ArchiveQuery, type Snapshot,
 } from '../../src/lib/logic';
-import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Special, type Task } from '../../src/lib/model';
+import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Project, type Special, type Task } from '../../src/lib/model';
 
 const DAY = 86400000;
 const NOW = new Date(2026, 9, 7, 12).getTime(); // Wednesday 07.10.2026
@@ -17,7 +17,7 @@ function entry(id: string, taskId: string, day: string): Entry {
   return { id, type: 'entry', updatedAt: 1, taskId, day, createdAt: 1 };
 }
 function snap(tasks: Task[], entries: Entry[] = [], specials: Special[] = []): Snapshot {
-  return { tasks, categories: [], entries, specials, hides: [], settings: DEFAULT_SETTINGS };
+  return { tasks, categories: [], projects: [], entries, specials, hides: [], settings: DEFAULT_SETTINGS };
 }
 const states = (s: Snapshot, day: string) => dayItems(s, day, TODAY).map((i) => `${i.task.id}:${i.kind}:${i.state}`);
 
@@ -158,6 +158,55 @@ describe('hidden appointments', () => {
   });
 });
 
+
+describe('projects', () => {
+  function project(id: string, extra: Partial<Project> = {}): Project {
+    return { id, type: 'project', updatedAt: 1, name: id, icon: 'stern', color: 'tinte', createdAt: 1, ...extra };
+  }
+  const withProjects = (tasks: Task[], projects: Project[], entries: Entry[] = []) => ({ ...snap(tasks, entries), projects });
+
+  it('stand in the master list as one line, in their place, without their tasks', () => {
+    const s = withProjects([
+      task('a', { createdAt: 1 }),
+      task('p1', { createdAt: 5, projectId: 'garten' }),
+      task('b', { createdAt: 10 }),
+      task('c', { createdAt: 30, projectId: 'gone' }),
+    ], [project('garten', { createdAt: 8 }), project('gone', { createdAt: 2, deleted: true }), project('later', { createdAt: 40 })]);
+    const line = masterEntries(s, NOW).map((e) => (e.kind === 'task' ? e.row.task.id : `[${e.project.id}]`));
+    // the task of a deleted project stands in the list again
+    expect(line).toEqual(['a', '[garten]', 'b', 'c', '[later]']);
+    expect(projectRows(s, 'garten', NOW).map((r) => r.task.id)).toEqual(['p1']);
+  });
+
+  it('leave the list some days after they are finished, like tasks', () => {
+    const s = withProjects([], [project('fertig', { doneAt: NOW - 2 * DAY }), project('lange', { doneAt: NOW - 30 * DAY })]);
+    expect(masterEntries(s, NOW).map((e) => e.kind === 'project' && e.project.id)).toEqual(['fertig']);
+  });
+
+  it('show "!" and the dot for their open tasks, and how far they are', () => {
+    const tasks = [
+      task('a', { projectId: 'p', important: true }),
+      task('b', { projectId: 'p', deadline: TODAY }),
+      task('c', { projectId: 'p', doneAt: NOW, doneDay: TODAY }),
+      task('d', { projectId: 'q', important: true, doneAt: NOW, doneDay: TODAY }),
+    ];
+    const s = withProjects(tasks, [project('p'), project('q')]);
+    expect(projectMarks(s, 'p', TODAY, new Map())).toEqual({ important: true, today: true });
+    expect(projectMarks(s, 'q', TODAY, new Map())).toEqual({ important: false, today: false });
+    expect(projectProgress(s, 'p')).toEqual({ done: 1, total: 3 });
+  });
+
+  it('keep their tasks findable: in categories and in what is suggested', () => {
+    const s = withProjects([
+      task('a', { text: 'Holz bestellen', projectId: 'p', categoryId: 'haus' }),
+      task('b', { text: 'Holz hacken' }),
+    ], [project('p')]);
+    expect(categoryTasks(s, 'haus', NOW).map((t) => t.id)).toEqual(['a']);
+    expect(todaySuggestions(s, TODAY, 'holz', NOW).map((t) => t.id)).toEqual(['a', 'b']);
+    expect(projectSuggestions(s, 'p', 'holz', NOW).map((t) => t.id)).toEqual(['b']);
+    expect(archiveList({ ...s, tasks: [{ ...s.tasks[0], doneAt: NOW, doneDay: TODAY }] }, { ...ALL_DONE, text: 'p' }).map((t) => t.id)).toEqual(['a']);
+  });
+});
 
 describe('pushing a deadline on to tomorrow', () => {
   it('shows ">" today and no dot, the next day the deadline is there again', () => {

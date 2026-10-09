@@ -45,6 +45,8 @@ export interface Task extends Base {
   after?: string[];
   /** The day a deadline was pushed on to the next: ">" in its box that day; the deadline stays. */
   deferredOn?: DayKey | null;
+  /** The project the task belongs to: in the master list it stands only inside its project. */
+  projectId?: string | null;
 }
 
 export interface Payment {
@@ -67,6 +69,24 @@ export interface Category extends Base {
   name: string;
   color: string;
   createdAt: number;
+}
+
+/**
+ * A project: in the master list one line with its icon instead of all its
+ * tasks; it has a page of its own.
+ */
+export interface Project extends Base {
+  type: 'project';
+  name: string;
+  /** A hand-drawn icon (key of ICON_SHAPES). */
+  icon: string;
+  /** The colour of the icon: a key of CATEGORY_COLORS, or "tinte" for black ink. */
+  color: string;
+  createdAt: number;
+  /** Notes on the project page: what it is about, ideas, things to know. */
+  note?: string;
+  /** Finished: struck through in the master list like a done task. */
+  doneAt?: number | null;
 }
 
 /** A task written into a day. Dragging copies: the earlier entry stays. */
@@ -117,9 +137,9 @@ export interface Settings extends Base {
   followUpsAdopted: boolean;
 }
 
-export type AnyRecord = Task | Category | Entry | Special | Settings | Hide;
+export type AnyRecord = Task | Category | Project | Entry | Special | Settings | Hide;
 export type RecordType = AnyRecord['type'];
-export const RECORD_TYPES: RecordType[] = ['task', 'category', 'entry', 'special', 'settings', 'hide'];
+export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'entry', 'special', 'settings', 'hide'];
 
 export const SETTINGS_ID = 'settings';
 

@@ -2,11 +2,12 @@
 // rules can be tested without any interface.
 
 import { addDays, compareDays, daySearchText, parseDay, weekDays, type DayKey } from './dates';
-import type { CalEvent, Category, Entry, Hide, Settings, Special, Task, TaskLink } from './model';
+import type { CalEvent, Category, Entry, Hide, Project, Settings, Special, Task, TaskLink } from './model';
 
 export interface Snapshot {
   tasks: Task[];
   categories: Category[];
+  projects: Project[];
   entries: Entry[];
   specials: Special[];
   hides: Hide[];
@@ -32,14 +33,15 @@ export interface DayItem {
   entry?: Entry;
 }
 
-export function isVisibleInLists(task: Task, settings: Settings, now: number): boolean {
-  if (task.deleted) return false;
-  if (task.doneAt == null) return true;
-  if (task.doneAt <= (settings.listClearedAt ?? 0)) return false;
-  return now - task.doneAt < settings.hideDoneAfterDays * DAY_MS;
+/** A task (or a project) stays in the lists until some days after it was done, or until swept. */
+export function isVisibleInLists(item: { deleted?: boolean; doneAt?: number | null }, settings: Settings, now: number): boolean {
+  if (item.deleted) return false;
+  if (item.doneAt == null) return true;
+  if (item.doneAt <= (settings.listClearedAt ?? 0)) return false;
+  return now - item.doneAt < settings.hideDoneAfterDays * DAY_MS;
 }
 
-const byCreated = <T extends { createdAt: number; id: string }>(a: T, b: T) =>
+const byCreated = (a: { createdAt: number; id: string }, b: { createdAt: number; id: string }) =>
   a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1);
 
 export interface ListRow {
@@ -48,19 +50,45 @@ export interface ListRow {
   anchor: string | null;
 }
 
+/** Projects not deleted, in the order they were written. */
+export function liveProjects(s: Snapshot): Project[] {
+  return s.projects.filter((p) => !p.deleted).sort(byCreated);
+}
+
+/** Whether a task stands only inside its project (not in the master list itself). */
+function inProject(liveProjectIds: Set<string>) {
+  return (t: Task) => !!t.projectId && liveProjectIds.has(t.projectId);
+}
+
 /**
  * The master list in its order: by when the tasks were written, and a task
  * that waited for others right below the one of them done last. Tasks still
- * waiting are not in the list (they hang under their "mothers", see followUps).
+ * waiting are not in the list (they hang under their "mothers", see followUps),
+ * nor are tasks of a project (the project stands there instead, see masterEntries).
  */
 export function masterRows(s: Snapshot, now: number): ListRow[] {
+  const ofProject = inProject(new Set(liveProjects(s).map((p) => p.id)));
+  return listRows(s, now, (t) => !ofProject(t));
+}
+
+/** All tasks in the order of the master list, those of projects too (for categories and suggestions). */
+export function allRows(s: Snapshot, now: number): ListRow[] {
+  return listRows(s, now, () => true);
+}
+
+/** The tasks of a project, in the order of the master list. */
+export function projectRows(s: Snapshot, projectId: string, now: number): ListRow[] {
+  return listRows(s, now, (t) => t.projectId === projectId);
+}
+
+function listRows(s: Snapshot, now: number, include: (t: Task) => boolean): ListRow[] {
   const live = s.tasks.filter((t) => !t.deleted);
   const byId = new Map(live.map((t) => [t.id, t]));
   const below = new Map<string, Task[]>();
   const anchors = new Map<string, string | null>();
   const free: Task[] = [];
   for (const t of live) {
-    if (isWaiting(t, byId)) continue;
+    if (!include(t) || isWaiting(t, byId)) continue;
     const anchor = anchorOf(t, byId);
     anchors.set(t.id, anchor);
     free.push(t);
@@ -89,8 +117,40 @@ export function masterTasks(s: Snapshot, now: number): Task[] {
   return masterRows(s, now).map((r) => r.task);
 }
 
+export type MasterEntry = { kind: 'task'; row: ListRow } | { kind: 'project'; project: Project };
+
+/** The master list with its projects: each as one line, in its place by when it was written. */
+export function masterEntries(s: Snapshot, now: number): MasterEntry[] {
+  const projects = liveProjects(s).filter((p) => isVisibleInLists(p, s.settings, now));
+  const out: MasterEntry[] = [];
+  let next = 0;
+  for (const row of masterRows(s, now)) {
+    // a task standing under another keeps its place below it
+    if (row.anchor == null) {
+      while (next < projects.length && byCreated(projects[next], row.task) < 0) out.push({ kind: 'project', project: projects[next++] });
+    }
+    out.push({ kind: 'task', row });
+  }
+  while (next < projects.length) out.push({ kind: 'project', project: projects[next++] });
+  return out;
+}
+
+/** A category page shows its tasks, those of projects too. */
 export function categoryTasks(s: Snapshot, categoryId: string, now: number): Task[] {
-  return masterTasks(s, now).filter((t) => t.categoryId === categoryId);
+  return allRows(s, now).map((r) => r.task).filter((t) => t.categoryId === categoryId);
+}
+
+/** What the line of a project in the master list shows: "!" for an important open task, the dot for one open today. */
+export function projectMarks(s: Snapshot, projectId: string, today: DayKey, index: Map<string, Entry[]>): { important: boolean; today: boolean } {
+  const byId = new Map(s.tasks.map((t) => [t.id, t]));
+  const open = s.tasks.filter((t) => !t.deleted && t.projectId === projectId && t.doneAt == null && !isWaiting(t, byId));
+  return { important: open.some((t) => t.important), today: open.some((t) => isOpenToday(t, today, index)) };
+}
+
+/** How far a project is: its tasks done and all of them. */
+export function projectProgress(s: Snapshot, projectId: string): { done: number; total: number } {
+  const tasks = s.tasks.filter((t) => !t.deleted && t.projectId === projectId);
+  return { done: tasks.filter((t) => t.doneAt != null).length, total: tasks.length };
 }
 
 export function liveCategories(s: Snapshot): Category[] {
@@ -227,6 +287,7 @@ export const ALL_DONE: ArchiveQuery = { text: '', category: null, deadline: null
 export function archiveList(s: Snapshot, q: ArchiveQuery): Task[] {
   const words = q.text.toLowerCase().split(/\s+/).filter(Boolean);
   const categories = new Map(s.categories.map((c) => [c.id, c.name.toLowerCase()]));
+  const projects = new Map(s.projects.map((p) => [p.id, p.name.toLowerCase()]));
   const hits = s.tasks.filter((t) => {
     if (t.deleted || !t.doneDay || t.doneAt == null) return false;
     if (q.category === 'none' ? t.categoryId != null : q.category != null && t.categoryId !== q.category) return false;
@@ -235,7 +296,7 @@ export function archiveList(s: Snapshot, q: ArchiveQuery): Task[] {
     if (q.important && !t.important) return false;
     if (q.clip && !t.photos?.length && !t.pay) return false;
     if (!words.length) return true;
-    const hay = `${t.text.toLowerCase()} | ${(t.note ?? '').toLowerCase()} | ${(t.link?.title ?? '').toLowerCase()} | ${daySearchText(t.doneDay)} | ${categories.get(t.categoryId ?? '') ?? ''}`;
+    const hay = `${t.text.toLowerCase()} | ${(t.note ?? '').toLowerCase()} | ${(t.link?.title ?? '').toLowerCase()} | ${daySearchText(t.doneDay)} | ${categories.get(t.categoryId ?? '') ?? ''} | ${projects.get(t.projectId ?? '') ?? ''}`;
     return words.every((w) => hay.includes(w));
   });
   const newest = (a: Task, b: Task) => compareDays(b.doneDay!, a.doneDay!) || b.doneAt! - a.doneAt!;
@@ -243,6 +304,11 @@ export function archiveList(s: Snapshot, q: ArchiveQuery): Task[] {
   else if (q.sort === 'old') hits.sort((a, b) => -newest(a, b));
   else hits.sort(newest);
   return hits;
+}
+
+/** Existing tasks that match what is being typed into a project. */
+export function projectSuggestions(s: Snapshot, projectId: string, text: string, now: number, limit = 5): Task[] {
+  return matching(s, text, now, (t) => t.projectId === projectId, limit);
 }
 
 /** Existing tasks that match what is being typed in a category page. */
@@ -261,11 +327,11 @@ export function todaySuggestions(s: Snapshot, today: DayKey, text: string, now: 
   return matching(s, text, now, (t) => isOpenToday(t, today, index), limit);
 }
 
-/** Open tasks of the master list containing the typed text, those starting with it first. */
+/** Open tasks (those of projects too) containing the typed text, those starting with it first. */
 function matching(s: Snapshot, text: string, now: number, there: (t: Task) => boolean, limit: number): Task[] {
   const q = text.trim().toLowerCase();
   if (q.length < 2) return [];
-  return masterTasks(s, now)
+  return allRows(s, now).map((r) => r.task)
     .filter((t) => t.doneAt == null && !there(t) && t.text.toLowerCase().includes(q))
     .sort((a, b) => {
       const as = a.text.toLowerCase().startsWith(q) ? 0 : 1;

@@ -123,6 +123,23 @@ describe('store', () => {
     expect(s.task(a.id)!.deferredOn).toBeNull();
   });
 
+  it('keeps projects with their tasks; deleted, the tasks stay', () => {
+    const s = makeStore();
+    const p = s.addProject('  Gartenhaus ')!;
+    expect(s.project(p.id)).toMatchObject({ name: 'Gartenhaus', icon: 'stern', color: 'tinte' });
+    // the next one gets another colour
+    expect(s.addProject('Umzug')!.color).not.toBe('tinte');
+    s.updateProject(p.id, { icon: 'garten', color: 'gruen', note: 'bis Mai' });
+    const a = s.addTask('Holz bestellen', null, { projectId: p.id })!;
+    // what comes after a task of the project belongs to it, too
+    expect(s.addFollowUp(a.id, 'Holz streichen')!.projectId).toBe(p.id);
+    s.finishProject(p.id, true);
+    expect(s.project(p.id)!.doneAt).not.toBeNull();
+    s.deleteProject(p.id);
+    expect(s.project(p.id)).toBeUndefined();
+    expect(s.snapshot().tasks.map((t) => t.projectId)).toEqual([null, null]);
+  });
+
   it('copies a task into a day only once', () => {
     const s = makeStore();
     const t = s.addTask('Brot kaufen')!;
