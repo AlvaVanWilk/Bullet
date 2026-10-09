@@ -7,16 +7,17 @@ import type { DayKey } from '../lib/dates';
 export interface DragSource {
   taskId: string;
   text: string;
-  /** master list, category page, a day, or the deadlines in the head of the week */
-  from: 'master' | 'category' | 'day' | 'week';
+  /** master list, category page, a day, the deadlines in the head of the week, or a project */
+  from: 'master' | 'category' | 'day' | 'week' | 'project';
   day?: DayKey;
   color?: string;
 }
 
 export interface DropTarget {
-  kind: 'day' | 'category';
+  kind: 'day' | 'category' | 'project';
   day?: DayKey;
   categoryId?: string;
+  projectId?: string;
 }
 
 type Accept = (source: DragSource, target: DropTarget) => boolean;
@@ -123,6 +124,7 @@ function targetOf(el: HTMLElement): DropTarget | null {
   const kind = el.dataset.drop;
   if (kind === 'day') return { kind, day: el.dataset.day };
   if (kind === 'category') return { kind, categoryId: el.dataset.cat };
+  if (kind === 'project') return { kind, projectId: el.dataset.project };
   return null;
 }
 

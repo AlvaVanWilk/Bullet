@@ -1,27 +1,33 @@
-// The side list: two sheets lying on top of each other, the master list and
-// the categories, with sticky-note tabs at the bottom. It slides in and out;
-// switching tabs pulls the front sheet out and tucks it behind the other.
+// The side list: three sheets lying on top of each other, the master list, the
+// categories and the projects, with sticky-note tabs at the bottom. It slides
+// in and out; switching tabs pulls the front sheet out and tucks it behind.
 
 import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
-import { entriesByTask, followUps, isOpenToday, liveCategories, masterRows, masterTasks } from '../lib/logic';
+import { allRows, entriesByTask, followUps, isOpenToday, liveCategories, masterEntries, masterRows } from '../lib/logic';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
 import { FollowRows, FollowToggle, useFolds } from './Follow';
 import { Bang, ClipMark, hasClip, NoteMark, ScheduledDot, TaskText } from './ink';
+import { NewLine } from './NewLine';
+import { ProjectLine, ProjectList } from './Projects';
 import { playPaperSlide, playStrike } from './sound';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
 
 const SWAP_MS = 640;
 const BACK = 'translate(7px, 9px) rotate(0.9deg)';
 
+type Tab = 'master' | 'categories' | 'projects';
+
 export function Sidebar() {
   const dev = useDevice();
   const snap = useStore();
   const asideRef = useRef<HTMLElement>(null);
-  const sheets = useRef<Record<'master' | 'categories', HTMLElement | null>>({ master: null, categories: null });
+  const sheets = useRef<Record<Tab, HTMLElement | null>>({ master: null, categories: null, projects: null });
   const [swapping, setSwapping] = useState(false);
+  // the sheet being tucked away while switching; the third one stays hidden behind
+  const [leaving, setLeaving] = useState<Tab | null>(null);
   const [settled, setSettled] = useState(dev.sidebarOpen);
   const [moved, setMoved] = useState(false);
   const front = dev.sidebarTab;
@@ -45,7 +51,7 @@ export function Sidebar() {
     return () => clearTimeout(t);
   }, [dev.sidebarOpen]);
 
-  function switchTo(tab: 'master' | 'categories') {
+  function switchTo(tab: Tab) {
     if (tab === front || swapping) return;
     const out = sheets.current[front];
     const into = sheets.current[tab];
@@ -54,6 +60,7 @@ export function Sidebar() {
       return;
     }
     setSwapping(true);
+    setLeaving(front);
     playPaperSlide();
     const opts: KeyframeAnimationOptions = { duration: SWAP_MS, easing: 'cubic-bezier(.45,.05,.2,1)' };
     out.animate([
@@ -68,8 +75,10 @@ export function Sidebar() {
       { transform: 'none', zIndex: 2 },
     ], opts);
     device.set({ sidebarTab: tab });
-    setTimeout(() => setSwapping(false), SWAP_MS);
+    setTimeout(() => { setSwapping(false); setLeaving(null); }, SWAP_MS);
   }
+
+  const sheetClass = (tab: Tab) => `sheet paper ${front === tab ? 'front' : 'back'} ${front !== tab && leaving !== tab ? 'idle' : ''}`;
 
   function toggle() {
     setMoved(true);
@@ -77,7 +86,7 @@ export function Sidebar() {
     device.set(dev.sidebarOpen ? { sidebarOpen: false } : { sidebarOpen: true, sidebarTab: 'master' });
   }
 
-  const openCount = masterTasks(snap, Date.now()).filter((t) => t.doneAt == null).length;
+  const openCount = allRows(snap, Date.now()).filter((r) => r.task.doneAt == null).length;
 
   return (
     <>
@@ -88,7 +97,7 @@ export function Sidebar() {
         <div class={`sheets ${swapping ? 'swapping' : ''}`}>
           <section
             ref={(el) => { sheets.current.master = el; }}
-            class={`sheet paper ${front === 'master' ? 'front' : 'back'}`}
+            class={sheetClass('master')}
             data-paper={snap.settings.paperSidebar}
             aria-hidden={front !== 'master'}
           >
@@ -96,11 +105,19 @@ export function Sidebar() {
           </section>
           <section
             ref={(el) => { sheets.current.categories = el; }}
-            class={`sheet paper ${front === 'categories' ? 'front' : 'back'}`}
+            class={sheetClass('categories')}
             data-paper={snap.settings.paperSidebar}
             aria-hidden={front !== 'categories'}
           >
             <CategoryList />
+          </section>
+          <section
+            ref={(el) => { sheets.current.projects = el; }}
+            class={sheetClass('projects')}
+            data-paper={snap.settings.paperSidebar}
+            aria-hidden={front !== 'projects'}
+          >
+            <ProjectList />
           </section>
         </div>
         <div class="tabs" role="tablist">
@@ -119,6 +136,13 @@ export function Sidebar() {
             onClick={() => switchTo('categories')}
           >
             Kategorien
+          </button>
+          <button
+            type="button" role="tab" aria-selected={front === 'projects'}
+            class={`tab tab-projects ${front === 'projects' ? 'on' : ''}`}
+            onClick={() => switchTo('projects')}
+          >
+            Projekte
           </button>
         </div>
         <button type="button" class="spine" onClick={toggle} aria-label={dev.sidebarOpen ? 'Liste einfahren' : 'Liste ausfahren'}>
@@ -158,8 +182,10 @@ function MasterList(props: { active: boolean }) {
   const listRef = useRef<HTMLUListElement>(null);
   const [striking, setStriking] = useState<Set<string>>(new Set());
   const struckRef = useRef<Set<string>>(new Set());
-  const allRows = masterRows(snap, Math.max(now, Date.now()));
-  const tasks = allRows.map((r) => r.task);
+  const listNow = Math.max(now, Date.now());
+  const taskRows = masterRows(snap, listNow);
+  const entries = masterEntries(snap, listNow);
+  const tasks = taskRows.map((r) => r.task);
   const index = entriesByTask(snap.entries);
   const seen = dev.strikeSeenAt;
   const follow = followUps(snap);
@@ -201,7 +227,7 @@ function MasterList(props: { active: boolean }) {
   // screen, and is then written in.
   const unstruck = new Set(pending.filter((t) => !striking.has(t.id)).map((t) => t.id));
   const held = new Set<string>();
-  const rows = allRows.filter((r) => {
+  const rows = taskRows.filter((r) => {
     if (r.anchor && (unstruck.has(r.anchor) || held.has(r.anchor))) {
       held.add(r.task.id);
       return false;
@@ -209,6 +235,7 @@ function MasterList(props: { active: boolean }) {
     return true;
   });
   const struckRows = rows.filter((r) => r.task.doneAt != null && (r.task.doneAt <= seen || striking.has(r.task.id)));
+  const shown = new Map(rows.map((r) => [r.task.id, r]));
 
   // "Aufräumen": the struck tasks are swept off the list (the archive keeps them).
   const sweep = () => {
@@ -237,7 +264,11 @@ function MasterList(props: { active: boolean }) {
         </button>
       </h2>
       <ul class="task-list" ref={listRef} data-scroll>
-        {rows.map(({ task: t, anchor }) => {
+        {entries.map((entry) => {
+          if (entry.kind === 'project') return <ProjectLine key={entry.project.id} project={entry.project} today={today} index={index} />;
+          const row = shown.get(entry.row.task.id);
+          if (!row) return null;
+          const { task: t, anchor } = row;
           const cat = store.category(t.categoryId);
           const color = cat ? categoryColor(cat.color) : null;
           const isStruck = t.doneAt != null && (t.doneAt <= seen || striking.has(t.id));
@@ -273,7 +304,7 @@ function MasterList(props: { active: boolean }) {
             </Fragment>
           );
         })}
-        {!rows.length && <li class="empty-hint">Hier entsteht deine Liste. Schreib unten los und drück Enter.</li>}
+        {!entries.length && <li class="empty-hint">Hier entsteht deine Liste. Schreib unten los und drück Enter.</li>}
       </ul>
       <NewLine
         placeholder="Neue Aufgabe …"
@@ -305,7 +336,7 @@ function CategoryList() {
   const now = useNow();
   const cats = liveCategories(snap);
   const open = new Map<string, number>();
-  for (const t of masterTasks(snap, now)) {
+  for (const { task: t } of allRows(snap, now)) {
     if (t.categoryId && t.doneAt == null) open.set(t.categoryId, (open.get(t.categoryId) ?? 0) + 1);
   }
   return (
@@ -340,36 +371,5 @@ function CategoryList() {
       </ul>
       <NewLine placeholder="Neue Kategorie …" onEnter={(name) => store.addCategory(name)} />
     </div>
-  );
-}
-
-// --- writing a new line ----------------------------------------------------------------
-
-export function NewLine(props: { placeholder: string; onEnter: (text: string) => void }) {
-  const [value, setValue] = useState('');
-  return (
-    <form
-      class="new-line"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!value.trim()) return;
-        props.onEnter(value);
-        setValue('');
-      }}
-    >
-      <span class="new-line-mark" aria-hidden="true">+</span>
-      <input
-        value={value}
-        onInput={(e) => setValue((e.target as HTMLInputElement).value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') { setValue(''); (e.currentTarget as HTMLInputElement).blur(); }
-        }}
-        placeholder={props.placeholder}
-        enterKeyHint="enter"
-        autoComplete="off"
-        autoCorrect="on"
-        spellcheck={true}
-      />
-    </form>
   );
 }

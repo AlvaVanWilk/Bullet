@@ -18,6 +18,7 @@ import { GRID } from './baseline';
 import { DayHeading } from './DayHeading';
 import { clickSuppressed, startDrag } from './drag';
 import { Checkbox, ClipMark, HandBox, hasClip, NoteMark, TaskText } from './ink';
+import { ProjectIcon } from './ProjectIcon';
 import { StatusNote } from './StatusNote';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { movePick, SuggestList } from './Suggest';
@@ -360,6 +361,7 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
   const task = item.task;
   const cat = store.category(task.categoryId);
   const color = cat ? categoryColor(cat.color) : null;
+  const project = store.project(task.projectId);
   const past = compareDays(props.day, props.today) < 0;
   const faded = item.state === 'migrated' || item.state === 'dropped' || item.state === 'doneBefore';
   // Undone tasks from an earlier day can be dragged into today (a copy).
@@ -372,16 +374,20 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
         taskId: task.id, text: task.text, from: 'day', day: props.day, color: item.kind === 'deadline' ? 'var(--red)' : undefined,
       })}
     >
-      <Checkbox
-        state={item.state}
-        important={task.important}
-        seed={item.key}
-        label={item.state === 'done' ? 'wieder offen' : 'erledigt'}
-        onClick={(e) => {
-          e.stopPropagation();
-          store.toggleDone(task.id, props.day);
-        }}
-      />
+      {/* a task of a project: its icon lies under the box, as if the box were drawn over it */}
+      <span class={project ? 'cb-under' : 'cb-plain'}>
+        {project && <ProjectIcon icon={project.icon} color={project.color} seed={project.id} />}
+        <Checkbox
+          state={item.state}
+          important={task.important}
+          seed={item.key}
+          label={item.state === 'done' ? 'wieder offen' : 'erledigt'}
+          onClick={(e) => {
+            e.stopPropagation();
+            store.toggleDone(task.id, props.day);
+          }}
+        />
+      </span>
       <span
         class="dtask-text"
         onClick={(e) => {

@@ -3,10 +3,10 @@
 Ein Bullet Journal als App fürs iPad (quer), das wie echtes Papier aussieht und
 sich auch so anfühlt, nur ein bisschen magisch.
 
-- **Masterliste** in der Seitenleiste: Mit Enter kommt eine Aufgabe dazu. Daneben
-  liegen die **Kategorien** mit eigenen Textmarker-Farben. Zwischen beiden wechselst
-  du über die zwei Post-it-Laschen unten. Dabei tauschen die beiden Blätter ihren
-  Platz, und die Leiste lässt sich ein- und ausfahren.
+- **Masterliste** in der Seitenleiste: Mit Enter kommt eine Aufgabe dazu. Darunter
+  liegen die **Kategorien** mit eigenen Textmarker-Farben und die **Projekte** mit
+  handgezeichneten Bildern. Zwischen den Blättern wechselst du über die drei
+  Post-it-Laschen unten, und die Leiste lässt sich ein- und ausfahren.
 - **Hauptseite** mit der Woche: Kalenderwoche, darunter die Boxen **Termine**
   (aus Google), **Deadlines** und **Besonderes**. Darunter steht jeder Tag von
   Montag bis heute.
@@ -37,6 +37,9 @@ sich auch so anfühlt, nur ein bisschen magisch.
 | auf dem Handy | Die Liste ist schmaler und anfangs eingeklappt (Lasche „Liste“ antippen); ein Tipp auf die Seite klappt sie wieder ein. Die Wochenübersicht ist kleiner, Pfeile und Zahnrad stehen in der Zeile der Kalenderwoche. |
 | frühere und kommende Wochen ansehen | Pfeile neben der Kalenderwoche, „heute“ führt zurück; in kommenden Wochen steht nur die Wochenübersicht |
 | Familie dazuholen | Einstellungen → Familie → Google-Adresse eintragen → „freigeben“. Jede Person hat ihre eigene Liste und ihren eigenen Kalender. |
+| Projekt anlegen | Lasche „Projekte“, unten schreiben, Enter. Das Bild davor antippen: Name, eines von 70 handgezeichneten Bildern und die Farbe wählen (oder das Projekt löschen; seine Aufgaben bleiben dann in der Masterliste). |
+| Aufgaben in ein Projekt | auf der Karteikarte oder der Projektseite unten schreiben; eine vorhandene Aufgabe auf die Zeile des Projekts in der Masterliste oder auf die Projektseite ziehen; oder im Post-it der Aufgabe unter „Projekt“ wählen. In der Masterliste steht vom Projekt nur eine Zeile mit seinem Bild („!“ und Punkt liegen darüber, wenn eine Aufgabe darin wichtig ist oder heute offen steht). |
+| mit einem Projekt arbeiten | seine Zeile in der Masterliste antippen: Eine Karteikarte zeigt die offenen Aufgaben; gedrückt halten und in heute ziehen (im Tag liegt das Bild dann unter dem Kästchen). Daneben tippen schließt die Karte. „Seite ›“ (oder das Projekt unter „Projekte“) öffnet die Projektseite: großes Bild, wie viel erledigt ist, Notizen, alle Aufgaben, „Projekt abschließen“ (dann wird es in der Masterliste durchgestrichen und verschwindet wie eine erledigte Aufgabe). |
 | Folgeaufgabe (erst nach einer anderen dran) | Aufgabe antippen → „↳ Folgeaufgabe“, schreiben, Enter (oder eine vorhandene Aufgabe aus den Vorschlägen nehmen). Die Folgeaufgabe steht nicht in der Masterliste; das kleine gezeichnete Dreieck neben der Mutter klappt die nächste Ebene eingerückt aus; hat eine Folgeaufgabe selbst Folgeaufgaben, hat sie ihr eigenes Dreieck. Noch einmal tippen klappt wieder ein (alles darunter mit); beim nächsten Öffnen ist alles eingeklappt. Ist die Mutter erledigt und durchgestrichen, erscheint die Folgeaufgabe darunter. Hat eine Aufgabe mehrere Mütter, wartet sie auf alle („auch nach: …“) und erscheint unter der zuletzt erledigten. Im Post-it der Folgeaufgabe steht unter „kommt nach“, worauf sie wartet; × löst die Verbindung. |
 | aufräumen | der Besen neben „Masterliste“ fegt alles Durchgestrichene weg; im Archiv bleibt es |
 | zwischen Planer und Archiv wechseln | die Laschen rechts an der Seite: Kästchen = Planer (Woche; ist er schon offen, führt sie zur aktuellen Woche), Kiste = Archiv. Platz für weitere Laschen ist darunter. |

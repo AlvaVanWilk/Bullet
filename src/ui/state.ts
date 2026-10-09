@@ -12,10 +12,14 @@ export type PostItTarget =
   | { kind: 'task'; id: string; rect: DOMRect; day?: DayKey; entryId?: string }
   | { kind: 'category'; id: string; rect: DOMRect }
   | { kind: 'special'; id: string | null; rect: DOMRect; date?: DayKey }
-  | { kind: 'event'; event: CalEvent; rect: DOMRect };
+  | { kind: 'event'; event: CalEvent; rect: DOMRect }
+  /** the card of a project with its open tasks (from its line in the master list) */
+  | { kind: 'project'; id: string; rect: DOMRect }
+  /** name, icon and colour of a project */
+  | { kind: 'projectEdit'; id: string; rect: DOMRect };
 
 export interface UiState {
-  view: { kind: 'week' } | { kind: 'category'; id: string } | { kind: 'archive' };
+  view: { kind: 'week' } | { kind: 'category'; id: string } | { kind: 'project'; id: string } | { kind: 'archive' };
   /** 0 = this week, -1 = last week … */
   weekOffset: number;
   postIt: PostItTarget | null;

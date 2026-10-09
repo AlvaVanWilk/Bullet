@@ -1,7 +1,8 @@
 // Notes stuck next to what was tapped: a task (text, note, "!", deadline,
-// category, photos, a transfer to make, follow-ups, delete), a category (name, colour), something special, or an
-// appointment from Google (to hide it). Appointments and specials also take
-// the tasks that prepare them.
+// category, project, photos, a transfer to make, follow-ups, delete), a
+// category (name, colour), a project (name, icon, colour), something special,
+// or an appointment from Google (to hide it). Appointments and specials also
+// take the tasks that prepare them. The card of a project lies here, too.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CATEGORY_COLORS, categoryColor } from '../lib/colors';
@@ -15,6 +16,7 @@ import { forgetPhotosOf } from '../photos';
 import { FollowSection } from './Follow';
 import { PaySection } from './Pay';
 import { PhotoStrip } from './Photos';
+import { ProjectCard, ProjectChips, ProjectEditNote } from './Projects';
 import { movePick, SuggestList } from './Suggest';
 
 const WIDTH = 312;
@@ -26,18 +28,24 @@ export function PostItLayer() {
   const close = () => ui.set({ postIt: null });
   return (
     <div class="postit-layer" onPointerDown={(e) => { if (e.target === e.currentTarget) close(); }}>
-      <Placed key={`${target.kind}-${target.kind === 'event' ? target.event.id : target.id}`} target={target}>
+      <Placed
+        key={`${target.kind}-${target.kind === 'event' ? target.event.id : target.id}`}
+        target={target}
+        variant={target.kind === 'project' ? 'pcard' : undefined}
+      >
         {target.kind === 'task' && <TaskNote target={target} close={close} />}
         {target.kind === 'category' && <CategoryNote id={target.id} close={close} />}
         {target.kind === 'special' && <SpecialNote id={target.id} date={target.date} close={close} />}
         {target.kind === 'event' && <EventNote event={target.event} close={close} />}
+        {target.kind === 'project' && <ProjectCard id={target.id} close={close} />}
+        {target.kind === 'projectEdit' && <ProjectEditNote id={target.id} close={close} />}
       </Placed>
     </div>
   );
 }
 
-/** Puts the note beside the tapped thing, inside the window. */
-function Placed(props: { target: PostItTarget; children: preact.ComponentChildren }) {
+/** Puts the note beside the tapped thing, inside the window. A variant looks different (the card of a project). */
+function Placed(props: { target: PostItTarget; variant?: string; children: preact.ComponentChildren }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   useLayoutEffect(() => {
@@ -63,7 +71,7 @@ function Placed(props: { target: PostItTarget; children: preact.ComponentChildre
   return (
     <div
       ref={ref}
-      class={`postit ${pos ? 'shown' : ''}`}
+      class={`postit ${props.variant ?? ''} ${pos ? 'shown' : ''}`}
       data-scroll
       style={pos ? { left: `${pos.left}px`, top: `${pos.top}px` } : { left: '-9999px', top: '0px' }}
       role="dialog"
@@ -179,6 +187,7 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
           );
         })}
       </div>
+      <ProjectChips task={task} />
 
       <div class="note-extras">
         <PhotoStrip task={task} />

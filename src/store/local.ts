@@ -5,7 +5,7 @@ import { STORAGE_PREFIX } from '../stage';
 
 export interface DeviceState {
   sidebarOpen: boolean;
-  sidebarTab: 'master' | 'categories';
+  sidebarTab: 'master' | 'categories' | 'projects';
   /** Done tasks up to this time have already been struck through on screen. */
   strikeSeenAt: number;
 }

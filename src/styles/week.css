@@ -1,6 +1,6 @@
 /* The main page: the head of the week, the days, a category. */
 
-.week, .catview, .archive {
+.week, .catview, .projview, .archive {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -321,6 +321,51 @@
 .cat-hint { color: var(--ink-faint); margin: 18px 0 0; max-width: 560px; }
 .is-dragging .cat-page { box-shadow: inset 0 0 0 3px rgba(43, 43, 48, 0.08); }
 .cat-page.drop-over { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--cat-marker) 80%, transparent); }
+
+/* a project opened in the main page */
+.proj-head { flex: none; display: flex; align-items: center; gap: 14px; padding: 14px 22px 8px 30px; }
+.proj-head-icon { flex: none; width: 64px; height: 64px; display: grid; place-items: center; border-radius: 12px; }
+.proj-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.proj-title { font-size: 42px; line-height: 1.1; }
+.proj-title.finished { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--ink-soft); }
+.proj-progress { font-family: var(--clean); font-size: 14px; color: var(--ink-soft); }
+.proj-page {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--grid) 40px 40vh 38px;
+  transition: box-shadow 0.2s;
+}
+.proj-notes {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  border: 0;
+  background: transparent;
+  resize: none;
+  outline: none;
+  padding: 0 0 0 4px;
+  font-size: var(--hand-size);
+  line-height: var(--grid);
+  color: var(--ink-soft);
+  border-left: 2px solid color-mix(in srgb, var(--proj-ink) 45%, transparent);
+}
+.proj-notes::placeholder { color: var(--ink-faint); }
+.proj-section {
+  font-size: 18px;
+  line-height: var(--grid);
+  margin: var(--grid) 0 0;
+  color: var(--ink-soft);
+  font-variant-caps: small-caps;
+  letter-spacing: 0.08em;
+}
+.proj-tasks { max-width: 720px; padding: 0; overflow: visible; background: none; }
+.proj-page .suggest { max-width: 720px; position: relative; }
+.proj-page .new-line { margin: 8px 0 0; }
+.proj-foot { margin-top: calc(var(--grid) * 2); }
+.is-dragging .proj-page { box-shadow: inset 0 0 0 3px rgba(43, 43, 48, 0.08); }
+.proj-page.drop-over { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--proj-ink) 45%, transparent); }
 
 .suggest-list {
   position: absolute;

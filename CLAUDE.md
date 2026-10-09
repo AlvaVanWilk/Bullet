@@ -46,6 +46,16 @@ Bedienung und Einrichtung: `README.md`.
   Folgeaufgabe vollständig darunter (nach dem Durchstreichen, mit Schreib-Animation).
   Mehrere Mütter: wartet auf alle, hängt unter jeder offenen („auch nach: …“), erscheint
   unter der zuletzt erledigten. Schleifen werden verhindert.
+- Projekte (`project`, `task.projectId`): dritte Lasche „Projekte“ in der Seitenleiste.
+  In der Masterliste steht nur eine Zeile pro Projekt (an seinem Platz nach Anlegezeit)
+  mit seinem Bild davor; „!“ und „•“ liegen darüber. Antippen → Karteikarte (weiß,
+  roter Strich, blaue Linien) als Overlay mit den offenen Aufgaben, daraus in heute
+  ziehen; daneben tippen schließt sie. Im Tag liegt das Bild unter dem Kästchen.
+  Bilder: handgezeichnet wie dünner Marker, eine Farbe (Tinte oder Kategorie-Töne),
+  höchstens ein Punktekästchen groß (Formen aus Lucide, `scripts/project-icons.mjs`).
+  Projektseite: großes Bild, Fortschritt, Notizen, Aufgaben, „Projekt abschließen“.
+  Gelöscht → Aufgaben zurück in die Masterliste. Kategorien und Vorschläge finden
+  Projektaufgaben weiterhin.
 - Hauptseite: Kopf (Kalenderwoche, Boxen Termine/Deadlines/Besonderes) scrollt nicht.
   Tage von Montag bis heute; heute nie unterhalb der Fenstermitte. Vergangene Termine
   blass. Deadlines im Kopf in normaler Schrift; nur überfällige rot und leuchtend.

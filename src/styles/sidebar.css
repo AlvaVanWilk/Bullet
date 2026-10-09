@@ -54,6 +54,8 @@
   pointer-events: none;
 }
 .sheets:not(.swapping) .sheet.back .sheet-inner { visibility: hidden; }
+/* the third sheet, not taking part in a switch, stays hidden behind */
+.sheet.idle .sheet-inner { visibility: hidden; }
 
 .sheet-inner {
   height: 100%;
@@ -182,19 +184,19 @@
 /* sticky-note tabs at the foot of the stack */
 .tabs {
   position: absolute;
-  left: 24px;
+  left: 18px;
   bottom: 8px;
   display: flex;
-  gap: 10px;
+  gap: 6px;
   transition: opacity 0.3s, transform 0.56s var(--ease-paper);
 }
 .sidebar.closed .tabs { opacity: 0; transform: translateX(-120%); pointer-events: none; }
 .tab {
   position: relative;
-  min-width: 112px;
+  min-width: 96px;
   height: 44px;
-  padding: 6px 14px 0;
-  font-size: 21px;
+  padding: 6px 10px 0;
+  font-size: 20px;
   border-radius: 1px 1px 3px 8px;
   box-shadow: 0 2px 4px rgba(60, 45, 20, 0.18);
   transform: translateY(6px) rotate(0.8deg);
@@ -221,6 +223,28 @@
   z-index: 2;
 }
 .tab-categories.on { transform: translateY(-2px) rotate(1.1deg); }
+.tab-projects { background: #c9dcec; transform: translateY(6px) rotate(1.4deg); }
+.tab-projects.on { transform: translateY(-2px) rotate(-0.8deg); }
+
+/* projects: a line in the master list, the rows of the sheet */
+.project-line { cursor: pointer; }
+.project-line .tt { font-weight: 400; }
+.project-open {
+  flex: none;
+  margin-left: 8px;
+  font-size: 15px;
+  line-height: var(--grid);
+  color: var(--ink-faint);
+}
+.proj-icon { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; }
+.proj-row .cat-name { color: var(--ink); }
+.proj-row.finished .cat-name {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.2px;
+}
+.proj-row.finished .picon { opacity: 0.45; }
+.proj-row.drop-over, .project-line.drop-over { background: rgba(201, 220, 236, 0.6); }
 
 /* the edge to slide the list in and out */
 .spine {

@@ -36,6 +36,16 @@ export function seedDemo(today: DayKey) {
   t('Urlaub im Frühling planen');
   void steuer;
 
+  const garten = store.addProject('Gartenhaus streichen')!;
+  store.updateProject(garten.id, { icon: 'renovieren', color: 'gruen', note: 'Bis zum Grillfest im Mai fertig. Farbe: Schwedenrot.' });
+  const farbe = store.addTask('Farbe und Pinsel kaufen', haushalt.id, { projectId: garten.id })!;
+  store.addTask('Alte Farbe abschleifen', null, { projectId: garten.id });
+  store.addTask('Nachbarn fragen wegen Leiter', null, { projectId: garten.id });
+  store.addFollowUp(farbe.id, 'Erster Anstrich');
+  const umzug = store.addProject('Keller ausmisten')!;
+  store.updateProject(umzug.id, { icon: 'koffer', color: 'orange' });
+  store.addTask('Sperrmüll anmelden', null, { projectId: umzug.id, deadline: today });
+
   if (upToToday(0)) {
     store.addEntry(buecher.id, day(0));
     store.addEntry(fenster.id, day(0));

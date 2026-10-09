@@ -17,6 +17,7 @@ import { QrSheet } from './Pay';
 import { PageTabs } from './PageTabs';
 import { PhotoViewer } from './Photos';
 import { PostItLayer } from './PostIt';
+import { ProjectView } from './Projects';
 import { SettingsSheet } from './Settings';
 import { Sidebar } from './Sidebar';
 import { currentDay, useStore, useUi } from './state';
@@ -32,10 +33,12 @@ configureDrops(
       if (target.day !== today) return false;
       return !isOpenToday(task, today, entriesByTask(store.snapshot().entries));
     }
+    if (target.kind === 'project') return !!target.projectId && task.projectId !== target.projectId;
     return source.from !== 'category' && task.categoryId !== target.categoryId;
   },
   (source, target) => {
     if (target.kind === 'day') store.addEntry(source.taskId, target.day!);
+    else if (target.kind === 'project') store.updateTask(source.taskId, { projectId: target.projectId });
     else store.updateTask(source.taskId, { categoryId: target.categoryId ?? null });
   },
 );
@@ -68,6 +71,7 @@ export function App() {
       <Sidebar />
       <main class="page paper" data-paper={snap.settings.paperMain}>
         {state.view.kind === 'category' ? <CategoryView id={state.view.id} />
+          : state.view.kind === 'project' ? <ProjectView id={state.view.id} />
           : state.view.kind === 'archive' ? <ArchiveView />
           : <WeekView />}
       </main>

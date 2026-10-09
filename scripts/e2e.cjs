@@ -171,6 +171,41 @@ async function device(browser, name) {
     check('the planner tab leads back to the week', (await phone.locator('.week-head').count()) === 1);
     const phoneCover = await phone.evaluate(() => getComputedStyle(document.body).backgroundColor);
     check('the cover is the same on the other device', phoneCover === 'rgb(90, 47, 55)', phoneCover);
+
+    // a project: one line with its icon in the master list, its tasks on its card; from there into today
+    await ipad.locator('.tab-projects').click();
+    await ipad.waitForTimeout(800);
+    await ipad.locator('.sheet.front .new-line input').fill('Gartenhaus');
+    await ipad.locator('.sheet.front .new-line input').press('Enter');
+    await ipad.locator('.tab-master').click();
+    await ipad.waitForTimeout(800);
+    await ipad.locator('.sheet.front .project-line', { hasText: 'Gartenhaus' }).click();
+    await ipad.waitForSelector('.postit.pcard.shown');
+    await ipad.locator('.pcard .new-line input').fill('Holz bestellen');
+    await ipad.locator('.pcard .new-line input').press('Enter');
+    await ipad.waitForTimeout(300);
+    const onCard = await ipad.$$eval('.pcard-row .tt-text', (els) => els.map((e) => e.textContent));
+    const card = await ipad.locator('.pcard-row', { hasText: 'Holz bestellen' }).boundingBox();
+    const todayBox = await ipad.locator('.day.today').boundingBox();
+    await ipad.mouse.move(card.x + 60, card.y + 12);
+    await ipad.mouse.down();
+    await ipad.waitForTimeout(450);
+    await ipad.mouse.move(card.x + 80, card.y + 30, { steps: 4 });
+    await ipad.mouse.move(todayBox.x + 200, todayBox.y + todayBox.height - 20, { steps: 12 });
+    await ipad.mouse.up();
+    await ipad.waitForTimeout(500);
+    await ipad.mouse.click(1000, 790);
+    await ipad.waitForTimeout(300);
+    const masterNow = await ipad.$$eval('.sheet.front .task-list > li.row .tt-text', (els) => els.map((e) => e.textContent));
+    const inToday = await ipad.locator('.day.today .dtask', { hasText: 'Holz bestellen' }).locator('.cb-under .picon').count();
+    check('a project is one line with its icon; its tasks on its card, from there into today (icon under the box)',
+      onCard.join() === 'Holz bestellen' && masterNow.includes('Gartenhaus') && !masterNow.includes('Holz bestellen') && inToday === 1,
+      { onCard, masterNow, inToday });
+    await ipad.waitForTimeout(1500);
+    await phone.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await phone.waitForTimeout(2500);
+    const phoneList = await phone.$$eval('.sheet.front .task-list > li.row .tt-text', (els) => els.map((e) => e.textContent));
+    check('the project arrives on the other device', phoneList.includes('Gartenhaus') && !phoneList.includes('Holz bestellen'), phoneList);
   } catch (err) {
     failed = true;
     console.log('✗', err.message);

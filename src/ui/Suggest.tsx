@@ -1,8 +1,8 @@
 // Tasks that already exist, offered under a line being written (in a category,
-// under "Vorbereiten", in today): the first choice writes the text as a new
-// task, tapping an offer takes the existing one instead.
+// a project, under "Vorbereiten", in today): the first choice writes the text
+// as a new task, tapping an offer takes the existing one instead.
 
-import type { Dispatch, StateUpdater } from 'preact/hooks';
+import { useRef, useState, type Dispatch, type StateUpdater } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
 import type { Task } from '../lib/model';
 import { store } from '../store/store';
@@ -46,10 +46,68 @@ export function SuggestList(props: {
   );
 }
 
-/** Where an offered task stands now: for an appointment, in a category, or just in the list. */
+/** Where an offered task stands now: for an appointment, in a project, in a category, or just in the list. */
 export function whereFrom(t: Task): string {
   if (t.link) return `für: ${t.link.title}`;
+  const project = store.project(t.projectId);
+  if (project) return `Projekt ${project.name}`;
   return store.category(t.categoryId)?.name ?? 'Masterliste';
+}
+
+/**
+ * A line on a page (category, project) to write a task on; matching tasks are
+ * offered while typing, and tapping one takes it there instead.
+ */
+export function AddLine(props: {
+  placeholder: string;
+  head: string;
+  find: (text: string) => Task[];
+  onTake: (task: Task) => void;
+  onAdd: (text: string) => void;
+}) {
+  const [value, setValue] = useState('');
+  const [pick, setPick] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const found = props.find(value);
+
+  function take(task: Task) {
+    props.onTake(task);
+    setValue('');
+    setPick(-1);
+    inputRef.current?.focus();
+  }
+
+  function submit() {
+    if (pick >= 0 && found[pick]) {
+      take(found[pick]);
+      return;
+    }
+    if (!value.trim()) return;
+    props.onAdd(value);
+    setValue('');
+    setPick(-1);
+  }
+
+  return (
+    <div class="suggest">
+      <form class="new-line" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+        <span class="new-line-mark" aria-hidden="true">+</span>
+        <input
+          ref={inputRef}
+          value={value}
+          placeholder={props.placeholder}
+          enterKeyHint="enter"
+          autoComplete="off"
+          onInput={(e) => { setValue((e.target as HTMLInputElement).value); setPick(-1); }}
+          onKeyDown={(e) => {
+            if (movePick(e, found.length, setPick)) return;
+            if (e.key === 'Escape') { setValue(''); setPick(-1); (e.currentTarget as HTMLInputElement).blur(); }
+          }}
+        />
+      </form>
+      <SuggestList text={value} found={found} pick={pick} head={props.head} onNew={submit} onTake={take} />
+    </div>
+  );
 }
 
 /** Arrow keys move through the offers; true when the key was used. */
