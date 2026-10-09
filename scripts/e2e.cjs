@@ -206,6 +206,22 @@ async function device(browser, name) {
     await phone.waitForTimeout(2500);
     const phoneList = await phone.$$eval('.sheet.front .task-list > li.row .tt-text', (els) => els.map((e) => e.textContent));
     check('the project arrives on the other device', phoneList.includes('Gartenhaus') && !phoneList.includes('Holz bestellen'), phoneList);
+
+    // its next step: the arrow on the slip; then the step stands in the list instead of the project, its icon opens the slip
+    await ipad.locator('.sheet.front .project-line', { hasText: 'Gartenhaus' }).click();
+    await ipad.waitForSelector('.postit.pslip.shown');
+    await ipad.locator('.pslip-row', { hasText: 'Holz bestellen' }).locator('.next-mark').click();
+    await ipad.waitForTimeout(300);
+    const onTop = await ipad.$$eval('.pslip-next .pslip-row .tt-text', (els) => els.map((e) => e.textContent));
+    await ipad.mouse.click(1000, 790);
+    await ipad.waitForTimeout(300);
+    const withStep = await ipad.$$eval('.sheet.front .task-list > li.row', (els) => els.map((e) => (e.classList.contains('project-line') ? 'P:' : '') + (e.querySelector('.lead-icon') ? 'I:' : '') + e.querySelector('.tt-text').textContent));
+    await ipad.locator('.sheet.front .lead-icon').first().click();
+    const slipAgain = await ipad.locator('.postit.pslip.shown .pslip-title').textContent();
+    await ipad.mouse.click(1000, 790);
+    check('the next step stands in the list in place of its project; its icon opens the slip',
+      onTop.join() === 'Holz bestellen' && withStep.includes('I:Holz bestellen') && !withStep.some((t) => t.includes('Gartenhaus')) && slipAgain === 'Gartenhaus',
+      { onTop, withStep, slipAgain });
   } catch (err) {
     failed = true;
     console.log('✗', err.message);

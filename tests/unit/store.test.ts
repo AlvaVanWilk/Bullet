@@ -140,6 +140,27 @@ describe('store', () => {
     expect(s.snapshot().tasks.map((t) => t.projectId)).toEqual([null, null]);
   });
 
+  it('keeps one next step per project and passes it on to what comes after', () => {
+    const s = makeStore();
+    const p = s.addProject('Gartenhaus')!;
+    const a = s.addTask('Farbe kaufen', null, { projectId: p.id })!;
+    const b = s.addTask('Leiter leihen', null, { projectId: p.id })!;
+    s.setNextStep(a.id);
+    s.setNextStep(b.id);
+    expect([s.task(a.id)!.next, s.task(b.id)!.next]).toEqual([false, true]);
+    const c = s.addFollowUp(b.id, 'Leiter zurückbringen')!;
+    s.setDone(b.id, true, '2026-10-09');
+    // done, it keeps its mark (struck in the list); what came after it is next now
+    expect([s.task(b.id)!.next, s.task(c.id)!.next]).toEqual([true, true]);
+    // ticked off by mistake and opened again: it is the next step again
+    s.setDone(b.id, false);
+    expect([s.task(b.id)!.next, s.task(c.id)!.next]).toEqual([true, false]);
+    // into another project, no next step any more
+    const q = s.addProject('Keller')!;
+    s.updateTask(b.id, { projectId: q.id });
+    expect(s.task(b.id)!.next).toBe(false);
+  });
+
   it('copies a task into a day only once', () => {
     const s = makeStore();
     const t = s.addTask('Brot kaufen')!;

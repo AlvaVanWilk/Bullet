@@ -237,6 +237,16 @@
 /* projects: a line in the master list, the rows of the sheet */
 .project-line { cursor: pointer; }
 .project-line .tt { font-weight: 400; }
+/* an open project without a next step */
+.project-next {
+  flex: none;
+  margin-left: 8px;
+  font-size: 17px;
+  line-height: var(--grid);
+  color: var(--ink-faint);
+  opacity: 0.75;
+  white-space: nowrap;
+}
 .project-open {
   flex: none;
   margin-left: 8px;

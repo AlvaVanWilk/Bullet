@@ -42,6 +42,7 @@ export function seedDemo(today: DayKey) {
   store.addTask('Alte Farbe abschleifen', null, { projectId: garten.id });
   store.addTask('Nachbarn fragen wegen Leiter', null, { projectId: garten.id });
   store.addFollowUp(farbe.id, 'Erster Anstrich');
+  store.setNextStep(farbe.id);
   const umzug = store.addProject('Keller ausmisten')!;
   store.updateProject(umzug.id, { icon: 'koffer', color: 'orange' });
   store.addTask('Sperrmüll anmelden', null, { projectId: umzug.id, deadline: today });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_DONE, archiveList, dayItems, deadlineFor, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
-  openLinkCounts, prepRows, prepSuggestions, wouldLoop, masterEntries, projectMarks, projectProgress, projectRows, projectSuggestions, categoryTasks,
+  openLinkCounts, prepRows, prepSuggestions, wouldLoop, masterEntries, nextStep, projectMarks, projectProgress, projectRows, projectSuggestions, categoryTasks,
   specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type ArchiveQuery, type Snapshot,
 } from '../../src/lib/logic';
 import { DEFAULT_SETTINGS, type CalEvent, type Entry, type Hide, type Project, type Special, type Task } from '../../src/lib/model';
@@ -176,6 +176,26 @@ describe('projects', () => {
     // the task of a deleted project stands in the list again
     expect(line).toEqual(['a', '[garten]', 'b', 'c', '[later]']);
     expect(projectRows(s, 'garten', NOW).map((r) => r.task.id)).toEqual(['p1']);
+  });
+
+  it('show their next step in their place instead of themselves; done steps stay struck for a while', () => {
+    const tasks = [
+      task('a', { createdAt: 1 }),
+      task('s1', { createdAt: 3, projectId: 'p', next: true, doneAt: NOW - 1000, doneDay: TODAY }),
+      task('s2', { createdAt: 4, projectId: 'p', next: true, after: ['s1'] }),
+      task('rest', { createdAt: 5, projectId: 'p' }),
+      task('b', { createdAt: 10 }),
+    ];
+    const s = withProjects(tasks, [project('p', { createdAt: 2 }), project('q', { createdAt: 6 })]);
+    const line = masterEntries(s, NOW).map((e) => (e.kind === 'task' ? e.row.task.id : `[${e.project.id}:${e.rows.map((r) => r.task.id).join('+')}:${e.next?.id ?? '?'}]`));
+    expect(line).toEqual(['a', '[p:s1+s2:s2]', '[q::?]', 'b']);
+    const p = masterEntries(s, NOW)[1];
+    // the new step hangs under the one done before it (written in once that is struck)
+    expect(p.kind === 'project' && p.rows[1].anchor).toBe('s1');
+    expect(nextStep(s, 'p')!.id).toBe('s2');
+    // long done, the old step is gone; without an open one the project stands there
+    const later = withProjects([{ ...tasks[1], doneAt: NOW - 30 * DAY }, { ...tasks[2], next: false }], [project('p')]);
+    expect(masterEntries(later, NOW).map((e) => e.kind === 'project' && `${e.rows.length}:${e.next?.id ?? '?'}`)).toEqual(['0:?']);
   });
 
   it('leave the list some days after they are finished, like tasks', () => {

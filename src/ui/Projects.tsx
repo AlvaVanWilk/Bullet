@@ -1,6 +1,7 @@
 // Projects. In the master list a project is one line with its hand-drawn
-// icon; tapped, a slip of paper with its open tasks unfolds under it (drag
-// them into today from there). The sheet "Projekte" lists them all, each opens its page:
+// icon, or its next step with the icon before it; tapped (the icon of the
+// step), a slip of paper with its open tasks unfolds under it (drag them into
+// today from there). The sheet "Projekte" lists them all, each opens its page:
 // the big icon, notes, all its tasks, and "Projekt abschließen". Name, icon
 // and colour are chosen on a note.
 
@@ -8,7 +9,7 @@ import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor, projectInk } from '../lib/colors';
 import {
-  entriesByTask, followUps, isOpenToday, liveProjects, projectMarks, projectProgress, projectRows, projectSuggestions,
+  entriesByTask, followUps, isOpenToday, liveProjects, nextStep, projectMarks, projectProgress, projectRows, projectSuggestions,
 } from '../lib/logic';
 import type { Entry, Project, Task } from '../lib/model';
 import { store } from '../store/store';
@@ -27,21 +28,39 @@ const rectOf = (el: EventTarget | null) => (el as HTMLElement).getBoundingClient
 
 /**
  * Before a line: the dot (open today) and "!" (important), and for a task of a
- * project its icon under them, as if the marks were drawn over it.
+ * project its icon under them, as if the marks were drawn over it. With
+ * onIcon, a tap on the icon does that instead of opening the task.
  */
-export function Lead(props: { dot: boolean; bang: boolean; project?: Project | null }) {
+export function Lead(props: { dot: boolean; bang: boolean; project?: Project | null; onIcon?: (el: HTMLElement) => void }) {
   const p = props.project;
-  return (
-    <span class={`lead ${p ? 'with-icon' : ''}`}>
+  const marks = (
+    <>
       {p && <ProjectIcon project={p} />}
       {props.dot && <ScheduledDot />}
       {props.bang && <Bang />}
-    </span>
+    </>
   );
+  if (p && props.onIcon) {
+    const onIcon = props.onIcon;
+    return (
+      <button
+        type="button"
+        class="lead with-icon lead-icon"
+        aria-label={`Projekt ${p.name}`}
+        onClick={(e) => { e.stopPropagation(); onIcon(e.currentTarget as HTMLElement); }}
+      >
+        {marks}
+      </button>
+    );
+  }
+  return <span class={`lead ${p ? 'with-icon' : ''}`}>{marks}</span>;
 }
 
-/** A project in the master list: its icon and name; tapped, its card. */
-export function ProjectLine(props: { project: Project; today: string; index: Map<string, Entry[]> }) {
+/**
+ * A project in the master list when no next step stands for it: its icon and
+ * name, and a faint "→ ?" while it is open; tapped, its slip.
+ */
+export function ProjectLine(props: { project: Project; today: string; index: Map<string, Entry[]>; fresh?: boolean }) {
   const snap = useStore();
   const state = useUi();
   const p = props.project;
@@ -50,7 +69,7 @@ export function ProjectLine(props: { project: Project; today: string; index: Map
   const showing = state.postIt?.kind === 'project' && state.postIt.id === p.id;
   return (
     <li
-      class={`row project-line ${showing ? 'editing' : ''} ${store.isFresh(p.id) ? 'ink-in' : ''}`}
+      class={`row project-line ${showing ? 'editing' : ''} ${store.isFresh(p.id) || props.fresh ? 'ink-in' : ''}`}
       // a task dragged onto the project goes into it
       data-drop="project"
       data-project={p.id}
@@ -61,22 +80,52 @@ export function ProjectLine(props: { project: Project; today: string; index: Map
     >
       <Lead dot={marks.today} bang={marks.important} project={p} />
       <TaskText text={p.name} struck={p.doneAt != null} />
+      {p.doneAt == null && <span class="project-next" title="noch kein nächster Schritt">→ ?</span>}
       {p.doneAt == null && open.total > open.done && <span class="project-open">{open.total - open.done}</span>}
     </li>
   );
 }
 
-/** The slip of a project, under its line in the list: its open tasks, to drag into today, and a line for a new one. */
+/**
+ * The slip of a project, under its line in the list: on top its next step,
+ * below the other open tasks (each to drag into today, the arrow before one
+ * makes it the next step), and a line for a new one.
+ */
 export function ProjectCard(props: { id: string; close: () => void }) {
   const snap = useStore();
   const today = useToday();
   const now = useNow();
+  const nextRef = useRef<HTMLUListElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  useGridRows(nextRef);
   useGridRows(listRef);
   const p = store.project(props.id);
   if (!p) return null;
   const index = entriesByTask(snap.entries);
-  const rows = projectRows(snap, p.id, Math.max(now, Date.now())).filter((r) => r.task.doneAt == null);
+  const open = projectRows(snap, p.id, Math.max(now, Date.now())).map((r) => r.task).filter((t) => t.doneAt == null);
+  const next = nextStep(snap, p.id);
+  const rest = open.filter((t) => t.id !== next?.id);
+  const row = (t: Task) => {
+    const cat = store.category(t.categoryId);
+    const color = cat ? categoryColor(cat.color) : null;
+    return (
+      <li
+        key={t.id}
+        class={`row pslip-row ${t.id === next?.id ? 'is-next' : ''}`}
+        onPointerDown={(e) => startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'project', color: color?.ink })}
+        onClick={(e) => {
+          if (clickSuppressed()) return;
+          ui.set({ postIt: { kind: 'task', id: t.id, rect: rectOf(e.currentTarget) } });
+        }}
+      >
+        <NextMark task={t} on={t.id === next?.id} />
+        <Lead dot={isOpenToday(t, today, index)} bang={t.important} />
+        <TaskText text={t.text} color={color?.ink} fresh={store.isFresh(t.id)} />
+        {t.note && <NoteMark />}
+        {hasClip(t) && <ClipMark />}
+      </li>
+    );
+  };
   return (
     <div class="pslip-inner" style={{ '--proj': projectInk(p.color) }}>
       {/* the paper: tinted a little in the colour of the project, folded once across and once down */}
@@ -90,32 +139,45 @@ export function ProjectCard(props: { id: string; close: () => void }) {
           onClick={() => { props.close(); ui.set({ view: { kind: 'project', id: p.id } }); }}
         >Seite ›</button>
       </header>
-      <ul class="pslip-list" ref={listRef}>
-        {rows.map(({ task: t }) => {
-          const cat = store.category(t.categoryId);
-          const color = cat ? categoryColor(cat.color) : null;
-          return (
-            <li
-              key={t.id}
-              class="row pslip-row"
-              onPointerDown={(e) => startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'project', color: color?.ink })}
-              onClick={(e) => {
-                if (clickSuppressed()) return;
-                ui.set({ postIt: { kind: 'task', id: t.id, rect: rectOf(e.currentTarget) } });
-              }}
-            >
-              <Lead dot={isOpenToday(t, today, index)} bang={t.important} />
-              <TaskText text={t.text} color={color?.ink} fresh={store.isFresh(t.id)} />
-              {t.note && <NoteMark />}
-              {hasClip(t) && <ClipMark />}
-            </li>
-          );
-        })}
-        {!rows.length && <li class="pslip-empty">{p.doneAt != null ? 'abgeschlossen' : 'Nichts mehr offen.'}</li>}
+      {p.doneAt == null && open.length > 0 && (
+        <section class="pslip-next">
+          <h4 class="pslip-label">nächster Schritt</h4>
+          {next
+            ? <ul class="pslip-list" ref={nextRef}>{row(next)}</ul>
+            : <p class="pslip-none">Noch keiner – tipp auf den Pfeil vor einer Aufgabe.</p>}
+        </section>
+      )}
+      <ul class="pslip-list pslip-rest" ref={listRef}>
+        {rest.map(row)}
+        {!open.length && <li class="pslip-empty">{p.doneAt != null ? 'abgeschlossen' : 'Nichts mehr offen.'}</li>}
       </ul>
       <NewLine placeholder="Neue Aufgabe im Projekt …" onEnter={(text) => store.addTask(text, null, { projectId: p.id })} />
       <p class="pslip-hint">Zum Planen: Aufgabe gedrückt halten und in heute ziehen.</p>
     </div>
+  );
+}
+
+/**
+ * The small arrow before a task of a project: drawn in the colour of the
+ * project on its next step, faint on the others; a tap makes the task the
+ * next step (or no longer).
+ */
+export function NextMark(props: { task: Task; on: boolean }) {
+  const { task: t, on } = props;
+  return (
+    <button
+      type="button"
+      class={`next-mark ${on ? 'on' : ''}`}
+      aria-pressed={on}
+      aria-label={on ? 'nicht mehr der nächste Schritt' : 'als nächsten Schritt setzen'}
+      title={on ? 'nächster Schritt' : 'als nächsten Schritt setzen'}
+      onClick={(e) => { e.stopPropagation(); store.setNextStep(t.id, !on); }}
+    >
+      <svg width="20" height="28" viewBox="0 0 20 28" aria-hidden="true">
+        <path d="M2.6 14.6c3.6-.5 8.1-.3 13.4.2" />
+        <path d="M11.4 10c1.7 1.5 3.3 3 4.8 4.8-1.6 1.4-3.1 2.9-4.5 4.6" />
+      </svg>
+    </button>
   );
 }
 
@@ -182,6 +244,7 @@ export function ProjectView(props: { id: string }) {
     return null;
   }
   const rows = projectRows(snap, p.id, Math.max(now, Date.now()));
+  const next = nextStep(snap, p.id);
   const index = entriesByTask(snap.entries);
   const follow = followUps(snap);
   const { done, total } = projectProgress(snap, p.id);
@@ -224,6 +287,7 @@ export function ProjectView(props: { id: string }) {
                     ui.set({ postIt: { kind: 'task', id: t.id, rect: rectOf(e.currentTarget) } });
                   }}
                 >
+                  {p.doneAt == null && (t.doneAt == null ? <NextMark task={t} on={t.id === next?.id} /> : <span class="next-mark" />)}
                   <Lead dot={isOpenToday(t, today, index)} bang={t.important} />
                   <TaskText text={t.text} color={color?.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
                   {t.note && <NoteMark />}

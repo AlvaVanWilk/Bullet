@@ -5,7 +5,7 @@ import { createStore, get, set } from 'idb-keyval';
 import { compareDays, dayKey, type DayKey } from '../lib/dates';
 import { newId, stableId } from '../lib/ids';
 import { nextFreeColor, PROJECT_COLORS, projectInk } from '../lib/colors';
-import { deadlineFor, wouldLoop, type Snapshot } from '../lib/logic';
+import { deadlineFor, isWaiting, wouldLoop, type Snapshot } from '../lib/logic';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
   type AnyRecord, type Category, type Entry, type Hide, type Project, type Settings, type Special, type Task, type TaskLink,
@@ -160,8 +160,42 @@ export class Store {
   updateTask(id: string, patch: Partial<Omit<Task, 'id' | 'type'>>) {
     const task = this.task(id);
     if (!task) return;
-    this.put({ ...task, ...patch });
+    // in another project (or none) it is no next step any more
+    const moved = patch.projectId !== undefined && (patch.projectId ?? null) !== (task.projectId ?? null);
+    this.put({ ...task, ...patch, ...(moved ? { next: false } : {}) });
     this.changed(true);
+  }
+
+  /** The next step of its project (the one open before loses the mark), or not any more. */
+  setNextStep(taskId: string, on = true) {
+    const task = this.task(taskId);
+    if (!task?.projectId) return;
+    if (on) this.unmarkOtherSteps(task);
+    this.put({ ...task, next: on });
+    this.changed(true);
+  }
+
+  private unmarkOtherSteps(task: Task) {
+    for (const r of this.records.values()) {
+      if (r.type === 'task' && !r.deleted && r.id !== task.id && r.projectId === task.projectId && r.next && r.doneAt == null) {
+        this.put({ ...r, next: false });
+      }
+    }
+  }
+
+  /**
+   * A next step done: what comes right after it in the project (and waits for
+   * nothing else) becomes the next step.
+   */
+  private passOnStep(task: Task) {
+    if (!task.next || !task.projectId) return;
+    const live = [...this.records.values()].filter((r): r is Task => r.type === 'task' && !r.deleted);
+    if (live.some((t) => t.projectId === task.projectId && t.next && t.doneAt == null)) return;
+    const byId = new Map(live.map((t) => [t.id, t]));
+    const after = live
+      .filter((t) => t.projectId === task.projectId && t.doneAt == null && t.after?.includes(task.id) && !isWaiting(t, byId))
+      .sort((a, b) => a.createdAt - b.createdAt)[0];
+    if (after) this.put({ ...after, next: true });
   }
 
   /**
@@ -247,12 +281,13 @@ export class Store {
     const task = this.task(taskId);
     if (!task) return;
     if (task.doneDay === day) {
-      this.put({ ...task, doneAt: null, doneDay: null });
-      this.changed(true);
+      this.reopen(task);
       return;
     }
     const wasDone = task.doneAt != null;
-    this.put({ ...task, doneDay: day, doneAt: wasDone ? task.doneAt : this.now() });
+    const done = { ...task, doneDay: day, doneAt: wasDone ? task.doneAt : this.now() };
+    this.put(done);
+    if (!wasDone) this.passOnStep(done);
     this.changed(true);
     if (!wasDone) this.emit({ kind: 'done', taskId });
   }
@@ -261,10 +296,14 @@ export class Store {
     const task = this.task(taskId);
     if (!task || (task.doneAt != null) === done) return;
     if (done) this.toggleDone(taskId, today);
-    else {
-      this.put({ ...task, doneAt: null, doneDay: null });
-      this.changed(true);
-    }
+    else this.reopen(task);
+  }
+
+  /** Open again; a next step open again is the next step again. */
+  private reopen(task: Task) {
+    if (task.next) this.unmarkOtherSteps(task);
+    this.put({ ...task, doneAt: null, doneDay: null });
+    this.changed(true);
   }
 
   deleteTask(id: string) {
@@ -393,7 +432,7 @@ export class Store {
     if (!project) return;
     this.put({ ...project, deleted: true });
     for (const r of this.records.values()) {
-      if (r.type === 'task' && r.projectId === id && !r.deleted) this.put({ ...r, projectId: null });
+      if (r.type === 'task' && r.projectId === id && !r.deleted) this.put({ ...r, projectId: null, next: false });
     }
     this.changed(true);
   }

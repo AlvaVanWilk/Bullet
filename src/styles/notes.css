@@ -581,7 +581,20 @@
 .pslip-head { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 6px 10px 2px 14px; }
 .pslip-title { flex: 1; min-width: 0; font-size: 24px; line-height: 1.1; font-weight: 400; }
 .pslip-open { font-family: var(--clean); font-size: 14px; color: var(--ink-soft); padding: 6px 4px; }
-.pslip-list { padding: 0 10px 0 12px; max-height: 58dvh; overflow-y: auto; }
+.pslip-list { padding: 0 10px 0 12px; }
+/* on top the next step, then, a little apart, the rest (which scrolls) */
+.pslip-next { padding-bottom: 10px; margin-bottom: 6px; }
+.pslip-label {
+  font-family: var(--clean);
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--proj) 70%, var(--ink-soft));
+  margin: 0 14px -2px 18px;
+}
+.pslip-none { font-family: var(--clean); font-size: 13px; color: var(--ink-faint); margin: 4px 14px 0 18px; }
+.pslip-rest { max-height: 50dvh; overflow-y: auto; }
 .pslip-row { cursor: grab; }
 .pslip-empty { color: var(--ink-faint); font-size: 19px; line-height: var(--grid); padding-left: 24px; }
 .pslip .new-line { margin: 2px 14px 2px 18px; }

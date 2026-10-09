@@ -216,6 +216,29 @@
 .lead.with-icon .bang { position: relative; z-index: 1; }
 .lead.with-icon .sched-dot { margin: 0 2px; box-shadow: 0 0 0 1.5px var(--paper); }
 .lead.with-icon .bang { text-shadow: 0 0 2px var(--paper), 0 0 2px var(--paper); }
+/* the icon of a next step in the master list opens its project */
+button.lead-icon { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+/* before a task of a project: the arrow that makes it the next step */
+.next-mark {
+  flex: none;
+  width: 20px;
+  height: var(--grid);
+  margin: 0 2px 0 -2px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.next-mark path {
+  fill: none;
+  stroke: var(--ink-faint);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.6;
+  transition: stroke 0.2s, opacity 0.2s;
+}
+.next-mark.on path { stroke: var(--proj, var(--proj-ink, var(--ink))); stroke-width: 2; opacity: 1; }
+@media (hover: hover) { button.next-mark:hover path { opacity: 1; } }
 /* in a day: the icon in the margin before the box */
 .dtask { position: relative; }
 .dtask .margin-icon { position: absolute; left: -33px; top: 0; }

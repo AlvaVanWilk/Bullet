@@ -61,6 +61,14 @@ Bedienung und Einrichtung: `README.md`.
   mit Spritzern, ohne Umrandung) in seiner Farbe, Fortschritt,
   Notizen, Aufgaben, „Projekt abschließen“. Gelöscht → Aufgaben zurück in die
   Masterliste. Kategorien, Vorschläge und Archiv zeigen Projektaufgaben einzeln.
+- Nächster Schritt (`task.next`): höchstens einer offen pro Projekt (sonst plant man,
+  statt zu handeln), gesetzt mit dem kleinen Pfeil vor einer Aufgabe auf Zettel oder
+  Projektseite. Dann steht in der Masterliste statt der Projektzeile dieser Schritt mit
+  dem Projektbild davor, als normale Zeile (eigenes „!“/„•“, ziehen, Post-it); das Bild
+  öffnet den Zettel. Kein Projektname dabei. Auf dem Zettel steht er oben, darunter
+  abgesetzt die übrigen (scrollbar). Erledigt → durchgestrichen; seine nächste
+  Folgeaufgabe im Projekt wird von selbst der nächste Schritt und schreibt sich darunter.
+  Ohne nächsten Schritt: die Projektzeile mit blassem „→ ?“.
 - Hauptseite: Kopf (Kalenderwoche, Boxen Termine/Deadlines/Besonderes) scrollt nicht.
   Tage von Montag bis heute; heute nie unterhalb der Fenstermitte. Vergangene Termine
   blass. Deadlines im Kopf in normaler Schrift; nur überfällige rot und leuchtend.

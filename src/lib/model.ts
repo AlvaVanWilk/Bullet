@@ -47,6 +47,11 @@ export interface Task extends Base {
   deferredOn?: DayKey | null;
   /** The project the task belongs to: in the master list it stands only inside its project. */
   projectId?: string | null;
+  /**
+   * The next step of its project: it stands in the master list in place of the
+   * project (one open at a time; done ones keep the mark and stay struck there).
+   */
+  next?: boolean;
 }
 
 export interface Payment {

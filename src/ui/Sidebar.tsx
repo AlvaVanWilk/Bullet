@@ -5,14 +5,15 @@
 import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
-import { allRows, entriesByTask, followUps, isOpenToday, liveCategories, masterEntries, masterRows } from '../lib/logic';
+import { allRows, entriesByTask, followUps, isOpenToday, liveCategories, masterEntries, masterRows, type ListRow } from '../lib/logic';
+import type { Project } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
 import { FollowRows, FollowToggle, useFolds } from './Follow';
 import { useGridRows } from './gridRows';
-import { Bang, ClipMark, hasClip, NoteMark, ScheduledDot, TaskText } from './ink';
+import { ClipMark, hasClip, NoteMark, TaskText } from './ink';
 import { NewLine } from './NewLine';
-import { ProjectLine, ProjectList } from './Projects';
+import { Lead, ProjectLine, ProjectList } from './Projects';
 import { playPaperSlide, playStrike } from './sound';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
 
@@ -185,8 +186,12 @@ function MasterList(props: { active: boolean }) {
   const [striking, setStriking] = useState<Set<string>>(new Set());
   const struckRef = useRef<Set<string>>(new Set());
   const listNow = Math.max(now, Date.now());
-  const taskRows = masterRows(snap, listNow);
   const entries = masterEntries(snap, listNow);
+  // the tasks of the list, and the next steps standing in for their projects
+  const taskRows = [
+    ...masterRows(snap, listNow),
+    ...entries.flatMap((e) => (e.kind === 'project' ? e.rows : [])),
+  ];
   const tasks = taskRows.map((r) => r.task);
   const index = entriesByTask(snap.entries);
   const seen = dev.strikeSeenAt;
@@ -250,6 +255,56 @@ function MasterList(props: { active: boolean }) {
     }, 520);
   };
 
+  const openSlip = (project: Project, el: HTMLElement) => {
+    if (clickSuppressed()) return;
+    const line = el.closest('li') ?? el;
+    ui.set({ postIt: { kind: 'project', id: project.id, rect: line.getBoundingClientRect() } });
+  };
+
+  /** A line of the list: a task, or the next step of a project (its icon in front opens the project). */
+  const taskRow = ({ task: t, anchor }: ListRow, project?: Project) => {
+    const cat = store.category(t.categoryId);
+    const color = cat ? categoryColor(cat.color) : null;
+    const isStruck = t.doneAt != null && (t.doneAt <= seen || striking.has(t.id));
+    const editing = (uiState.postIt?.kind === 'task' && uiState.postIt.id === t.id)
+      || (!!project && uiState.postIt?.kind === 'project' && uiState.postIt.id === project.id);
+    const waiting = follow(t.id);
+    const folded = !folds.isOpen(t.id);
+    return (
+      <Fragment key={t.id}>
+        <li
+          class={`row ${editing ? 'editing' : ''} ${sweeping && isStruck ? 'swept' : ''}`}
+          // a task dragged onto a next step goes into its project
+          data-drop={project ? 'project' : undefined}
+          data-project={project?.id}
+          onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, {
+            taskId: t.id, text: t.text, from: 'master', color: color?.ink,
+          })}
+          onClick={(e) => openPostIt(t.id, e.currentTarget as HTMLElement)}
+        >
+          <Lead
+            dot={isOpenToday(t, today, index)}
+            bang={t.important}
+            project={project}
+            onIcon={project ? (el) => openSlip(project, el) : undefined}
+          />
+          <TaskText
+            text={t.text}
+            color={color && mode === 'text' ? color.ink : undefined}
+            marker={color && mode === 'marker' ? color.marker : null}
+            struck={isStruck}
+            animate={striking.has(t.id)}
+            fresh={store.isFresh(t.id) || (!!anchor && striking.has(anchor))}
+          />
+          {t.note && <NoteMark />}
+          {hasClip(t) && <ClipMark />}
+          {waiting.length > 0 && <FollowToggle count={waiting.length} open={!folded} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
+        </li>
+        {!folded && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode={mode} />}
+      </Fragment>
+    );
+  };
+
   return (
     <div class="sheet-inner">
       <h2 class="sheet-title">
@@ -267,44 +322,20 @@ function MasterList(props: { active: boolean }) {
       </h2>
       <ul class="task-list" ref={listRef} data-scroll>
         {entries.map((entry) => {
-          if (entry.kind === 'project') return <ProjectLine key={entry.project.id} project={entry.project} today={today} index={index} />;
+          if (entry.kind === 'project') {
+            // A project shows its next step (with its icon); without one, the project
+            // itself, once the step done last is struck through.
+            const last = entry.rows[entry.rows.length - 1]?.task.id;
+            const bare = !entry.next && !(last && unstruck.has(last));
+            return (
+              <Fragment key={entry.project.id}>
+                {entry.rows.map((r) => (shown.has(r.task.id) ? taskRow(shown.get(r.task.id)!, entry.project) : null))}
+                {bare && <ProjectLine project={entry.project} today={today} index={index} fresh={!!last && striking.has(last)} />}
+              </Fragment>
+            );
+          }
           const row = shown.get(entry.row.task.id);
-          if (!row) return null;
-          const { task: t, anchor } = row;
-          const cat = store.category(t.categoryId);
-          const color = cat ? categoryColor(cat.color) : null;
-          const isStruck = t.doneAt != null && (t.doneAt <= seen || striking.has(t.id));
-          const editing = uiState.postIt?.kind === 'task' && uiState.postIt.id === t.id;
-          const waiting = follow(t.id);
-          const folded = !folds.isOpen(t.id);
-          return (
-            <Fragment key={t.id}>
-              <li
-                class={`row ${editing ? 'editing' : ''} ${sweeping && isStruck ? 'swept' : ''}`}
-                onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, {
-                  taskId: t.id, text: t.text, from: 'master', color: color?.ink,
-                })}
-                onClick={(e) => openPostIt(t.id, e.currentTarget as HTMLElement)}
-              >
-                <span class="lead">
-                  {isOpenToday(t, today, index) && <ScheduledDot />}
-                  {t.important && <Bang />}
-                </span>
-                <TaskText
-                  text={t.text}
-                  color={color && mode === 'text' ? color.ink : undefined}
-                  marker={color && mode === 'marker' ? color.marker : null}
-                  struck={isStruck}
-                  animate={striking.has(t.id)}
-                  fresh={store.isFresh(t.id) || (!!anchor && striking.has(anchor))}
-                />
-                {t.note && <NoteMark />}
-                {hasClip(t) && <ClipMark />}
-                {waiting.length > 0 && <FollowToggle count={waiting.length} open={!folded} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
-              </li>
-              {!folded && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode={mode} />}
-            </Fragment>
-          );
+          return row ? taskRow(row) : null;
         })}
         {!entries.length && <li class="empty-hint">Hier entsteht deine Liste. Schreib unten los und drück Enter.</li>}
       </ul>
