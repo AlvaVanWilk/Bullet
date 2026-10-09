@@ -17,7 +17,7 @@ function entry(id: string, taskId: string, day: string): Entry {
   return { id, type: 'entry', updatedAt: 1, taskId, day, createdAt: 1 };
 }
 function snap(tasks: Task[], entries: Entry[] = [], specials: Special[] = []): Snapshot {
-  return { tasks, categories: [], projects: [], entries, specials, hides: [], settings: DEFAULT_SETTINGS };
+  return { tasks, categories: [], projects: [], entries, specials, hides: [], decos: [], awards: [], settings: DEFAULT_SETTINGS };
 }
 const states = (s: Snapshot, day: string) => dayItems(s, day, TODAY).map((i) => `${i.task.id}:${i.kind}:${i.state}`);
 

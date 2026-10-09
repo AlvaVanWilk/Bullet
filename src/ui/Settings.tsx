@@ -310,6 +310,13 @@ function DaysTab(props: { s: Settings }) {
           onChange={(v) => store.updateSettings({ sounds: v === 'an' })}
         />
       </Field>
+      <Field label="Deko" note="Ab und zu gibt es für besondere Momente einen Stempel, Sticker oder eine Kritzelei. Zum Aufkleben eine freie Stelle der Seite gedrückt halten.">
+        <Choice<'an' | 'aus'>
+          value={s.deco ? 'an' : 'aus'}
+          options={[['an', 'an'], ['aus', 'aus']]}
+          onChange={(v) => store.updateSettings({ deco: v === 'an' })}
+        />
+      </Field>
     </>
   );
 }

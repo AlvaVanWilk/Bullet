@@ -60,6 +60,9 @@ export function seedDemo(today: DayKey) {
   store.addEntry(kita.id, today);
   store.addSpecial('Namenstag Lisa', day(3), true);
 
+  // what the example reached is already unlocked, without announcing it
+  for (const a of store.snapshot().awards) store.seeAward(a.id);
+
   // Let the strike-through play once when the list is opened.
   device.set({ strikeSeenAt: 0 });
   store.fresh.clear();

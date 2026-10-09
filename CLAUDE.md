@@ -95,6 +95,17 @@ Bedienung und Einrichtung: `README.md`.
   ist sofort auf der Seite zu sehen.
 - Leise Geräusche: Papier über Papier beim Laschenwechsel, Stift beim Durchstreichen
   (abschaltbar). Post-it: „speichern“, Notizfeld; kein „erledigt“ dort.
+- Deko (`deco`, `award`; Regeln in `src/lib/milestones.ts`, Motive in `src/ui/decoPieces.tsx`):
+  Besondere Momente schenken je einmal einen Stempel, Sticker, eine Kritzelei oder
+  Washi-Tape. Belohnung als kleines Extra, kein Fokus: keine Liste, kein Fortschritt,
+  man weiß vorher nicht, wofür es was gibt (nichts zum Hinarbeiten oder Sammeln).
+  Gleich angekündigt mit einem Zettel: Art als Überschrift, Bild, was passiert ist, ein
+  passender Spruch; antippen legt ihn weg (auf allen Geräten). Kein Konfetti, kein „Du
+  hast eine Belohnung erhalten!“. Aufkleben: freie Stelle der Woche gedrückt halten →
+  Fächer mit den Arten → darauf gleiten → Motiv → loslassen (klebt am Druckpunkt);
+  ohne Gleiten loslassen = antippen. Hängt an einem Tag oder am Kopf der Woche und
+  scrollt mit, ohne Funktion, über der Schrift, ohne Tippen zu blockieren. Größe und
+  Drehung frei (Griff oder zwei Finger), „×“ zieht ab. Abschaltbar (Aussehen → Deko).
 - Termine aus Google lassen sich in Bullet ausblenden, ohne sie in Google zu ändern.
 - Termin oder Besonderes antippen → „Vorbereiten“: Die Aufgaben dort sind normale
   Aufgaben der Masterliste mit dem Tag des Termins als Deadline (änderbar) und merken

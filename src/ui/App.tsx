@@ -9,6 +9,8 @@ import { ArchiveView } from './Archive';
 import { alignToPaper, watchPaperAlignment } from './baseline';
 import { CategoryView } from './CategoryView';
 import { applyCover } from './cover';
+import { AwardNote, DecoFan } from './Deco';
+import { DecoDefs } from './decoPieces';
 import { configureDrops } from './drag';
 import { Login } from './Login';
 import { uploadPending } from '../photos';
@@ -62,6 +64,8 @@ export function App() {
   useEffect(() => watchPaperAlignment(), []);
   // photos taken without a connection go up with the next sync
   useEffect(() => onSynced(() => void uploadPending()), []);
+  // with everything from the server there: a look back at yesterday (milestones)
+  useEffect(() => onSynced(() => store.checkNewDay()), []);
 
   if (server.mode === 'checking') return <div class="desk boot" />;
   if (server.mode === 'signedOut') return <Login configured={server.configured} note={server.note} offline={server.offline} />;
@@ -80,6 +84,9 @@ export function App() {
       <PhotoViewer />
       <QrSheet />
       <SettingsSheet />
+      <DecoDefs />
+      <DecoFan />
+      <AwardNote />
       {STAGE === 'test' && <div class="test-badge" aria-hidden="true">Test</div>}
     </div>
   );

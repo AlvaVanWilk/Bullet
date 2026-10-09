@@ -30,7 +30,7 @@ export interface UiState {
   qr: string | null;
 }
 
-function observable<T extends object>(initial: T) {
+export function observable<T extends object>(initial: T) {
   let value = initial;
   const listeners = new Set<() => void>();
   return {
@@ -73,7 +73,7 @@ export function useExternal<T>(subscribe: (fn: () => void) => () => void, get: (
   return value;
 }
 
-function useObservable<T>(o: { get: () => T; subscribe: (fn: () => void) => () => void }): T {
+export function useObservable<T>(o: { get: () => T; subscribe: (fn: () => void) => () => void }): T {
   return useExternal(o.subscribe, o.get);
 }
 
@@ -95,6 +95,7 @@ const forcedToday = (() => {
 export function currentDay(): DayKey {
   return forcedToday ?? dayKey(new Date());
 }
+store.today = currentDay;
 
 const clock = observable({ today: currentDay(), now: Date.now() });
 setInterval(() => clock.set({ today: currentDay(), now: Date.now() }), 30000);

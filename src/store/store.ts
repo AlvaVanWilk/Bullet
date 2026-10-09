@@ -6,9 +6,11 @@ import { compareDays, dayKey, type DayKey } from '../lib/dates';
 import { newId, stableId } from '../lib/ids';
 import { nextFreeColor, PROJECT_COLORS, projectInk } from '../lib/colors';
 import { deadlineFor, isWaiting, wouldLoop, type Snapshot } from '../lib/logic';
+import { milestone, reachedOnDone, reachedOnNewDay, reachedOnProject, type Reached } from '../lib/milestones';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
-  type AnyRecord, type Category, type Entry, type Hide, type Project, type Settings, type Special, type Task, type TaskLink,
+  type AnyRecord, type Award, type Category, type Deco, type Entry, type Hide, type Project, type Settings, type Special, type Task,
+  type TaskLink,
 } from '../lib/model';
 import { STORAGE_PREFIX } from '../stage';
 import { isNewer } from './merge';
@@ -47,6 +49,9 @@ export class Store {
 
   constructor(private clock: () => number = Date.now) {}
 
+  /** The day it is now (the page may pretend another one, see ui/state). */
+  today: () => DayKey = () => dayKey(new Date(this.clock()));
+
   /** The time, but never the same twice: keeps the order of quick changes. */
   private now(): number {
     this.lastTick = Math.max(this.clock(), this.lastTick + 1);
@@ -57,7 +62,7 @@ export class Store {
 
   snapshot(): Snapshot {
     if (this.snapshotCache?.version === this.version) return this.snapshotCache.snap;
-    const snap: Snapshot = { tasks: [], categories: [], projects: [], entries: [], specials: [], hides: [], settings: DEFAULT_SETTINGS };
+    const snap: Snapshot = { tasks: [], categories: [], projects: [], entries: [], specials: [], hides: [], decos: [], awards: [], settings: DEFAULT_SETTINGS };
     for (const r of this.records.values()) {
       switch (r.type) {
         case 'task': snap.tasks.push(r); break;
@@ -66,6 +71,8 @@ export class Store {
         case 'entry': snap.entries.push(r); break;
         case 'special': snap.specials.push(r); break;
         case 'hide': snap.hides.push(r); break;
+        case 'deco': snap.decos.push(r); break;
+        case 'award': snap.awards.push(r); break;
         case 'settings': {
           const calendars = r.calendars && !Array.isArray(r.calendars) ? r.calendars : {};
           snap.settings = { ...DEFAULT_SETTINGS, ...r, calendars };
@@ -132,6 +139,7 @@ export class Store {
     const next = { ...record, updatedAt: stamp } as AnyRecord;
     this.records.set(next.id, next);
     this.dirty.add(next.id);
+    this.snapshotCache = null;
   }
 
   private markFresh(id: string) {
@@ -287,7 +295,10 @@ export class Store {
     const wasDone = task.doneAt != null;
     const done = { ...task, doneDay: day, doneAt: wasDone ? task.doneAt : this.now() };
     this.put(done);
-    if (!wasDone) this.passOnStep(done);
+    if (!wasDone) {
+      this.passOnStep(done);
+      this.grant(reachedOnDone(this.snapshot(), done, this.today(), done.doneAt!));
+    }
     this.changed(true);
     if (!wasDone) this.emit({ kind: 'done', taskId });
   }
@@ -423,6 +434,7 @@ export class Store {
     const project = this.project(id);
     if (!project) return;
     this.put({ ...project, doneAt: done ? this.now() : null });
+    if (done) this.grant(reachedOnProject(this.today()));
     this.changed(true);
   }
 
@@ -471,6 +483,63 @@ export class Store {
   unhideEvent(id: string) {
     const r = this.records.get(id);
     if (r?.type !== 'hide' || r.deleted) return;
+    this.put({ ...r, deleted: true });
+    this.changed(true);
+  }
+
+  // --- decoration ---------------------------------------------------------------------
+
+  /** Milestones reached: each gives its piece once, announced on the page (unless decoration is off). */
+  private grant(reached: Reached[]) {
+    for (const { key, day } of reached) {
+      const id = stableId('award', key);
+      if (this.records.has(id) || !milestone(key)) continue;
+      const award: Award = { id, type: 'award', updatedAt: 0, milestone: key, at: this.now(), day, seen: !this.settings.deco };
+      this.put(award);
+    }
+  }
+
+  /** A new day has begun (looked at once all records are there): a look back at yesterday. */
+  checkNewDay() {
+    if (this.records.has(stableId('award', 'faul'))) return;
+    const before = this.dirty.size;
+    this.grant(reachedOnNewDay(this.snapshot(), this.today(), this.clock()));
+    if (this.dirty.size !== before) this.changed(true);
+  }
+
+  seeAward(id: string) {
+    const r = this.records.get(id);
+    if (r?.type !== 'award' || r.seen) return;
+    this.put({ ...r, seen: true });
+    this.changed(true);
+  }
+
+  /** The pieces given so far (by milestones reached). */
+  unlockedPieces(): string[] {
+    const pieces = this.snapshot().awards.filter((a) => !a.deleted).sort((a, b) => a.at - b.at)
+      .map((a) => milestone(a.milestone)?.piece).filter((p): p is string => !!p);
+    return [...new Set(pieces)];
+  }
+
+  addDeco(piece: string, anchor: string, x: number, y: number, extra: Partial<Pick<Deco, 'date' | 'rot' | 'size'>> = {}): Deco {
+    const deco: Deco = {
+      id: newId(), type: 'deco', updatedAt: 0, piece, anchor, x, y, size: 1, rot: 0, createdAt: this.now(), ...extra,
+    };
+    this.put(deco);
+    this.changed(true);
+    return deco;
+  }
+
+  updateDeco(id: string, patch: Partial<Pick<Deco, 'anchor' | 'x' | 'y' | 'size' | 'rot'>>) {
+    const r = this.records.get(id);
+    if (r?.type !== 'deco' || r.deleted) return;
+    this.put({ ...r, ...patch });
+    this.changed(true);
+  }
+
+  removeDeco(id: string) {
+    const r = this.records.get(id);
+    if (r?.type !== 'deco' || r.deleted) return;
     this.put({ ...r, deleted: true });
     this.changed(true);
   }

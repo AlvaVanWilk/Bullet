@@ -222,6 +222,35 @@ async function device(browser, name) {
     check('the next step stands in the list in place of its project; its icon opens the slip',
       onTop.join() === 'Holz bestellen' && withStep.includes('I:Holz bestellen') && !withStep.some((t) => t.includes('Gartenhaus')) && slipAgain === 'Gartenhaus',
       { onTop, withStep, slipAgain });
+
+    // a milestone: a finished project gives a doodle (announced once); held on free paper in today, it sticks there, on both devices
+    await ipad.locator('.tab-projects').click();
+    await ipad.waitForTimeout(800);
+    await ipad.locator('.proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
+    await ipad.locator('.proj-foot .note-btn').click();
+    await ipad.waitForSelector('.award-note');
+    const award = await ipad.locator('.award-note').innerText();
+    await ipad.locator('.award-note').click();
+    await ipad.locator('.projview .close-x').click();
+    await ipad.waitForTimeout(500);
+    const dayBox = await ipad.locator('.day.today').boundingBox();
+    await ipad.mouse.move(dayBox.x + dayBox.width - 150, dayBox.y + 40);
+    await ipad.mouse.down();
+    await ipad.waitForTimeout(700);
+    await ipad.mouse.up();
+    await ipad.waitForTimeout(500);
+    await ipad.locator('.fan-disc.piece').first().click();
+    await ipad.waitForTimeout(400);
+    await ipad.mouse.click(dayBox.x + 40, dayBox.y + 4);
+    const stuck = await ipad.locator('.day.today .deco-piece').count();
+    await ipad.waitForTimeout(1600);
+    await phone.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await phone.waitForTimeout(2500);
+    const onPhone = await phone.locator('.day.today .deco-piece').count();
+    const announcedAgain = await phone.locator('.award-note').count();
+    check('a finished project gives a doodle; held on free paper it sticks to today, and shows on the other device (not announced again)',
+      award.includes('Kritzelei') && award.includes('Projekt abgeschlossen') && stuck === 1 && onPhone === 1 && announcedAgain === 0,
+      { award: award.split('\n')[0], stuck, onPhone, announcedAgain });
   } catch (err) {
     failed = true;
     console.log('✗', err.message);

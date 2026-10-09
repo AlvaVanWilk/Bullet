@@ -109,3 +109,26 @@ export function playStrike(duration = 0.4) {
   const c = context();
   if (c && noise) penStroke(c, noise, c.destination, c.currentTime + 0.01, duration);
 }
+
+/** A rubber stamp pressed onto the paper: a soft, low knock. */
+export function stampKnock(c: BaseAudioContext, buffer: AudioBuffer, out: AudioNode, t: number) {
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  const lp = filter(c, 'lowpass', 380, 0.9);
+  const gain = c.createGain();
+  gain.gain.value = 0;
+  gain.gain.setValueCurveAtTime(softCurve(24, 0.2, 0.05, 0.8, 0.1), t, 0.14);
+  src.connect(lp).connect(gain).connect(out);
+  src.start(t, Math.random());
+  src.stop(t + 0.2);
+}
+
+/** Something stuck on the page: a stamp knocks, a sticker is pressed down, a doodle is drawn. */
+export function playStick(kind: 'stempel' | 'sticker' | 'kritzelei' | 'washi') {
+  const c = context();
+  if (!c || !noise) return;
+  const t = c.currentTime + 0.01;
+  if (kind === 'stempel') stampKnock(c, noise, c.destination, t);
+  else if (kind === 'kritzelei') penStroke(c, noise, c.destination, t, 0.35);
+  else paperSlide(c, noise, c.destination, t, 0.16);
+}

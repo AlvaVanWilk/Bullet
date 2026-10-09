@@ -1,0 +1,132 @@
+/* --- decoration stuck on the page (Deco.tsx) --- */
+:root { --deco-scale: 1; }
+
+.deco-defs { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+
+/* the free paper can be held without the browser picking words or showing its menu */
+.week { -webkit-touch-callout: none; }
+.week .days, .week .week-head { -webkit-user-select: none; user-select: none; }
+.week input, .week textarea { -webkit-user-select: text; user-select: text; }
+
+/* no z-index: the stamps print onto the paper (multiply), over the writing */
+.deco-layer { position: absolute; inset: 0; pointer-events: none; }
+.deco-piece {
+  position: absolute;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+}
+.deco-piece .deco-art { display: block; width: 100%; height: 100%; overflow: visible; }
+.deco-stempel { mix-blend-mode: multiply; opacity: 0.9; }
+.deco-kritzelei, .deco-washi { mix-blend-mode: multiply; }
+.deco-sticker { overflow: visible; }
+
+.deco-piece.selected { pointer-events: auto; touch-action: none; cursor: move; z-index: 5; }
+.deco-frame {
+  position: absolute;
+  inset: -8px;
+  border: 1.5px dashed rgba(43, 43, 48, 0.42);
+  border-radius: 10px;
+  pointer-events: none;
+}
+.deco-remove, .deco-handle {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(40, 30, 15, 0.3), 0 3px 8px rgba(40, 30, 15, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+.deco-remove { top: -22px; right: -22px; font-size: 22px; line-height: 1; color: var(--ink-soft); }
+.deco-handle { bottom: -22px; right: -22px; cursor: nwse-resize; }
+.deco-handle svg { width: 20px; height: 20px; fill: none; stroke: var(--ink-soft); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* just stuck: a stamp is pressed, a sticker pressed down, a doodle drawn */
+@keyframes deco-stamp { 0% { transform: scale(1.18); opacity: 0; } 45% { opacity: 1; } 70% { transform: scale(0.97); } 100% { transform: none; } }
+@keyframes deco-sticker { 0% { transform: translate(-6px, -14px) rotate(5deg) scale(1.06); opacity: 0; filter: drop-shadow(0 10px 8px rgba(40, 30, 15, 0.25)); } 100% { transform: none; opacity: 1; filter: none; } }
+@keyframes deco-draw { from { opacity: 0; clip-path: inset(0 100% 0 0); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
+.deco-piece.placed.stempel .deco-art { animation: deco-stamp 0.32s ease-out both; }
+.deco-piece.placed.sticker .deco-art,
+.deco-piece.placed.washi .deco-art { animation: deco-sticker 0.36s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.deco-piece.placed.kritzelei .deco-art { animation: deco-draw 0.6s ease-out both; }
+@keyframes deco-peel { to { transform: translate(8px, -12px) rotate(-8deg) scale(0.6); opacity: 0; } }
+.deco-piece.peeling .deco-art { animation: deco-peel 0.26s ease-in both; }
+
+/* --- the fan: kinds around the finger, then the pieces of one kind --- */
+.fan-layer { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
+.fan-layer.tap { pointer-events: auto; }
+@keyframes fan-pop { from { transform: translate(var(--fx), var(--fy)) scale(0.3); opacity: 0; } to { transform: none; opacity: 1; } }
+.fan-disc {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(40, 30, 15, 0.25), 0 6px 14px rgba(40, 30, 15, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  animation: fan-pop 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+  transition: opacity 0.15s, box-shadow 0.15s, scale 0.15s;
+}
+.fan-disc.kind { width: 64px; height: 64px; margin: -32px 0 0 -32px; }
+.fan-disc.kind svg { width: 36px; height: 36px; }
+.fan-disc.piece { width: 84px; height: 84px; margin: -42px 0 0 -42px; }
+.fan-disc.piece .deco-art { overflow: visible; }
+.fan-disc.piece .deco-stempel { mix-blend-mode: multiply; }
+.fan-disc.on { box-shadow: 0 0 0 2.5px var(--ink), 0 6px 14px rgba(40, 30, 15, 0.25); }
+/* (the pop-in animation holds the opacity, so the dimming goes through a filter) */
+.fan-disc.dim { filter: opacity(0.3); }
+.fan-disc.hover { box-shadow: 0 0 0 2.5px var(--ink), 0 8px 18px rgba(40, 30, 15, 0.3); scale: 1.1; }
+.fan-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, 3px);
+  font-family: var(--hand);
+  font-size: 17px;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  white-space: nowrap;
+  text-shadow: 0 0 3px var(--paper), 0 0 3px var(--paper), 0 0 3px var(--paper);
+  pointer-events: none;
+}
+
+/* --- a milestone reached: a small card from above, tapped away --- */
+@keyframes award-in {
+  0% { transform: translateY(-130%) rotate(-4deg); }
+  65% { transform: translateY(6px) rotate(1.8deg); }
+  100% { transform: translateY(0) rotate(1.2deg); }
+}
+@keyframes award-out { to { transform: translateY(-130%) rotate(-3deg); opacity: 0; } }
+.award-note {
+  position: fixed;
+  top: 84px;
+  right: 92px;
+  z-index: 65;
+  width: 250px;
+  padding: 12px 16px 14px;
+  border-radius: 3px;
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(40, 30, 15, 0.22), 3px 12px 26px rgba(40, 30, 15, 0.3);
+  transform: rotate(1.2deg);
+  text-align: center;
+  cursor: pointer;
+  animation: award-in 0.55s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.award-note.leaving { animation: award-out 0.28s ease-in both; }
+.award-kind { font-size: 24px; font-weight: 400; margin: 0 0 4px; }
+.award-art { display: flex; justify-content: center; align-items: center; min-height: 136px; margin: 4px 0 6px; }
+.award-art .deco-art { overflow: visible; }
+.award-art.stempel .deco-art { mix-blend-mode: multiply; }
+.award-why { font-family: var(--clean); font-size: 14px; line-height: 1.35; color: var(--ink-soft); margin: 0 0 4px; }
+.award-saying { font-size: 22px; line-height: 1.2; margin: 0; }
+.award-hint { font-family: var(--clean); font-size: 12px; color: var(--ink-faint); margin: 8px 0 0; }
+
+@media (max-width: 760px) {
+  :root { --deco-scale: 0.62; }
+  .award-note { right: 50%; margin-right: -120px; width: 240px; top: 8px; }
+}

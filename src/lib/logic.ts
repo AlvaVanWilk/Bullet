@@ -2,7 +2,7 @@
 // rules can be tested without any interface.
 
 import { addDays, compareDays, daySearchText, parseDay, weekDays, type DayKey } from './dates';
-import type { CalEvent, Category, Entry, Hide, Project, Settings, Special, Task, TaskLink } from './model';
+import type { Award, CalEvent, Category, Deco, Entry, Hide, Project, Settings, Special, Task, TaskLink } from './model';
 
 export interface Snapshot {
   tasks: Task[];
@@ -11,6 +11,8 @@ export interface Snapshot {
   entries: Entry[];
   specials: Special[];
   hides: Hide[];
+  decos: Deco[];
+  awards: Award[];
   settings: Settings;
 }
 

@@ -123,6 +123,41 @@ export interface Hide extends Base {
   createdAt: number;
 }
 
+/**
+ * A decoration stuck on the page: a stamp, a sticker, a doodle or a strip of
+ * washi tape. It does nothing; it only lies there, on a day or on the head of
+ * a week, and scrolls with it.
+ */
+export interface Deco extends Base {
+  type: 'deco';
+  /** Which one (a key of DECO_PIECES). */
+  piece: string;
+  /** What it sticks to: "day|2026-10-09", or "week|2026-10-05" for the head of that week. */
+  anchor: string;
+  /** Its middle: x as a share of the width of what it sticks to, y in rows of the paper from its top. */
+  x: number;
+  y: number;
+  /** 1 is its own size. */
+  size: number;
+  /** Turned by so many degrees. */
+  rot: number;
+  /** The date a postmark shows. */
+  date?: DayKey;
+  createdAt: number;
+}
+
+/** A milestone reached: it gives one piece of decoration (once; the id comes from the milestone). */
+export interface Award extends Base {
+  type: 'award';
+  /** A key of MILESTONES. */
+  milestone: string;
+  at: number;
+  /** The day it was earned on. */
+  day?: DayKey;
+  /** Shown and put away (on any device): it is not announced again. */
+  seen: boolean;
+}
+
 export interface Settings extends Base {
   type: 'settings';
   paperSidebar: PaperStyle;
@@ -142,11 +177,13 @@ export interface Settings extends Base {
   cover: string;
   /** Follow-ups written before they belonged to the appointment of their mother have been taken up (once per person). */
   followUpsAdopted: boolean;
+  /** Decoration: milestones give stamps, stickers and doodles to stick on the page. */
+  deco: boolean;
 }
 
-export type AnyRecord = Task | Category | Project | Entry | Special | Settings | Hide;
+export type AnyRecord = Task | Category | Project | Entry | Special | Settings | Hide | Deco | Award;
 export type RecordType = AnyRecord['type'];
-export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'entry', 'special', 'settings', 'hide'];
+export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'entry', 'special', 'settings', 'hide', 'deco', 'award'];
 
 export const SETTINGS_ID = 'settings';
 
@@ -168,6 +205,7 @@ export const DEFAULT_SETTINGS: Settings = {
   listClearedAt: 0,
   cover: 'nachtblau',
   followUpsAdopted: false,
+  deco: true,
 };
 
 /** An appointment read from Google (not synced, cached per week). */

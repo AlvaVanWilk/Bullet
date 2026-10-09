@@ -16,6 +16,7 @@ import type { CalEvent, Task } from '../lib/model';
 import { store } from '../store/store';
 import { GRID } from './baseline';
 import { DayHeading } from './DayHeading';
+import { beyondContent, DecoLayer, onDecoMenu, onDecoPress } from './Deco';
 import { clickSuppressed, startDrag } from './drag';
 import { Checkbox, ClipMark, HandBox, hasClip, NoteMark, TaskText } from './ink';
 import { ProjectIcon } from './ProjectIcon';
@@ -51,7 +52,8 @@ export function WeekView() {
   }, [today, monday]);
 
   return (
-    <div class={`week ${ahead ? 'ahead' : ''}`}>
+    // held on free paper: decoration (Deco.tsx)
+    <div class={`week ${ahead ? 'ahead' : ''}`} onPointerDown={onDecoPress} onContextMenu={onDecoMenu}>
       <WeekHead monday={monday} today={today} events={events} now={now} />
       {!ahead && (
         <div class="days paper" data-paper={snap.settings.paperMain} ref={scrollRef} data-scroll>
@@ -94,7 +96,7 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
   const prep = openLinkCounts(snap);
 
   return (
-    <header class="week-head">
+    <header class="week-head" data-deco-anchor={`week|${props.monday}`}>
       <div class="week-title">
         <h1 class="kw">KW {isoWeek(props.monday)}</h1>
         <span class="week-range">{weekRangeLabel(props.monday)}</span>
@@ -197,6 +199,7 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
           </ul>
         </HandBox>
       </div>
+      <DecoLayer anchor={`week|${props.monday}`} />
     </header>
   );
 }
@@ -246,6 +249,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
       class={`day ${isToday ? 'today' : ''} ${compareDays(props.day, props.today) < 0 ? 'past' : ''}`}
       data-drop={isToday ? 'day' : undefined}
       data-day={props.day}
+      data-deco-anchor={`day|${props.day}`}
     >
       <DayHeading day={props.day} isToday={isToday} settings={snap.settings} />
       {(special.length > 0 || specials.length > 0) && (
@@ -270,6 +274,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
         {props.items.map((item) => <DayTaskRow key={item.key} item={item} day={props.day} today={props.today} />)}
       </ul>
       {isToday && <TodayLine day={props.day} />}
+      <DecoLayer anchor={`day|${props.day}`} />
     </section>
   );
 }
@@ -370,7 +375,8 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
   return (
     <li
       class={`dtask ${item.kind} st-${item.state} ${faded ? 'faded' : ''}`}
-      onPointerDown={(e) => draggable && startDrag(e, e.currentTarget as HTMLElement, {
+      // right of the writing the row is free paper (for decoration), not the task
+      onPointerDown={(e) => draggable && !beyondContent(e.currentTarget as HTMLElement, e.clientX) && startDrag(e, e.currentTarget as HTMLElement, {
         taskId: task.id, text: task.text, from: 'day', day: props.day, color: item.kind === 'deadline' ? 'var(--red)' : undefined,
       })}
     >
