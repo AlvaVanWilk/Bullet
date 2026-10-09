@@ -38,7 +38,7 @@ export function ArchiveView() {
   return (
     <div class="archive">
       <header class="cat-head">
-        <h1 class="cat-title arch-title"><span>ARCHIV</span></h1>
+        <h1 class="cat-title arch-title"><span>Archiv</span></h1>
       </header>
       <div class="arch-tools">
         <label class="arch-search">

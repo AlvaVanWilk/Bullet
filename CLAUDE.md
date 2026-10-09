@@ -74,6 +74,7 @@ Bedienung und Einrichtung: `README.md`.
   Listen stehen die Zeilen einer umgebrochenen Aufgabe enger; jede Aufgabe beginnt
   trotzdem auf einer Punktreihe, so ist zwischen Aufgaben mehr Abstand (`gridRows.ts`).
 - Farben gedeckt und „erwachsen“, nicht knallig.
+- Überschriften grundsätzlich in Kapitälchen (nicht in Großbuchstaben geschrieben).
 - Einband: Die Fläche unter den Seiten ist ein Buchleinen in wählbarer Farbe (Einstellungen
   → Aussehen; zehn gedeckte Farben oder eine eigene, Standard Nachtblau, `settings.cover`).
 - Handy (`src/styles/screens.css`): dieselbe Ansicht, nur kleiner. Liste schmaler und

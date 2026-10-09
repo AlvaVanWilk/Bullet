@@ -1,4 +1,4 @@
-// A category opened in the main page: its name in capitals, its tasks in
+// A category opened in the main page: its name in small capitals, its tasks in
 // its colour, and a line to add tasks. While typing, matching tasks from the
 // master list or other categories are offered; picking one moves it here.
 
@@ -36,7 +36,7 @@ export function CategoryView(props: { id: string }) {
   return (
     <div class="catview" style={{ '--cat-ink': color.ink, '--cat-marker': color.marker }}>
       <header class="cat-head">
-        <h1 class="cat-title"><span>{cat.name.toUpperCase()}</span></h1>
+        <h1 class="cat-title"><span>{cat.name}</span></h1>
         <button type="button" class="ghost-btn close-x" aria-label="Zur Woche" onClick={() => ui.set({ view: { kind: 'week' } })}>✕</button>
       </header>
       <div class="cat-page paper" data-paper={snap.settings.paperMain} data-drop="category" data-cat={cat.id} data-scroll>

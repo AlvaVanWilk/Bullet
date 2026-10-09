@@ -60,6 +60,8 @@ input, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px dashed rgba(43, 43, 48, 0.45); outline-offset: 2px; }
 ul { list-style: none; margin: 0; padding: 0; }
 h1, h2, h3 { font-weight: 400; margin: 0; }
+/* headings in small capitals, everywhere (the days set theirs themselves) */
+h1, h2:not(.day-title), h3 { font-variant-caps: small-caps; letter-spacing: 0.04em; }
 
 .desk {
   height: 100%;

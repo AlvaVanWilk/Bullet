@@ -298,7 +298,7 @@
   align-items: center;
   padding: 18px 22px 10px 38px;
 }
-.cat-title { font-size: 46px; line-height: 1.1; letter-spacing: 0.1em; flex: 1; min-width: 0; }
+.cat-title { font-size: 46px; line-height: 1.1; letter-spacing: 0.06em; flex: 1; min-width: 0; }
 .cat-title span {
   background-image: linear-gradient(178deg, transparent 52%, color-mix(in srgb, var(--cat-marker) 80%, transparent) 53%, color-mix(in srgb, var(--cat-marker) 70%, transparent) 88%, transparent 90%);
   padding: 0 0.15em;
@@ -334,7 +334,7 @@
 .proj-badge .picon.tilted { position: absolute; left: 30px; top: 18px; transform: rotate(-9deg); }
 .proj-badge .picon.tilted path { stroke-width: 2.6px; }
 .proj-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.proj-title { font-size: 42px; line-height: 1.1; font-variant-caps: small-caps; letter-spacing: 0.04em; }
+.proj-title { font-size: 42px; line-height: 1.1; }
 .proj-title.finished { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--ink-soft); }
 .proj-progress { font-family: var(--clean); font-size: 14px; color: var(--ink-soft); }
 .proj-page {
