@@ -216,19 +216,7 @@
 .lead.with-icon .bang { position: relative; z-index: 1; }
 .lead.with-icon .sched-dot { margin: 0 2px; box-shadow: 0 0 0 1.5px var(--paper); }
 .lead.with-icon .bang { text-shadow: 0 0 2px var(--paper), 0 0 2px var(--paper); }
-/* in a day: the icon under the box */
-.cb-plain { display: contents; }
-.cb-under { position: relative; flex: none; display: inline-flex; margin-left: -6px; }
-.cb-under .cb { margin-left: 0; position: relative; z-index: 1; }
-/* a little paper inside the box, so the box reads clearly over the icon */
-.cb-under .cb::before {
-  content: '';
-  position: absolute;
-  width: 13px;
-  height: 13px;
-  background: var(--paper);
-  opacity: 0.7;
-  border-radius: 2px;
-}
-.cb-under .cb svg { position: relative; }
-.cb-under .picon { position: absolute; left: 3px; top: 0; opacity: 0.8; }
+/* in a day: the icon in the margin before the box */
+.dtask { position: relative; }
+.dtask .margin-icon { position: absolute; left: -33px; top: 0; }
+.dtask.faded .margin-icon { opacity: 0.45; }

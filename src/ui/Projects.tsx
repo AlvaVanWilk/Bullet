@@ -1,12 +1,12 @@
 // Projects. In the master list a project is one line with its hand-drawn
-// icon; tapped, a card with its open tasks lies over the page (drag them into
-// today from there). The sheet "Projekte" lists them all, each opens its page:
+// icon; tapped, a crumpled slip with its open tasks unfolds under it (drag
+// them into today from there). The sheet "Projekte" lists them all, each opens its page:
 // the big icon, notes, all its tasks, and "Projekt abschließen". Name, icon
 // and colour are chosen on a note.
 
 import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { categoryColor, PROJECT_COLORS, projectInk } from '../lib/colors';
+import { categoryColor, projectInk } from '../lib/colors';
 import {
   entriesByTask, followUps, isOpenToday, liveProjects, projectMarks, projectProgress, projectRows, projectSuggestions,
 } from '../lib/logic';
@@ -14,9 +14,11 @@ import type { Entry, Project, Task } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
 import { FollowRows, FollowToggle, useFolds } from './Follow';
-import { Bang, ClipMark, hasClip, NoteMark, ScheduledDot, TaskText } from './ink';
+import { Bang, ClipMark, hasClip, NoteMark, ScheduledDot, seedOf, TaskText } from './ink';
 import { NewLine } from './NewLine';
-import { ICONS, ProjectIcon } from './ProjectIcon';
+import { ColorWheel } from './ColorWheel';
+import { DrawPad } from './DrawPad';
+import { ICONS, OWN, ProjectIcon } from './ProjectIcon';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { AddLine } from './Suggest';
 
@@ -30,7 +32,7 @@ export function Lead(props: { dot: boolean; bang: boolean; project?: Project | n
   const p = props.project;
   return (
     <span class={`lead ${p ? 'with-icon' : ''}`}>
-      {p && <ProjectIcon icon={p.icon} color={p.color} seed={p.id} />}
+      {p && <ProjectIcon project={p} />}
       {props.dot && <ScheduledDot />}
       {props.bang && <Bang />}
     </span>
@@ -63,7 +65,25 @@ export function ProjectLine(props: { project: Project; today: string; index: Map
   );
 }
 
-/** The card of a project over the page: its open tasks, to drag into today, and a line for a new one. */
+/** Crumpled paper that was folded twice and opened again: the ground of the slip. */
+function CrumpledPaper() {
+  return (
+    <div class="pslip-paper" aria-hidden="true">
+      <svg>
+        <filter id="pslip-crumple" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+          <feTurbulence type="turbulence" baseFrequency="0.012 0.008" numOctaves="3" seed="9" result="noise" />
+          <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1 0 0 0 0" result="height" />
+          <feDiffuseLighting in="height" lighting-color="#fff" surfaceScale="3" diffuseConstant="1.2">
+            <feDistantLight azimuth="230" elevation="55" />
+          </feDiffuseLighting>
+        </filter>
+        <rect width="100%" height="100%" filter="url(#pslip-crumple)" />
+      </svg>
+    </div>
+  );
+}
+
+/** The slip of a project, under its line in the list: its open tasks, to drag into today, and a line for a new one. */
 export function ProjectCard(props: { id: string; close: () => void }) {
   const snap = useStore();
   const today = useToday();
@@ -73,24 +93,25 @@ export function ProjectCard(props: { id: string; close: () => void }) {
   const index = entriesByTask(snap.entries);
   const rows = projectRows(snap, p.id, Math.max(now, Date.now())).filter((r) => r.task.doneAt == null);
   return (
-    <div class="pcard-inner">
-      <header class="pcard-head">
-        <ProjectIcon icon={p.icon} color={p.color} seed={p.id} />
-        <h3 class="pcard-title">{p.name}</h3>
+    <div class="pslip-inner">
+      <CrumpledPaper />
+      <header class="pslip-head">
+        <ProjectIcon project={p} />
+        <h3 class="pslip-title">{p.name}</h3>
         <button
           type="button"
-          class="pcard-open"
+          class="pslip-open"
           onClick={() => { props.close(); ui.set({ view: { kind: 'project', id: p.id } }); }}
         >Seite ›</button>
       </header>
-      <ul class="pcard-list">
+      <ul class="pslip-list">
         {rows.map(({ task: t }) => {
           const cat = store.category(t.categoryId);
           const color = cat ? categoryColor(cat.color) : null;
           return (
             <li
               key={t.id}
-              class="pcard-row"
+              class="row pslip-row"
               onPointerDown={(e) => startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'project', color: color?.ink })}
               onClick={(e) => {
                 if (clickSuppressed()) return;
@@ -104,10 +125,10 @@ export function ProjectCard(props: { id: string; close: () => void }) {
             </li>
           );
         })}
-        {!rows.length && <li class="pcard-empty">{p.doneAt != null ? 'abgeschlossen' : 'Nichts mehr offen.'}</li>}
+        {!rows.length && <li class="pslip-empty">{p.doneAt != null ? 'abgeschlossen' : 'Nichts mehr offen.'}</li>}
       </ul>
       <NewLine placeholder="Neue Aufgabe im Projekt …" onEnter={(text) => store.addTask(text, null, { projectId: p.id })} />
-      <p class="pcard-hint">Zum Planen: Aufgabe gedrückt halten und in heute ziehen.</p>
+      <p class="pslip-hint">Zum Planen: Aufgabe gedrückt halten und in heute ziehen.</p>
     </div>
   );
 }
@@ -138,7 +159,7 @@ export function ProjectList() {
                 aria-label={`Bild und Farbe von ${p.name}`}
                 onClick={(e) => ui.set({ postIt: { kind: 'projectEdit', id: p.id, rect: rectOf(e.currentTarget) } })}
               >
-                <ProjectIcon icon={p.icon} color={p.color} seed={p.id} />
+                <ProjectIcon project={p} />
               </button>
               <button
                 type="button"
@@ -182,11 +203,14 @@ export function ProjectView(props: { id: string }) {
       <header class="proj-head">
         <button
           type="button"
-          class="proj-head-icon"
+          class="proj-badge"
           aria-label="Bild, Farbe und Name ändern"
           onClick={(e) => ui.set({ postIt: { kind: 'projectEdit', id: p.id, rect: rectOf(e.currentTarget) } })}
         >
-          <ProjectIcon icon={p.icon} color={p.color} seed={p.id} size={56} class="big" />
+          <svg class="proj-blob" viewBox="0 0 120 100" aria-hidden="true" style={{ '--blob': projectInk(p.color) }}>
+            <path d={blobPath(p.id)} />
+          </svg>
+          <ProjectIcon project={p} size={80} class="big tilted" />
         </button>
         <div class="proj-head-text">
           <h1 class={`proj-title ${p.doneAt != null ? 'finished' : ''}`}>{p.name}</h1>
@@ -243,6 +267,23 @@ export function ProjectView(props: { id: string }) {
   );
 }
 
+/** A big dab of marker under the icon on the project page, a little different for each project. */
+function blobPath(seed: string): string {
+  let h = seedOf(seed);
+  const rnd = () => ((h = (h * 16807) % 2147483647) / 2147483647);
+  const n = 11;
+  const pts = Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2;
+    const k = 0.82 + rnd() * 0.3;
+    return [60 + Math.cos(a) * 52 * k, 52 + Math.sin(a) * 40 * k];
+  });
+  const mid = (a: number[], b: number[]) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const f = (p: number[]) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
+  let d = `M${f(mid(pts[n - 1], pts[0]))}`;
+  for (let i = 0; i < n; i++) d += `Q${f(pts[i])} ${f(mid(pts[i], pts[(i + 1) % n]))}`;
+  return `${d}Z`;
+}
+
 /** The notes of a project, written on the page itself; kept while typing. */
 function ProjectNotes(props: { project: Project }) {
   const [text, setText] = useState(props.project.note ?? '');
@@ -273,12 +314,13 @@ function ProjectNotes(props: { project: Project }) {
   );
 }
 
-/** Name, icon and colour of a project, or delete it. */
+/** Name, icon (drawn oneself, a doodle or a thing) and colour of a project, or delete it. */
 export function ProjectEditNote(props: { id: string; close: () => void }) {
-  useStore();
+  const snap = useStore();
   const p = store.project(props.id);
   const [name, setName] = useState(p?.name ?? '');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [drawing, setDrawing] = useState(false);
   const latest = useRef(name);
   latest.current = name;
   useEffect(() => () => {
@@ -287,6 +329,37 @@ export function ProjectEditNote(props: { id: string; close: () => void }) {
     if (now && clean && clean !== now.name) store.updateProject(now.id, { name: clean });
   }, []);
   if (!p) return null;
+  const ink = projectInk(p.color);
+  // the colours of the other projects, to take again
+  const others = [...new Set(liveProjects(snap).filter((o) => o.id !== p.id).map((o) => projectInk(o.color)))].filter((c) => c !== ink).slice(0, 8);
+  const option = (key: string, label: string) => (
+    <button
+      key={key}
+      type="button"
+      role="radio"
+      aria-checked={p.icon === key}
+      aria-label={label}
+      title={label}
+      class={`icon-opt ${p.icon === key ? 'on' : ''}`}
+      onClick={() => store.updateProject(p.id, { icon: key })}
+    >
+      <ProjectIcon project={{ ...p, icon: key }} />
+    </button>
+  );
+
+  if (drawing) {
+    return (
+      <div class="note">
+        <div class="note-label">Eigenes Bild zeichnen</div>
+        <DrawPad
+          project={p}
+          onDone={(strokes) => { store.updateProject(p.id, { icon: OWN, drawing: strokes }); setDrawing(false); }}
+          onCancel={() => setDrawing(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div class="note">
       <input
@@ -297,35 +370,21 @@ export function ProjectEditNote(props: { id: string; close: () => void }) {
         aria-label="Name des Projekts"
       />
       <div class="note-label">Bild</div>
-      <div class="icon-grid" role="radiogroup">
-        {ICONS.map((icon) => (
-          <button
-            key={icon.key}
-            type="button"
-            role="radio"
-            aria-checked={p.icon === icon.key}
-            aria-label={icon.label}
-            title={icon.label}
-            class={`icon-opt ${p.icon === icon.key ? 'on' : ''}`}
-            onClick={() => store.updateProject(p.id, { icon: icon.key })}
-          >
-            <ProjectIcon icon={icon.key} color={p.color} seed={p.id} />
+      <div class="icon-picker" role="radiogroup">
+        <div class="icon-grid">
+          <button type="button" class="icon-opt draw-own" onClick={() => setDrawing(true)} aria-label="Bild selbst zeichnen" title="selbst zeichnen">
+            {p.drawing?.length ? <ProjectIcon project={{ ...p, icon: OWN }} /> : <span aria-hidden="true">✎</span>}
           </button>
-        ))}
+          {p.drawing?.length ? option(OWN, 'mein Bild') : null}
+          {ICONS.filter((i) => i.group === 'abstrakt').map((i) => option(i.key, i.label))}
+        </div>
+        <div class="icon-group">Dinge</div>
+        <div class="icon-grid">
+          {ICONS.filter((i) => i.group === 'dinge').map((i) => option(i.key, i.label))}
+        </div>
       </div>
       <div class="note-label">Farbe</div>
-      <div class="palette">
-        {PROJECT_COLORS.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            class={`swatch ink-swatch ${p.color === c.key ? 'on' : ''}`}
-            style={{ '--blob': c.ink }}
-            aria-label={c.name}
-            onClick={() => store.updateProject(p.id, { color: c.key })}
-          />
-        ))}
-      </div>
+      <ColorWheel value={ink} others={others} onChange={(hex) => store.updateProject(p.id, { color: hex })} />
       <div class="note-actions">
         <button type="button" class="note-btn" onClick={() => ui.set({ view: { kind: 'project', id: p.id }, postIt: null })}>öffnen</button>
         <button
@@ -361,7 +420,7 @@ export function ProjectChips(props: { task: Task }) {
           class={`chip proj-chip ${t.projectId === p.id ? 'on' : ''}`}
           onClick={() => store.updateTask(t.id, { projectId: p.id })}
         >
-          <ProjectIcon icon={p.icon} color={p.color} seed={p.id} size={20} />
+          <ProjectIcon project={p} size={20} />
           {p.name}
         </button>
       ))}

@@ -4,7 +4,7 @@
 import { createStore, get, set } from 'idb-keyval';
 import { compareDays, dayKey, type DayKey } from '../lib/dates';
 import { newId, stableId } from '../lib/ids';
-import { nextFreeColor, PROJECT_COLORS } from '../lib/colors';
+import { nextFreeColor, PROJECT_COLORS, projectInk } from '../lib/colors';
 import { deadlineFor, wouldLoop, type Snapshot } from '../lib/logic';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
@@ -361,8 +361,8 @@ export class Store {
   addProject(name: string): Project | null {
     const clean = name.trim();
     if (!clean) return null;
-    const used = this.snapshot().projects.filter((p) => !p.deleted).map((p) => p.color);
-    const color = (PROJECT_COLORS.find((c) => !used.includes(c.key)) ?? PROJECT_COLORS[0]).key;
+    const used = this.snapshot().projects.filter((p) => !p.deleted).map((p) => projectInk(p.color));
+    const color = (PROJECT_COLORS.find((c) => !used.includes(c.ink)) ?? PROJECT_COLORS[0]).ink;
     const project: Project = {
       id: newId(), type: 'project', updatedAt: 0, name: clean, icon: 'stern', color, createdAt: this.now(),
     };
@@ -372,7 +372,7 @@ export class Store {
     return project;
   }
 
-  updateProject(id: string, patch: Partial<Pick<Project, 'name' | 'icon' | 'color' | 'note'>>) {
+  updateProject(id: string, patch: Partial<Pick<Project, 'name' | 'icon' | 'color' | 'note' | 'drawing'>>) {
     const project = this.project(id);
     if (!project) return;
     this.put({ ...project, ...patch });

@@ -172,7 +172,7 @@ async function device(browser, name) {
     const phoneCover = await phone.evaluate(() => getComputedStyle(document.body).backgroundColor);
     check('the cover is the same on the other device', phoneCover === 'rgb(90, 47, 55)', phoneCover);
 
-    // a project: one line with its icon in the master list, its tasks on its card; from there into today
+    // a project: one line with its icon in the master list, its tasks on its slip; from there into today
     await ipad.locator('.tab-projects').click();
     await ipad.waitForTimeout(800);
     await ipad.locator('.sheet.front .new-line input').fill('Gartenhaus');
@@ -180,12 +180,12 @@ async function device(browser, name) {
     await ipad.locator('.tab-master').click();
     await ipad.waitForTimeout(800);
     await ipad.locator('.sheet.front .project-line', { hasText: 'Gartenhaus' }).click();
-    await ipad.waitForSelector('.postit.pcard.shown');
-    await ipad.locator('.pcard .new-line input').fill('Holz bestellen');
-    await ipad.locator('.pcard .new-line input').press('Enter');
+    await ipad.waitForSelector('.postit.pslip.shown');
+    await ipad.locator('.pslip .new-line input').fill('Holz bestellen');
+    await ipad.locator('.pslip .new-line input').press('Enter');
     await ipad.waitForTimeout(300);
-    const onCard = await ipad.$$eval('.pcard-row .tt-text', (els) => els.map((e) => e.textContent));
-    const card = await ipad.locator('.pcard-row', { hasText: 'Holz bestellen' }).boundingBox();
+    const onCard = await ipad.$$eval('.pslip-row .tt-text', (els) => els.map((e) => e.textContent));
+    const card = await ipad.locator('.pslip-row', { hasText: 'Holz bestellen' }).boundingBox();
     const todayBox = await ipad.locator('.day.today').boundingBox();
     await ipad.mouse.move(card.x + 60, card.y + 12);
     await ipad.mouse.down();
@@ -197,8 +197,8 @@ async function device(browser, name) {
     await ipad.mouse.click(1000, 790);
     await ipad.waitForTimeout(300);
     const masterNow = await ipad.$$eval('.sheet.front .task-list > li.row .tt-text', (els) => els.map((e) => e.textContent));
-    const inToday = await ipad.locator('.day.today .dtask', { hasText: 'Holz bestellen' }).locator('.cb-under .picon').count();
-    check('a project is one line with its icon; its tasks on its card, from there into today (icon under the box)',
+    const inToday = await ipad.locator('.day.today .dtask', { hasText: 'Holz bestellen' }).locator('.margin-icon').count();
+    check('a project is one line with its icon; its tasks on its slip, from there into today (icon before the box)',
       onCard.join() === 'Holz bestellen' && masterNow.includes('Gartenhaus') && !masterNow.includes('Holz bestellen') && inToday === 1,
       { onCard, masterNow, inToday });
     await ipad.waitForTimeout(1500);

@@ -31,7 +31,7 @@ export function PostItLayer() {
       <Placed
         key={`${target.kind}-${target.kind === 'event' ? target.event.id : target.id}`}
         target={target}
-        variant={target.kind === 'project' ? 'pcard' : undefined}
+        variant={target.kind === 'project' ? 'pslip' : undefined}
       >
         {target.kind === 'task' && <TaskNote target={target} close={close} />}
         {target.kind === 'category' && <CategoryNote id={target.id} close={close} />}
@@ -47,7 +47,7 @@ export function PostItLayer() {
 /** Puts the note beside the tapped thing, inside the window. A variant looks different (the card of a project). */
 function Placed(props: { target: PostItTarget; variant?: string; children: preact.ComponentChildren }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number; width?: number } | null>(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -56,6 +56,14 @@ function Placed(props: { target: PostItTarget; variant?: string; children: preac
       const h = el.offsetHeight;
       const vw = innerWidth;
       const vh = innerHeight;
+      if (props.variant === 'pslip') {
+        // the slip of a project unfolds right under its line in the list, as wide as the list
+        const width = Math.min(vw - 16, Math.max(250, r.width + 12));
+        const left = Math.min(Math.max(8, r.left - 6), vw - width - 8);
+        const top = Math.max(14, Math.min(r.bottom + 2, vh - h - 14));
+        setPos({ left, top, width });
+        return;
+      }
       let left = r.right + 14;
       if (left + WIDTH > vw - 12) left = r.left - WIDTH - 14;
       if (left < 12) left = Math.min(vw - WIDTH - 12, Math.max(12, r.left + 24));
@@ -73,7 +81,7 @@ function Placed(props: { target: PostItTarget; variant?: string; children: preac
       ref={ref}
       class={`postit ${props.variant ?? ''} ${pos ? 'shown' : ''}`}
       data-scroll
-      style={pos ? { left: `${pos.left}px`, top: `${pos.top}px` } : { left: '-9999px', top: '0px' }}
+      style={pos ? { left: `${pos.left}px`, top: `${pos.top}px`, width: pos.width ? `${pos.width}px` : undefined } : { left: '-9999px', top: '0px' }}
       role="dialog"
     >
       {props.children}

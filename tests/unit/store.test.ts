@@ -126,10 +126,10 @@ describe('store', () => {
   it('keeps projects with their tasks; deleted, the tasks stay', () => {
     const s = makeStore();
     const p = s.addProject('  Gartenhaus ')!;
-    expect(s.project(p.id)).toMatchObject({ name: 'Gartenhaus', icon: 'stern', color: 'tinte' });
+    expect(s.project(p.id)).toMatchObject({ name: 'Gartenhaus', icon: 'stern', color: '#2b2b30' });
     // the next one gets another colour
-    expect(s.addProject('Umzug')!.color).not.toBe('tinte');
-    s.updateProject(p.id, { icon: 'garten', color: 'gruen', note: 'bis Mai' });
+    expect(s.addProject('Umzug')!.color).not.toBe('#2b2b30');
+    s.updateProject(p.id, { icon: 'eigen', drawing: ['M2 2L20 20'], color: '#56703f', note: 'bis Mai' });
     const a = s.addTask('Holz bestellen', null, { projectId: p.id })!;
     // what comes after a task of the project belongs to it, too
     expect(s.addFollowUp(a.id, 'Holz streichen')!.projectId).toBe(p.id);

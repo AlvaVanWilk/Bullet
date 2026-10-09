@@ -1,9 +1,11 @@
 // The icon of a project, drawn by hand like a thin marker in one colour: the
 // shapes (projectIconShapes.ts) go through rough.js, a little wild, the same
-// for a project everywhere (its id is the seed).
+// for a project everywhere (its id is the seed). An icon the person drew
+// herself is shown as she drew it.
 
 import rough from 'roughjs';
 import { projectInk } from '../lib/colors';
+import type { Project } from '../lib/model';
 import { seedOf } from './ink';
 import { ICON_SHAPES, type IconShape } from './projectIconShapes';
 
@@ -12,10 +14,8 @@ const SHAPES = new Map(ICON_SHAPES.map((s) => [s.key, s]));
 const cache = new Map<string, string[]>();
 
 export const ICONS: IconShape[] = ICON_SHAPES;
-
-export function iconLabel(key: string): string {
-  return SHAPES.get(key)?.label ?? 'Stern';
-}
+/** The key of an icon drawn by the person. */
+export const OWN = 'eigen';
 
 function strokes(icon: string, seed: string): string[] {
   const key = `${icon}|${seed}`;
@@ -23,9 +23,14 @@ function strokes(icon: string, seed: string): string[] {
   if (!d) {
     const shape = SHAPES.get(icon) ?? SHAPES.get('stern')!;
     const s = seedOf(seed);
-    d = shape.paths.flatMap((p, i) => gen.toPaths(gen.path(p, {
-      roughness: 1.1, bowing: 1.1, maxRandomnessOffset: 0.85, seed: ((s + i * 7919) % 2147483646) + 1,
-    })).filter((x) => x.stroke && x.stroke !== 'none').map((x) => x.d));
+    d = shape.paths.flatMap((p, i) => {
+      const filled = shape.fill?.includes(i);
+      return gen.toPaths(gen.path(p, {
+        roughness: 1.1, bowing: 1.1, maxRandomnessOffset: 0.85, seed: ((s + i * 7919) % 2147483646) + 1,
+        // a filled part is hatched, like with the side of the marker
+        ...(filled ? { fill: 'x', fillStyle: 'hachure', hachureGap: 2.1, hachureAngle: -40, fillWeight: 0.6 } : {}),
+      })).filter((x) => x.stroke && x.stroke !== 'none').map((x) => x.d);
+    });
     cache.set(key, d);
     if (cache.size > 3000) cache.clear();
   }
@@ -33,18 +38,24 @@ function strokes(icon: string, seed: string): string[] {
 }
 
 /** One cell of the dotted paper (28 px) unless said otherwise. */
-export function ProjectIcon(props: { icon: string; color: string; seed: string; size?: number; class?: string }) {
+export function ProjectIcon(props: {
+  project: Pick<Project, 'id' | 'icon' | 'color' | 'drawing'>;
+  size?: number;
+  class?: string;
+}) {
+  const p = props.project;
   const size = props.size ?? 28;
+  const own = p.icon === OWN && !!p.drawing?.length;
   return (
     <svg
-      class={`picon ${props.class ?? ''}`}
+      class={`picon ${own ? 'own' : ''} ${props.class ?? ''}`}
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      style={{ '--picon': projectInk(props.color) }}
+      style={{ '--picon': projectInk(p.color) }}
       aria-hidden="true"
     >
-      {strokes(props.icon, props.seed).map((d, i) => <path key={i} d={d} />)}
+      {(own ? p.drawing! : strokes(p.icon, p.id)).map((d, i) => <path key={i} d={d} />)}
     </svg>
   );
 }

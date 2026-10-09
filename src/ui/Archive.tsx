@@ -9,7 +9,8 @@ import { categoryColor } from '../lib/colors';
 import { parseDay } from '../lib/dates';
 import { ALL_DONE, archiveList, liveCategories, type ArchiveQuery, type ArchiveSort } from '../lib/logic';
 import { store } from '../store/store';
-import { Bang, ClipMark, hasClip, NoteMark, TaskText } from './ink';
+import { ClipMark, hasClip, NoteMark, TaskText } from './ink';
+import { Lead } from './Projects';
 import { ui, useStore } from './state';
 
 const PAGE = 100;
@@ -94,7 +95,7 @@ export function ArchiveView() {
                 class="row"
                 onClick={(e) => ui.set({ postIt: { kind: 'task', id: t.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
               >
-                <span class="lead">{t.important && <Bang />}</span>
+                <Lead dot={false} bang={t.important} project={store.project(t.projectId)} />
                 <TaskText
                   text={t.text}
                   color={color && mode === 'text' ? color.ink : undefined}

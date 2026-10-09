@@ -374,20 +374,18 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
         taskId: task.id, text: task.text, from: 'day', day: props.day, color: item.kind === 'deadline' ? 'var(--red)' : undefined,
       })}
     >
-      {/* a task of a project: its icon lies under the box, as if the box were drawn over it */}
-      <span class={project ? 'cb-under' : 'cb-plain'}>
-        {project && <ProjectIcon icon={project.icon} color={project.color} seed={project.id} />}
-        <Checkbox
-          state={item.state}
-          important={task.important}
-          seed={item.key}
-          label={item.state === 'done' ? 'wieder offen' : 'erledigt'}
-          onClick={(e) => {
-            e.stopPropagation();
-            store.toggleDone(task.id, props.day);
-          }}
-        />
-      </span>
+      {/* a task of a project: its icon in the margin before the box */}
+      {project && <ProjectIcon project={project} class="margin-icon" />}
+      <Checkbox
+        state={item.state}
+        important={task.important}
+        seed={item.key}
+        label={item.state === 'done' ? 'wieder offen' : 'erledigt'}
+        onClick={(e) => {
+          e.stopPropagation();
+          store.toggleDone(task.id, props.day);
+        }}
+      />
       <span
         class="dtask-text"
         onClick={(e) => {

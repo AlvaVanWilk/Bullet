@@ -17,9 +17,12 @@
   .sidebar { position: absolute; top: 0; bottom: 0; left: 0; }
   .sidebar.closed { width: var(--spine-w); }
   .page { margin-left: calc(var(--spine-w) + 6px); }
-  .days { padding: var(--grid) 14px 0 18px; }
+  .days { padding: var(--grid) 14px 0 26px; }
+  .dtask .margin-icon { width: 20px; height: 20px; left: -24px; top: 4px; }
   .cat-page, .proj-page { padding: 14px 16px 40vh 20px; }
   .proj-head { padding: 10px 12px 6px 16px; gap: 8px; }
+  .proj-badge { width: 84px; height: 70px; }
+  .proj-badge .picon.tilted { width: 56px; height: 56px; left: 14px; top: 6px; }
   .proj-title { font-size: 30px; }
   .tab { min-width: 68px; font-size: 16px; padding: 6px 6px 0; }
   .postit { width: min(312px, calc(100vw - 24px)); }

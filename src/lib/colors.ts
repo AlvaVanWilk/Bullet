@@ -39,7 +39,31 @@ export const PROJECT_COLORS: { key: string; name: string; ink: string }[] = [
 ];
 
 export function projectInk(key: string | undefined | null): string {
+  if (key && /^#[0-9a-f]{6}$/i.test(key)) return key.toLowerCase();
   return (PROJECT_COLORS.find((c) => c.key === key) ?? PROJECT_COLORS[0]).ink;
+}
+
+// --- colours as hue, greyness and brightness (the colour wheel) ---------------------
+
+/** h in degrees, s and v from 0 to 1 → "#rrggbb" */
+export function hsvToHex(h: number, s: number, v: number): string {
+  const k = (n: number) => (n + h / 60) % 6;
+  const c = (n: number) => v - v * s * Math.max(0, Math.min(k(n), 4 - k(n), 1));
+  return `#${[c(5), c(3), c(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** "#rrggbb" → hue in degrees, saturation and value from 0 to 1 */
+export function hexToHsv(hex: string): { h: number; s: number; v: number } {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  let h = 0;
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+  }
+  return { h: (h * 60 + 360) % 360, s: max ? d / max : 0, v: max };
 }
 
 /** A marker colour for each week, when day headings change colour weekly. */

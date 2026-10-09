@@ -78,10 +78,12 @@ export interface Category extends Base {
 export interface Project extends Base {
   type: 'project';
   name: string;
-  /** A hand-drawn icon (key of ICON_SHAPES). */
+  /** A hand-drawn icon (key of ICON_SHAPES), or "eigen" for one drawn by the person (see drawing). */
   icon: string;
-  /** The colour of the icon: a key of CATEGORY_COLORS, or "tinte" for black ink. */
+  /** The colour of the icon: "#rrggbb", or (from before) a key of PROJECT_COLORS. */
   color: string;
+  /** An icon drawn by the person: its strokes as SVG paths on 24 × 24. */
+  drawing?: string[];
   createdAt: number;
   /** Notes on the project page: what it is about, ideas, things to know. */
   note?: string;
