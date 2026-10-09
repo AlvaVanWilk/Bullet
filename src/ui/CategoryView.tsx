@@ -7,7 +7,9 @@ import { categoryColor } from '../lib/colors';
 import { categoryTasks, entriesByTask, followUps, isOpenToday, suggestions } from '../lib/logic';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
+import { useRef } from 'preact/hooks';
 import { FollowRows, FollowToggle, useFolds } from './Follow';
+import { useGridRows } from './gridRows';
 import { ClipMark, hasClip, NoteMark, TaskText } from './ink';
 import { Lead } from './Projects';
 import { ui, useNow, useStore, useToday } from './state';
@@ -18,6 +20,8 @@ export function CategoryView(props: { id: string }) {
   const now = useNow();
   const today = useToday();
   const folds = useFolds();
+  const listRef = useRef<HTMLUListElement>(null);
+  useGridRows(listRef);
   const cat = store.category(props.id);
   if (!cat) {
     // deleted meanwhile (maybe on another device): back to the week
@@ -36,7 +40,7 @@ export function CategoryView(props: { id: string }) {
         <button type="button" class="ghost-btn close-x" aria-label="Zur Woche" onClick={() => ui.set({ view: { kind: 'week' } })}>✕</button>
       </header>
       <div class="cat-page paper" data-paper={snap.settings.paperMain} data-drop="category" data-cat={cat.id} data-scroll>
-        <ul class="task-list cat-tasks">
+        <ul class="task-list cat-tasks" ref={listRef}>
           {tasks.map((t) => {
             const waiting = follow(t.id);
             return (

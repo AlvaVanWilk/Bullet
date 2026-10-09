@@ -4,12 +4,13 @@
 // order and a few filters. A page of its own, reached by its tab on the right
 // of the page. A task tapped here opens its post-it (note, photos, transfer).
 
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
 import { parseDay } from '../lib/dates';
 import { ALL_DONE, archiveList, liveCategories, type ArchiveQuery, type ArchiveSort } from '../lib/logic';
 import { store } from '../store/store';
 import { ClipMark, hasClip, NoteMark, TaskText } from './ink';
+import { useGridRows } from './gridRows';
 import { Lead } from './Projects';
 import { ui, useStore } from './state';
 
@@ -26,6 +27,8 @@ export function ArchiveView() {
   const snap = useStore();
   const [q, setQ] = useState<ArchiveQuery>(ALL_DONE);
   const [shown, setShown] = useState(PAGE);
+  const listRef = useRef<HTMLUListElement>(null);
+  useGridRows(listRef);
   const set = (patch: Partial<ArchiveQuery>) => { setQ({ ...q, ...patch }); setShown(PAGE); };
   const tasks = archiveList(snap, q);
   const cats = liveCategories(snap);
@@ -85,7 +88,7 @@ export function ArchiveView() {
       </div>
       <div class="arch-page paper" data-paper={snap.settings.paperMain} data-scroll>
         <p class="arch-count">{tasks.length === 1 ? '1 erledigte Aufgabe' : `${tasks.length} erledigte Aufgaben`}</p>
-        <ul class="task-list arch-list">
+        <ul class="task-list arch-list" ref={listRef}>
           {tasks.slice(0, shown).map((t) => {
             const cat = store.category(t.categoryId);
             const color = cat ? categoryColor(cat.color) : null;

@@ -48,15 +48,17 @@ Bedienung und Einrichtung: `README.md`.
   unter der zuletzt erledigten. Schleifen werden verhindert.
 - Projekte (`project`, `task.projectId`): dritte Lasche „Projekte“ in der Seitenleiste.
   In der Masterliste steht nur eine Zeile pro Projekt (an seinem Platz nach Anlegezeit)
-  mit seinem Bild davor; „!“ und „•“ liegen darüber. Antippen → ein zerknitterter,
-  zweimal gefalteter Zettel klappt sich lang und schmal über der Seitenleiste direkt
+  mit seinem Bild davor; „!“ und „•“ liegen darüber. Antippen → ein Zettel, ganz
+  leicht in der Projektfarbe getönt, mit einer Falz längs und quer (Kreuz in der
+  Mitte, kein Knittern), klappt sich lang und schmal über der Seitenleiste direkt
   unter der Projektzeile auf (offene Aufgaben, daraus in heute ziehen; daneben tippen
   schließt ihn). Im Tag steht das Bild vor dem Kästchen im Rand.
   Bilder: eine Farbe, höchstens ein Punktekästchen groß, wie dünner Marker; selbst
   gezeichnet (Pencil/Finger, `project.drawing`), abstrakte Kritzeleien
   (`scripts/doodles.mjs`) oder Dinge (Lucide), erzeugt mit `scripts/project-icons.mjs`.
   Farbe frei aus dem Farbkreis (Ton, Grauanteil) mit Helligkeitsregler (`#rrggbb`).
-  Projektseite: Bild groß und schräg auf einem Klecks in seiner Farbe, Fortschritt,
+  Projektseite: Titel in Kapitälchen; Bild groß und schräg auf einem Klecks (Klecksform
+  mit Spritzern, ohne Umrandung) in seiner Farbe, Fortschritt,
   Notizen, Aufgaben, „Projekt abschließen“. Gelöscht → Aufgaben zurück in die
   Masterliste. Kategorien, Vorschläge und Archiv zeigen Projektaufgaben einzeln.
 - Hauptseite: Kopf (Kalenderwoche, Boxen Termine/Deadlines/Besonderes) scrollt nicht.
@@ -68,7 +70,9 @@ Bedienung und Einrichtung: `README.md`.
   (grauer Marker, Marker in Wochenfarbe, gerader Strich, Striche links/rechts, Rahmen).
 - Besonderes in Grau, ohne Sternchen.
 - Die Schrift sitzt auf den Punktreihen bzw. Linien: Zeilen sind Vielfache von 28 px,
-  die Grundlinie der gewählten Schrift wird gemessen (`src/ui/baseline.ts`).
+  die Grundlinie der gewählten Schrift wird gemessen (`src/ui/baseline.ts`). In den
+  Listen stehen die Zeilen einer umgebrochenen Aufgabe enger; jede Aufgabe beginnt
+  trotzdem auf einer Punktreihe, so ist zwischen Aufgaben mehr Abstand (`gridRows.ts`).
 - Farben gedeckt und „erwachsen“, nicht knallig.
 - Einband: Die Fläche unter den Seiten ist ein Buchleinen in wählbarer Farbe (Einstellungen
   → Aussehen; zehn gedeckte Farben oder eine eigene, Standard Nachtblau, `settings.cover`).

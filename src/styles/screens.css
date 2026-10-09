@@ -21,8 +21,8 @@
   .dtask .margin-icon { width: 20px; height: 20px; left: -24px; top: 4px; }
   .cat-page, .proj-page { padding: 14px 16px 40vh 20px; }
   .proj-head { padding: 10px 12px 6px 16px; gap: 8px; }
-  .proj-badge { width: 84px; height: 70px; }
-  .proj-badge .picon.tilted { width: 56px; height: 56px; left: 14px; top: 6px; }
+  .proj-badge { width: 96px; height: 80px; }
+  .proj-badge .picon.tilted { width: 52px; height: 52px; left: 20px; top: 12px; }
   .proj-title { font-size: 30px; }
   .tab { min-width: 68px; font-size: 16px; padding: 6px 6px 0; }
   .postit { width: min(312px, calc(100vw - 24px)); }

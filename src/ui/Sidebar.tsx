@@ -9,6 +9,7 @@ import { allRows, entriesByTask, followUps, isOpenToday, liveCategories, masterE
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
 import { FollowRows, FollowToggle, useFolds } from './Follow';
+import { useGridRows } from './gridRows';
 import { Bang, ClipMark, hasClip, NoteMark, ScheduledDot, TaskText } from './ink';
 import { NewLine } from './NewLine';
 import { ProjectLine, ProjectList } from './Projects';
@@ -180,6 +181,7 @@ function MasterList(props: { active: boolean }) {
   const dev = useDevice();
   const uiState = useUi();
   const listRef = useRef<HTMLUListElement>(null);
+  useGridRows(listRef);
   const [striking, setStriking] = useState<Set<string>>(new Set());
   const struckRef = useRef<Set<string>>(new Set());
   const listNow = Math.max(now, Date.now());

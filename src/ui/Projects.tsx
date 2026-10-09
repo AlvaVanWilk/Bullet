@@ -1,5 +1,5 @@
 // Projects. In the master list a project is one line with its hand-drawn
-// icon; tapped, a crumpled slip with its open tasks unfolds under it (drag
+// icon; tapped, a slip of paper with its open tasks unfolds under it (drag
 // them into today from there). The sheet "Projekte" lists them all, each opens its page:
 // the big icon, notes, all its tasks, and "Projekt abschließen". Name, icon
 // and colour are chosen on a note.
@@ -14,6 +14,7 @@ import type { Entry, Project, Task } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
 import { FollowRows, FollowToggle, useFolds } from './Follow';
+import { useGridRows } from './gridRows';
 import { Bang, ClipMark, hasClip, NoteMark, ScheduledDot, seedOf, TaskText } from './ink';
 import { NewLine } from './NewLine';
 import { ColorWheel } from './ColorWheel';
@@ -65,36 +66,21 @@ export function ProjectLine(props: { project: Project; today: string; index: Map
   );
 }
 
-/** Crumpled paper that was folded twice and opened again: the ground of the slip. */
-function CrumpledPaper() {
-  return (
-    <div class="pslip-paper" aria-hidden="true">
-      <svg>
-        <filter id="pslip-crumple" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
-          <feTurbulence type="turbulence" baseFrequency="0.012 0.008" numOctaves="3" seed="9" result="noise" />
-          <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1 0 0 0 0" result="height" />
-          <feDiffuseLighting in="height" lighting-color="#fff" surfaceScale="3" diffuseConstant="1.2">
-            <feDistantLight azimuth="230" elevation="55" />
-          </feDiffuseLighting>
-        </filter>
-        <rect width="100%" height="100%" filter="url(#pslip-crumple)" />
-      </svg>
-    </div>
-  );
-}
-
 /** The slip of a project, under its line in the list: its open tasks, to drag into today, and a line for a new one. */
 export function ProjectCard(props: { id: string; close: () => void }) {
   const snap = useStore();
   const today = useToday();
   const now = useNow();
+  const listRef = useRef<HTMLUListElement>(null);
+  useGridRows(listRef);
   const p = store.project(props.id);
   if (!p) return null;
   const index = entriesByTask(snap.entries);
   const rows = projectRows(snap, p.id, Math.max(now, Date.now())).filter((r) => r.task.doneAt == null);
   return (
-    <div class="pslip-inner">
-      <CrumpledPaper />
+    <div class="pslip-inner" style={{ '--proj': projectInk(p.color) }}>
+      {/* the paper: tinted a little in the colour of the project, folded once across and once down */}
+      <div class="pslip-paper" aria-hidden="true" />
       <header class="pslip-head">
         <ProjectIcon project={p} />
         <h3 class="pslip-title">{p.name}</h3>
@@ -104,7 +90,7 @@ export function ProjectCard(props: { id: string; close: () => void }) {
           onClick={() => { props.close(); ui.set({ view: { kind: 'project', id: p.id } }); }}
         >Seite ›</button>
       </header>
-      <ul class="pslip-list">
+      <ul class="pslip-list" ref={listRef}>
         {rows.map(({ task: t }) => {
           const cat = store.category(t.categoryId);
           const color = cat ? categoryColor(cat.color) : null;
@@ -187,6 +173,8 @@ export function ProjectView(props: { id: string }) {
   const now = useNow();
   const today = useToday();
   const folds = useFolds();
+  const listRef = useRef<HTMLUListElement>(null);
+  useGridRows(listRef);
   const p = store.project(props.id);
   if (!p) {
     // deleted meanwhile (maybe on another device): back to the week
@@ -208,9 +196,9 @@ export function ProjectView(props: { id: string }) {
           onClick={(e) => ui.set({ postIt: { kind: 'projectEdit', id: p.id, rect: rectOf(e.currentTarget) } })}
         >
           <svg class="proj-blob" viewBox="0 0 120 100" aria-hidden="true" style={{ '--blob': projectInk(p.color) }}>
-            <path d={blobPath(p.id)} />
+            {blotPaths(p.id).map((d, i) => <path key={i} d={d} />)}
           </svg>
-          <ProjectIcon project={p} size={80} class="big tilted" />
+          <ProjectIcon project={p} size={76} class="big tilted" />
         </button>
         <div class="proj-head-text">
           <h1 class={`proj-title ${p.doneAt != null ? 'finished' : ''}`}>{p.name}</h1>
@@ -221,7 +209,7 @@ export function ProjectView(props: { id: string }) {
       <div class="proj-page paper" data-paper={snap.settings.paperMain} data-drop="project" data-project={p.id} data-scroll>
         <ProjectNotes project={p} />
         <h2 class="proj-section">Aufgaben</h2>
-        <ul class="task-list proj-tasks">
+        <ul class="task-list proj-tasks" ref={listRef}>
           {rows.map(({ task: t }) => {
             const cat = store.category(t.categoryId);
             const color = cat ? categoryColor(cat.color) : null;
@@ -267,21 +255,36 @@ export function ProjectView(props: { id: string }) {
   );
 }
 
-/** A big dab of marker under the icon on the project page, a little different for each project. */
-function blobPath(seed: string): string {
+/**
+ * A big blot of ink under the icon on the project page, with a few drops
+ * beside it; a little different for each project.
+ */
+function blotPaths(seed: string): string[] {
   let h = seedOf(seed);
   const rnd = () => ((h = (h * 16807) % 2147483647) / 2147483647);
-  const n = 11;
+  const n = 72;
+  const ph = [rnd(), rnd(), rnd(), rnd()].map((x) => x * Math.PI * 2);
   const pts = Array.from({ length: n }, (_, i) => {
     const a = (i / n) * Math.PI * 2;
-    const k = 0.82 + rnd() * 0.3;
-    return [60 + Math.cos(a) * 52 * k, 52 + Math.sin(a) * 40 * k];
+    // round, with a few bulges, and two little runs where the ink spread
+    const k = 1 + 0.12 * Math.sin(3 * a + ph[0]) + 0.07 * Math.sin(5 * a + ph[1]) + 0.025 * Math.sin(11 * a + ph[2])
+      + 0.3 * Math.max(0, Math.sin(2 * a + ph[3])) ** 14;
+    return [60 + Math.cos(a) * 40 * k, 50 + Math.sin(a) * 34 * k];
   });
   const mid = (a: number[], b: number[]) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
   const f = (p: number[]) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
   let d = `M${f(mid(pts[n - 1], pts[0]))}`;
   for (let i = 0; i < n; i++) d += `Q${f(pts[i])} ${f(mid(pts[i], pts[(i + 1) % n]))}`;
-  return `${d}Z`;
+  const drops = Array.from({ length: 3 + Math.floor(rnd() * 3) }, () => {
+    const a = rnd() * Math.PI * 2;
+    const dist = 1.18 + rnd() * 0.3;
+    const r = 1.5 + rnd() * 3.2;
+    const x = 60 + Math.cos(a) * 40 * dist;
+    const y = 50 + Math.sin(a) * 34 * dist;
+    return `M${(x - r).toFixed(1)} ${y.toFixed(1)}a${r.toFixed(1)} ${(r * 0.9).toFixed(1)} 0 1 0 ${(2 * r).toFixed(1)} 0`
+      + `a${r.toFixed(1)} ${(r * 0.9).toFixed(1)} 0 1 0 ${(-2 * r).toFixed(1)} 0`;
+  });
+  return [`${d}Z`, ...drops];
 }
 
 /** The notes of a project, written on the page itself; kept while typing. */

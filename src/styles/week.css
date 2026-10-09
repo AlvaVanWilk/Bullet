@@ -324,20 +324,17 @@
 
 /* a project opened in the main page */
 .proj-head { flex: none; display: flex; align-items: center; gap: 14px; padding: 14px 22px 8px 30px; }
-/* the icon of the project, big and a little tilted, on a dab of marker in its colour */
-.proj-badge { position: relative; flex: none; width: 120px; height: 100px; }
+/* the icon of the project, big and a little tilted, on a blot of ink in its colour */
+.proj-badge { position: relative; flex: none; width: 144px; height: 120px; }
 .proj-blob { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .proj-blob path {
-  fill: color-mix(in srgb, var(--blob) 26%, transparent);
-  stroke: color-mix(in srgb, var(--blob) 30%, transparent);
-  stroke-width: 3;
+  fill: color-mix(in srgb, var(--blob) 32%, transparent);
   mix-blend-mode: multiply;
-  filter: url(#marker-rough);
 }
-.proj-badge .picon.tilted { position: absolute; left: 22px; top: 8px; transform: rotate(-9deg); }
+.proj-badge .picon.tilted { position: absolute; left: 30px; top: 18px; transform: rotate(-9deg); }
 .proj-badge .picon.tilted path { stroke-width: 2.6px; }
 .proj-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.proj-title { font-size: 42px; line-height: 1.1; }
+.proj-title { font-size: 42px; line-height: 1.1; font-variant-caps: small-caps; letter-spacing: 0.04em; }
 .proj-title.finished { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--ink-soft); }
 .proj-progress { font-family: var(--clean); font-size: 14px; color: var(--ink-soft); }
 .proj-page {
