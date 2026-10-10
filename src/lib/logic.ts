@@ -2,12 +2,13 @@
 // rules can be tested without any interface.
 
 import { addDays, compareDays, daySearchText, parseDay, weekDays, type DayKey } from './dates';
-import type { Award, CalEvent, Category, Deco, Entry, Hide, Project, Settings, Special, Task, TaskLink } from './model';
+import type { Area, Award, CalEvent, Category, Deco, Entry, Hide, Project, Settings, Special, Task, TaskLink } from './model';
 
 export interface Snapshot {
   tasks: Task[];
   categories: Category[];
   projects: Project[];
+  areas: Area[];
   entries: Entry[];
   specials: Special[];
   hides: Hide[];
@@ -81,6 +82,21 @@ export function allRows(s: Snapshot, now: number): ListRow[] {
 /** The tasks of a project, in the order of the master list. */
 export function projectRows(s: Snapshot, projectId: string, now: number): ListRow[] {
   return listRows(s, now, (t) => t.projectId === projectId);
+}
+
+/** The areas of a project, in the order of their boxes. */
+export function projectAreas(s: Snapshot, projectId: string): Area[] {
+  return s.areas.filter((a) => !a.deleted && a.projectId === projectId).sort((a, b) => a.order - b.order || byCreated(a, b));
+}
+
+/**
+ * The tasks of one area of a project; with null those in none (also those
+ * whose area is gone): they stand above the boxes.
+ */
+export function areaRows(s: Snapshot, projectId: string, areaId: string | null, now: number): ListRow[] {
+  const areas = new Set(projectAreas(s, projectId).map((a) => a.id));
+  const areaOf = (t: Task) => (t.areaId && areas.has(t.areaId) ? t.areaId : null);
+  return listRows(s, now, (t) => t.projectId === projectId && areaOf(t) === areaId);
 }
 
 function listRows(s: Snapshot, now: number, include: (t: Task) => boolean): ListRow[] {

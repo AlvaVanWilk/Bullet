@@ -14,10 +14,12 @@ export interface DragSource {
 }
 
 export interface DropTarget {
-  kind: 'day' | 'category' | 'project';
+  kind: 'day' | 'category' | 'project' | 'area';
   day?: DayKey;
   categoryId?: string;
   projectId?: string;
+  /** an area of the project; none: above the boxes */
+  areaId?: string | null;
 }
 
 type Accept = (source: DragSource, target: DropTarget) => boolean;
@@ -125,6 +127,7 @@ function targetOf(el: HTMLElement): DropTarget | null {
   if (kind === 'day') return { kind, day: el.dataset.day };
   if (kind === 'category') return { kind, categoryId: el.dataset.cat };
   if (kind === 'project') return { kind, projectId: el.dataset.project };
+  if (kind === 'area') return { kind, projectId: el.dataset.project, areaId: el.dataset.area || null };
   return null;
 }
 

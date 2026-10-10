@@ -15,7 +15,7 @@ const MAX_SESSIONS = 20;             // devices signed in at the same time
 const MAX_BODY_BYTES = 4000000;
 const MAX_RECORD_BYTES = 20000;
 const MAX_CHANGES = 2000;
-const RECORD_TYPES = ['task', 'category', 'project', 'entry', 'special', 'settings', 'hide', 'deco', 'award'];
+const RECORD_TYPES = ['task', 'category', 'project', 'area', 'entry', 'special', 'settings', 'hide', 'deco', 'award'];
 const GOOGLE_SCOPES = 'openid email profile https://www.googleapis.com/auth/calendar';
 
 function config(): array

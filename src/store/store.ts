@@ -9,8 +9,8 @@ import { deadlineFor, isWaiting, wouldLoop, type Snapshot } from '../lib/logic';
 import { milestone, reachedOnDone, reachedOnNewDay, reachedOnProject, type Reached } from '../lib/milestones';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
-  type AnyRecord, type Award, type Category, type Deco, type Entry, type Hide, type Project, type Settings, type Special, type Task,
-  type TaskLink,
+  type AnyRecord, type Area, type Award, type Category, type Deco, type Entry, type Hide, type Project, type Settings, type Special,
+  type Task, type TaskLink,
 } from '../lib/model';
 import { STORAGE_PREFIX } from '../stage';
 import { isNewer } from './merge';
@@ -62,12 +62,13 @@ export class Store {
 
   snapshot(): Snapshot {
     if (this.snapshotCache?.version === this.version) return this.snapshotCache.snap;
-    const snap: Snapshot = { tasks: [], categories: [], projects: [], entries: [], specials: [], hides: [], decos: [], awards: [], settings: DEFAULT_SETTINGS };
+    const snap: Snapshot = { tasks: [], categories: [], projects: [], areas: [], entries: [], specials: [], hides: [], decos: [], awards: [], settings: DEFAULT_SETTINGS };
     for (const r of this.records.values()) {
       switch (r.type) {
         case 'task': snap.tasks.push(r); break;
         case 'category': snap.categories.push(r); break;
         case 'project': snap.projects.push(r); break;
+        case 'area': snap.areas.push(r); break;
         case 'entry': snap.entries.push(r); break;
         case 'special': snap.specials.push(r); break;
         case 'hide': snap.hides.push(r); break;
@@ -152,7 +153,7 @@ export class Store {
     return t != null && this.clock() - t < withinMs;
   }
 
-  addTask(text: string, categoryId: string | null = null, extra: Partial<Pick<Task, 'deadline' | 'link' | 'after' | 'projectId'>> = {}): Task | null {
+  addTask(text: string, categoryId: string | null = null, extra: Partial<Pick<Task, 'deadline' | 'link' | 'after' | 'projectId' | 'areaId'>> = {}): Task | null {
     const clean = text.trim();
     if (!clean) return null;
     const task: Task = {
@@ -168,9 +169,9 @@ export class Store {
   updateTask(id: string, patch: Partial<Omit<Task, 'id' | 'type'>>) {
     const task = this.task(id);
     if (!task) return;
-    // in another project (or none) it is no next step any more
+    // in another project (or none) it is no next step any more, and in an area only if said so
     const moved = patch.projectId !== undefined && (patch.projectId ?? null) !== (task.projectId ?? null);
-    this.put({ ...task, ...patch, ...(moved ? { next: false } : {}) });
+    this.put({ ...task, ...patch, ...(moved ? { next: false, areaId: patch.areaId ?? null } : {}) });
     this.changed(true);
   }
 
@@ -249,7 +250,7 @@ export class Store {
   addFollowUp(motherId: string, text: string): Task | null {
     const mother = this.task(motherId);
     const link = this.ahead(mother?.link) ? { link: mother!.link, deadline: mother!.link!.day } : {};
-    const project = mother?.projectId ? { projectId: mother.projectId } : {};
+    const project = mother?.projectId ? { projectId: mother.projectId, areaId: mother.areaId ?? null } : {};
     return this.addTask(text, mother?.categoryId ?? null, { after: [motherId], ...link, ...project });
   }
 
@@ -458,13 +459,75 @@ export class Store {
     this.changed(true);
   }
 
+  // --- areas of a project ---------------------------------------------------------------
+
+  /** A new area: its box comes last. */
+  addArea(projectId: string, name: string): Area | null {
+    const clean = name.trim();
+    if (!clean || !this.project(projectId)) return null;
+    const last = Math.max(-1, ...this.areasOf(projectId).map((a) => a.order));
+    const area: Area = { id: newId(), type: 'area', updatedAt: 0, projectId, name: clean, order: last + 1, createdAt: this.now() };
+    this.put(area);
+    this.markFresh(area.id);
+    this.changed(true);
+    return area;
+  }
+
+  renameArea(id: string, name: string) {
+    const r = this.records.get(id);
+    const clean = name.trim();
+    if (r?.type !== 'area' || r.deleted || !clean || clean === r.name) return;
+    this.put({ ...r, name: clean });
+    this.changed(true);
+  }
+
+  /** The boxes of a project in a new order. */
+  reorderAreas(projectId: string, ids: string[]) {
+    const areas = new Map(this.areasOf(projectId).map((a) => [a.id, a]));
+    const order = [...ids.filter((id) => areas.has(id)), ...[...areas.keys()].filter((id) => !ids.includes(id))];
+    order.forEach((id, i) => {
+      const a = areas.get(id)!;
+      if (a.order !== i) this.put({ ...a, order: i });
+    });
+    this.changed(true);
+  }
+
+  /** One place on (-1), back (1), or to the very front ('first'). */
+  moveArea(id: string, to: -1 | 1 | 'first') {
+    const r = this.records.get(id);
+    if (r?.type !== 'area' || r.deleted) return;
+    const ids = this.areasOf(r.projectId).map((a) => a.id);
+    const at = ids.indexOf(id);
+    const target = to === 'first' ? 0 : Math.min(ids.length - 1, Math.max(0, at + to));
+    ids.splice(at, 1);
+    ids.splice(target, 0, id);
+    this.reorderAreas(r.projectId, ids);
+  }
+
+  /** The area goes; its tasks stay in the project, above the boxes. */
+  deleteArea(id: string) {
+    const r = this.records.get(id);
+    if (r?.type !== 'area' || r.deleted) return;
+    this.put({ ...r, deleted: true });
+    for (const t of this.records.values()) {
+      if (t.type === 'task' && !t.deleted && t.areaId === id) this.put({ ...t, areaId: null });
+    }
+    this.changed(true);
+  }
+
+  private areasOf(projectId: string): Area[] {
+    return [...this.records.values()]
+      .filter((r): r is Area => r.type === 'area' && !r.deleted && r.projectId === projectId)
+      .sort((a, b) => a.order - b.order || a.createdAt - b.createdAt);
+  }
+
   /** The project goes; its tasks stay and stand in the master list again. */
   deleteProject(id: string) {
     const project = this.project(id);
     if (!project) return;
     this.put({ ...project, deleted: true });
     for (const r of this.records.values()) {
-      if (r.type === 'task' && r.projectId === id && !r.deleted) this.put({ ...r, projectId: null, next: false });
+      if (r.type === 'task' && r.projectId === id && !r.deleted) this.put({ ...r, projectId: null, next: false, areaId: null });
     }
     this.changed(true);
   }

@@ -372,6 +372,60 @@
 .proj-page .suggest { max-width: 720px; position: relative; }
 .proj-page .new-line { margin: 8px 0 0; }
 .proj-foot { margin-top: calc(var(--grid) * 2); }
+.proj-loose { border-radius: 10px; transition: background-color 0.2s; }
+.proj-loose.drop-over { background: color-mix(in srgb, var(--proj-ink) 8%, transparent); }
+
+/* areas: boxes drawn with a marker in the colour of the project, filling the page row by row */
+.proj-areas {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: calc(var(--grid) * 1.5) 22px;
+  align-items: start;
+  margin-top: calc(var(--grid) * 1.6);
+}
+.area-box { position: relative; border-radius: 14px; transition: background-color 0.2s, box-shadow 0.2s; }
+.proj-areas.sorting .area-box:not(.lifted) { transition: background-color 0.2s; }
+.area-box .handbox { padding: 18px 10px 6px 8px; }
+.marker-box .handbox-line path {
+  stroke: var(--proj-ink);
+  stroke-width: 3;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+}
+.marker-box .handbox-head { top: -16px; left: 16px; }
+.marker-box .handbox-title { padding: 0 6px; font-size: 21px; }
+.area-title {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font: inherit;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--proj-ink) 70%, var(--ink));
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  cursor: grab;
+}
+.area-count { font-family: var(--clean); font-size: 13px; letter-spacing: 0; color: var(--ink-faint); font-variant-caps: normal; }
+.area-box .proj-tasks { max-width: none; }
+.area-box .new-line { margin: 2px 4px 4px 6px; }
+.area-empty { font-size: 17px; line-height: var(--grid); color: var(--ink-faint); margin: 0 0 0 24px; }
+.area-box.drop-over { background: color-mix(in srgb, var(--proj-ink) 10%, transparent); }
+.area-box.lifted {
+  z-index: 5;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  box-shadow: 0 2px 4px rgba(40, 30, 15, 0.15), 0 14px 30px rgba(40, 30, 15, 0.22);
+}
+.area-new {
+  border: 2px dashed color-mix(in srgb, var(--proj-ink) 40%, transparent);
+  border-radius: 14px;
+  padding: 10px 6px;
+  align-self: start;
+}
+.area-new .new-line { margin: 0 6px; }
 .is-dragging .proj-page { box-shadow: inset 0 0 0 3px rgba(43, 43, 48, 0.08); }
 .proj-page.drop-over { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--proj-ink) 45%, transparent); }
 

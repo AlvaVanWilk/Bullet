@@ -36,11 +36,15 @@ configureDrops(
       return !isOpenToday(task, today, entriesByTask(store.snapshot().entries));
     }
     if (target.kind === 'project') return !!target.projectId && task.projectId !== target.projectId;
+    if (target.kind === 'area') {
+      return !!target.projectId && (task.projectId !== target.projectId || (task.areaId ?? null) !== (target.areaId ?? null));
+    }
     return source.from !== 'category' && task.categoryId !== target.categoryId;
   },
   (source, target) => {
     if (target.kind === 'day') store.addEntry(source.taskId, target.day!);
     else if (target.kind === 'project') store.updateTask(source.taskId, { projectId: target.projectId });
+    else if (target.kind === 'area') store.updateTask(source.taskId, { projectId: target.projectId, areaId: target.areaId ?? null });
     else store.updateTask(source.taskId, { categoryId: target.categoryId ?? null });
   },
 );

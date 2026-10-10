@@ -43,6 +43,13 @@ export function seedDemo(today: DayKey) {
   store.addTask('Nachbarn fragen wegen Leiter', null, { projectId: garten.id });
   store.addFollowUp(farbe.id, 'Erster Anstrich');
   store.setNextStep(farbe.id);
+  const holz = store.addArea(garten.id, 'Holz')!;
+  const farbeArea = store.addArea(garten.id, 'Farbe')!;
+  store.addArea(garten.id, 'Werkzeug');
+  store.updateTask(farbe.id, { areaId: farbeArea.id });
+  store.addTask('Bretter am Dach prüfen', null, { projectId: garten.id, areaId: holz.id });
+  store.addTask('Morsche Latte ersetzen', null, { projectId: garten.id, areaId: holz.id });
+  store.addTask('Farbton aussuchen', null, { projectId: garten.id, areaId: farbeArea.id });
   const umzug = store.addProject('Keller ausmisten')!;
   store.updateProject(umzug.id, { icon: 'koffer', color: 'orange' });
   store.addTask('Sperrmüll anmelden', null, { projectId: umzug.id, deadline: today });

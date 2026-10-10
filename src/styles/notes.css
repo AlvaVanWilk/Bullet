@@ -599,6 +599,20 @@
   color: color-mix(in srgb, var(--proj) 70%, var(--ink-soft));
   margin: 0 14px -2px 18px;
 }
+/* an area of the project: a small heading between its tasks */
+.pslip-area {
+  height: var(--grid);
+  line-height: var(--grid);
+  margin-top: 6px;
+  padding-left: 24px;
+  font-size: 16px;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--proj) 70%, var(--ink-soft));
+}
+.area-move { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.area-move .chip:disabled { opacity: 0.35; }
+.note-areas .area-chip { color: color-mix(in srgb, var(--proj-ink) 70%, var(--ink)); }
 .pslip-none { font-family: var(--clean); font-size: 13px; color: var(--ink-faint); margin: 4px 14px 0 18px; }
 .pslip-rest { max-height: 50dvh; overflow-y: auto; }
 .pslip-row { cursor: grab; }

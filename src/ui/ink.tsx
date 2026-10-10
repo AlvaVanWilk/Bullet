@@ -29,8 +29,10 @@ function paths(key: string, make: () => ReturnType<typeof gen.rectangle>) {
 
 const INK = '#2b2b30';
 
-/** A box drawn with a fineliner around its content; size follows the content. */
-export function HandBox(props: { class?: string; seed: string; children: ComponentChildren; title?: ComponentChildren; action?: ComponentChildren }) {
+/** A box drawn with a fineliner (or a marker) around its content; size follows the content. */
+export function HandBox(props: {
+  class?: string; seed: string; children: ComponentChildren; title?: ComponentChildren; action?: ComponentChildren; marker?: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<[number, number] | null>(null);
   useLayoutEffect(() => {
@@ -42,12 +44,15 @@ export function HandBox(props: { class?: string; seed: string; children: Compone
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const opts: Options = { roughness: 0.9, bowing: 1.1, stroke: INK, strokeWidth: 1.15, seed: seedOf(props.seed) };
+  // a marker is broader and a little wilder; its two strokes overlap darker (see .marker-box)
+  const opts: Options = props.marker
+    ? { roughness: 1.5, bowing: 1.6, stroke: INK, strokeWidth: 3, seed: seedOf(props.seed) }
+    : { roughness: 0.9, bowing: 1.1, stroke: INK, strokeWidth: 1.15, seed: seedOf(props.seed) };
   const drawn = size && size[0] > 8 && size[1] > 8
-    ? paths(`box|${props.seed}|${size[0]}|${size[1]}`, () => gen.rectangle(3, 3, size[0] - 6, size[1] - 6, opts))
+    ? paths(`${props.marker ? 'mbox' : 'box'}|${props.seed}|${size[0]}|${size[1]}`, () => gen.rectangle(3, 3, size[0] - 6, size[1] - 6, opts))
     : [];
   return (
-    <div ref={ref} class={`handbox ${props.class ?? ''}`}>
+    <div ref={ref} class={`handbox ${props.marker ? 'marker-box' : ''} ${props.class ?? ''}`}>
       {size && (
         <svg class="handbox-line" width={size[0]} height={size[1]} aria-hidden="true">
           {drawn.map((p, i) => <path key={i} d={p.d} />)}

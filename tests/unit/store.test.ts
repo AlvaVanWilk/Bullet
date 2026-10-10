@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { areaRows, projectAreas } from '../../src/lib/logic';
 import { Store } from '../../src/store/store';
 
 function makeStore() {
@@ -259,5 +260,40 @@ describe('hiding appointments', () => {
     s.doneOn(t.id, '2026-10-09');
     s.toggleDone(t.id, '2026-10-09');
     expect(s.snapshot().entries.filter((e) => !e.deleted).map((e) => e.day)).toEqual(['2026-10-09']);
+  });
+
+  it('gives a project areas: boxes in an order of their own; tasks go with their area, follow-ups with their mother', () => {
+    const s = makeStore();
+    const p = s.addProject('App')!;
+    const ui = s.addArea(p.id, 'Oberfläche')!;
+    const sync = s.addArea(p.id, ' Abgleich ')!;
+    const docs = s.addArea(p.id, 'Doku')!;
+    const names = () => projectAreas(s.snapshot(), p.id).map((a) => a.name);
+    expect(names()).toEqual(['Oberfläche', 'Abgleich', 'Doku']);
+    s.moveArea(docs.id, 'first');
+    expect(names()).toEqual(['Doku', 'Oberfläche', 'Abgleich']);
+    s.moveArea(docs.id, 1);
+    expect(names()).toEqual(['Oberfläche', 'Doku', 'Abgleich']);
+    s.reorderAreas(p.id, [sync.id, ui.id, docs.id]);
+    expect(names()).toEqual(['Abgleich', 'Oberfläche', 'Doku']);
+
+    const a = s.addTask('Knöpfe zeichnen', null, { projectId: p.id, areaId: ui.id })!;
+    const b = s.addTask('Ohne Bereich', null, { projectId: p.id })!;
+    const c = s.addFollowUp(a.id, 'Knöpfe prüfen')!;
+    expect(s.task(c.id)!.areaId).toBe(ui.id);
+    const rows = (areaId: string | null) => areaRows(s.snapshot(), p.id, areaId, Date.now()).map((r) => r.task.text);
+    expect(rows(ui.id)).toEqual(['Knöpfe zeichnen']);
+    expect(rows(null)).toEqual(['Ohne Bereich']);
+    s.updateTask(b.id, { areaId: sync.id });
+    expect(rows(sync.id)).toEqual(['Ohne Bereich']);
+    // in another project it belongs to no area there
+    const q = s.addProject('Garten')!;
+    s.updateTask(b.id, { projectId: q.id });
+    expect(s.task(b.id)!.areaId).toBeNull();
+    // an area deleted: its tasks stand above the boxes
+    s.deleteArea(ui.id);
+    expect(names()).toEqual(['Abgleich', 'Doku']);
+    expect(rows(null)).toEqual(['Knöpfe zeichnen']);
+    expect(s.addArea(p.id, '  ')).toBeNull();
   });
 });

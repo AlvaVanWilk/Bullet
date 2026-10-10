@@ -16,7 +16,9 @@ export type PostItTarget =
   /** the card of a project with its open tasks (from its line in the master list) */
   | { kind: 'project'; id: string; rect: DOMRect }
   /** name, icon and colour of a project */
-  | { kind: 'projectEdit'; id: string; rect: DOMRect };
+  | { kind: 'projectEdit'; id: string; rect: DOMRect }
+  /** name and place of an area of a project */
+  | { kind: 'area'; id: string; rect: DOMRect };
 
 export interface UiState {
   view: { kind: 'week' } | { kind: 'category'; id: string } | { kind: 'project'; id: string } | { kind: 'archive' };

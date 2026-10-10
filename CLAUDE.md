@@ -61,6 +61,16 @@ Bedienung und Einrichtung: `README.md`.
   mit Spritzern, ohne Umrandung) in seiner Farbe, Fortschritt,
   Notizen, Aufgaben, „Projekt abschließen“. Gelöscht → Aufgaben zurück in die
   Masterliste. Kategorien, Vorschläge und Archiv zeigen Projektaufgaben einzeln.
+- Bereiche (`area`, `task.areaId`): Ein Projekt lässt sich in Bereiche teilen. Auf der
+  Projektseite ist jeder Bereich eine Box, mit Marker in der Projektfarbe gezeichnet,
+  Name in Kapitälchen oben im Rahmen (daneben klein die Zahl der offenen). Die Boxen
+  füllen die Seite zeilenweise (iPad zwei bis drei Spalten, Handy eine). Aufgaben ohne
+  Bereich stehen als Liste über den Boxen (ohne Bereiche sieht die Seite aus wie vorher).
+  Reihenfolge wählbar (`area.order`): Namen gedrückt halten und die Box an einen
+  anderen Platz ziehen (rastet ein), oder Namen antippen → Zettel mit „ganz nach vorn“,
+  ‹ ›, umbenennen, löschen (Aufgaben bleiben, dann über den Boxen). Aufgaben zwischen
+  Boxen ziehen oder im Post-it „Bereich“ wählen; Folgeaufgaben bleiben im Bereich der
+  Mutter. Auf dem Projekt-Zettel: Bereiche als kleine Zwischenüberschriften.
 - Nächster Schritt (`task.next`): höchstens einer offen pro Projekt (sonst plant man,
   statt zu handeln), gesetzt mit dem kleinen Pfeil vor einer Aufgabe auf Zettel oder
   Projektseite. Dann steht in der Masterliste statt der Projektzeile dieser Schritt mit

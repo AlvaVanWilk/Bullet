@@ -18,7 +18,7 @@ import { forgetPhotosOf } from '../photos';
 import { FollowSection } from './Follow';
 import { PaySection } from './Pay';
 import { PhotoStrip } from './Photos';
-import { ProjectCard, ProjectChips, ProjectEditNote } from './Projects';
+import { AreaChips, AreaNote, ProjectCard, ProjectChips, ProjectEditNote } from './Projects';
 import { movePick, SuggestList } from './Suggest';
 
 const WIDTH = 312;
@@ -41,6 +41,7 @@ export function PostItLayer() {
         {target.kind === 'event' && <EventNote event={target.event} close={close} />}
         {target.kind === 'project' && <ProjectCard id={target.id} close={close} />}
         {target.kind === 'projectEdit' && <ProjectEditNote id={target.id} close={close} />}
+        {target.kind === 'area' && <AreaNote id={target.id} close={close} />}
       </Placed>
     </div>
   );
@@ -207,6 +208,7 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         })}
       </div>
       <ProjectChips task={task} />
+      <AreaChips task={task} />
 
       <div class="note-extras">
         <PhotoStrip task={task} />

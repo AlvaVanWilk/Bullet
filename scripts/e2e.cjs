@@ -240,6 +240,36 @@ async function device(browser, name) {
     check('a task done yesterday but in no day: "erledigt" on its post-it, then "gestern" – done there, struck in the list',
       struckNow === 1 && inYesterday === 1, { struckNow, inYesterday });
 
+    // areas of a project: boxes on its page, in an order of their own; on the slip small headings
+    await ipad.locator('.tab-projects').click();
+    await ipad.waitForTimeout(800);
+    await ipad.locator('.proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
+    await ipad.locator('.area-new input').fill('Holz');
+    await ipad.locator('.area-new input').press('Enter');
+    await ipad.locator('.area-box .new-line input').first().fill('Bretter prüfen');
+    await ipad.locator('.area-box .new-line input').first().press('Enter');
+    await ipad.locator('.area-new input').fill('Farbe');
+    await ipad.locator('.area-new input').press('Enter');
+    await ipad.waitForTimeout(300);
+    await ipad.locator('.area-title', { hasText: 'Farbe' }).click();
+    await ipad.locator('.area-move .chip', { hasText: 'ganz nach vorn' }).click();
+    await ipad.locator('.postit .note-btn.save').click();
+    await ipad.waitForTimeout(300);
+    const boxes = await ipad.$$eval('.area-title', (els) => els.map((e) => e.firstChild.textContent));
+    const inHolz = await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.tt-text').allTextContents();
+    await ipad.locator('.projview .close-x').click();
+    await ipad.waitForTimeout(1600);
+    await phone.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await phone.waitForTimeout(2500);
+    await phone.locator('.sheet.front .lead-icon').first().click();
+    await phone.waitForSelector('.postit.pslip.shown');
+    const slipAreas = await phone.$$eval('.pslip-area', (els) => els.map((e) => e.textContent));
+    const slipTasks = await phone.$$eval('.pslip-rest .tt-text', (els) => els.map((e) => e.textContent));
+    await phone.mouse.click(1000, 790);
+    check('areas: boxes on the project page in their own order; on the slip of the other device as headings',
+      boxes.join() === 'Farbe,Holz' && inHolz.join() === 'Bretter prüfen' && slipAreas.join() === 'Holz' && slipTasks.includes('Bretter prüfen'),
+      { boxes, inHolz, slipAreas, slipTasks });
+
     // a milestone: a finished project gives a doodle (announced once); held on free paper in today, it sticks there, on both devices
     await ipad.locator('.tab-projects').click();
     await ipad.waitForTimeout(800);

@@ -52,6 +52,8 @@ export interface Task extends Base {
    * project (one open at a time; done ones keep the mark and stay struck there).
    */
   next?: boolean;
+  /** The area of its project it belongs to (none: it stands above the boxes). */
+  areaId?: string | null;
 }
 
 export interface Payment {
@@ -94,6 +96,16 @@ export interface Project extends Base {
   note?: string;
   /** Finished: struck through in the master list like a done task. */
   doneAt?: number | null;
+}
+
+/** A part of a project (e.g. one area of an app): a box of its own on the project page. */
+export interface Area extends Base {
+  type: 'area';
+  projectId: string;
+  name: string;
+  /** Its place among the boxes of the project (smaller first). */
+  order: number;
+  createdAt: number;
 }
 
 /** A task written into a day. Dragging copies: the earlier entry stays. */
@@ -183,9 +195,9 @@ export interface Settings extends Base {
   deco: boolean;
 }
 
-export type AnyRecord = Task | Category | Project | Entry | Special | Settings | Hide | Deco | Award;
+export type AnyRecord = Task | Category | Project | Area | Entry | Special | Settings | Hide | Deco | Award;
 export type RecordType = AnyRecord['type'];
-export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'entry', 'special', 'settings', 'hide', 'deco', 'award'];
+export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'area', 'entry', 'special', 'settings', 'hide', 'deco', 'award'];
 
 export const SETTINGS_ID = 'settings';
 

@@ -6,17 +6,18 @@
 // and colour are chosen on a note.
 
 import { Fragment } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor, projectInk } from '../lib/colors';
 import {
-  entriesByTask, followUps, isOpenToday, liveProjects, nextStep, projectMarks, projectProgress, projectRows, projectSuggestions,
+  areaRows, entriesByTask, followUps, isOpenToday, liveProjects, nextStep, projectAreas, projectMarks, projectProgress, projectRows,
+  projectSuggestions, type ListRow,
 } from '../lib/logic';
-import type { Entry, Project, Task } from '../lib/model';
+import type { Area, Entry, Project, Task } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
-import { FollowRows, FollowToggle, useFolds } from './Follow';
+import { FollowRows, FollowToggle, useFolds, type Folds } from './Follow';
 import { useGridRows } from './gridRows';
-import { Bang, ClipMark, hasClip, NoteMark, ScheduledDot, seedOf, TaskText } from './ink';
+import { Bang, ClipMark, HandBox, hasClip, NoteMark, ScheduledDot, seedOf, TaskText } from './ink';
 import { NewLine } from './NewLine';
 import { ColorWheel } from './ColorWheel';
 import { DrawPad } from './DrawPad';
@@ -105,6 +106,9 @@ export function ProjectCard(props: { id: string; close: () => void }) {
   const open = projectRows(snap, p.id, Math.max(now, Date.now())).map((r) => r.task).filter((t) => t.doneAt == null);
   const next = nextStep(snap, p.id);
   const rest = open.filter((t) => t.id !== next?.id);
+  const areas = projectAreas(snap, p.id);
+  const areaIds = new Set(areas.map((a) => a.id));
+  const inArea = (id: string | null) => rest.filter((t) => (t.areaId && areaIds.has(t.areaId) ? t.areaId : null) === id);
   const row = (t: Task) => {
     const cat = store.category(t.categoryId);
     const color = cat ? categoryColor(cat.color) : null;
@@ -148,7 +152,17 @@ export function ProjectCard(props: { id: string; close: () => void }) {
         </section>
       )}
       <ul class="pslip-list pslip-rest" ref={listRef}>
-        {rest.map(row)}
+        {inArea(null).map(row)}
+        {/* the areas as small headings, each with its open tasks */}
+        {areas.map((a) => {
+          const tasks = inArea(a.id);
+          return tasks.length ? (
+            <Fragment key={a.id}>
+              <li class="pslip-area">{a.name}</li>
+              {tasks.map(row)}
+            </Fragment>
+          ) : null;
+        })}
         {!open.length && <li class="pslip-empty">{p.doneAt != null ? 'abgeschlossen' : 'Nichts mehr offen.'}</li>}
       </ul>
       <NewLine placeholder="Neue Aufgabe im Projekt …" onEnter={(text) => store.addTask(text, null, { projectId: p.id })} />
@@ -235,19 +249,17 @@ export function ProjectView(props: { id: string }) {
   const now = useNow();
   const today = useToday();
   const folds = useFolds();
-  const listRef = useRef<HTMLUListElement>(null);
-  useGridRows(listRef);
   const p = store.project(props.id);
   if (!p) {
     // deleted meanwhile (maybe on another device): back to the week
     queueMicrotask(() => ui.set({ view: { kind: 'week' } }));
     return null;
   }
-  const rows = projectRows(snap, p.id, Math.max(now, Date.now()));
-  const next = nextStep(snap, p.id);
-  const index = entriesByTask(snap.entries);
-  const follow = followUps(snap);
+  const at = Math.max(now, Date.now());
+  const loose = areaRows(snap, p.id, null, at);
+  const areas = projectAreas(snap, p.id);
   const { done, total } = projectProgress(snap, p.id);
+  const list = { project: p, next: nextStep(snap, p.id), today, index: entriesByTask(snap.entries), follow: followUps(snap), folds };
 
   return (
     <div class="projview" style={{ '--proj-ink': projectInk(p.color) }}>
@@ -272,49 +284,292 @@ export function ProjectView(props: { id: string }) {
       <div class="proj-page paper" data-paper={snap.settings.paperMain} data-drop="project" data-project={p.id} data-scroll>
         <ProjectNotes project={p} />
         <h2 class="proj-section">Aufgaben</h2>
-        <ul class="task-list proj-tasks" ref={listRef}>
-          {rows.map(({ task: t }) => {
-            const cat = store.category(t.categoryId);
-            const color = cat ? categoryColor(cat.color) : null;
-            const waiting = follow(t.id);
-            return (
-              <Fragment key={t.id}>
-                <li
-                  class="row"
-                  onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'project', color: color?.ink })}
-                  onClick={(e) => {
-                    if (clickSuppressed()) return;
-                    ui.set({ postIt: { kind: 'task', id: t.id, rect: rectOf(e.currentTarget) } });
-                  }}
-                >
-                  {p.doneAt == null && (t.doneAt == null ? <NextMark task={t} on={t.id === next?.id} /> : <span class="next-mark" />)}
-                  <Lead dot={isOpenToday(t, today, index)} bang={t.important} />
-                  <TaskText text={t.text} color={color?.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
-                  {t.note && <NoteMark />}
-                  {hasClip(t) && <ClipMark />}
-                  {waiting.length > 0 && <FollowToggle count={waiting.length} open={folds.isOpen(t.id)} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
-                </li>
-                {folds.isOpen(t.id) && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode="text" />}
-              </Fragment>
-            );
-          })}
-        </ul>
-        {p.doneAt == null && (
-          <AddLine
-            placeholder="Aufgabe eintragen …"
-            head="schon vorhanden – antippen, dann gehört sie zum Projekt:"
-            find={(text) => projectSuggestions(snap, p.id, text, Date.now())}
-            onTake={(t) => store.updateTask(t.id, { projectId: p.id })}
-            onAdd={(text) => store.addTask(text, null, { projectId: p.id })}
-          />
-        )}
-        {!rows.length && <p class="cat-hint">Schreib eine Aufgabe auf die Linie oder zieh eine aus der Masterliste hierher.</p>}
+        {/* the tasks in no area, above the boxes (dropped here, a task leaves its area) */}
+        <div class="proj-loose" data-drop="area" data-area="" data-project={p.id}>
+          <ProjectTasks {...list} rows={loose} />
+          {p.doneAt == null && (
+            <AddLine
+              placeholder="Aufgabe eintragen …"
+              head="schon vorhanden – antippen, dann gehört sie zum Projekt:"
+              find={(text) => projectSuggestions(snap, p.id, text, Date.now())}
+              onTake={(t) => store.updateTask(t.id, { projectId: p.id })}
+              onAdd={(text) => store.addTask(text, null, { projectId: p.id })}
+            />
+          )}
+          {!loose.length && !areas.length && <p class="cat-hint">Schreib eine Aufgabe auf die Linie oder zieh eine aus der Masterliste hierher.</p>}
+        </div>
+        <AreaGrid list={list} areas={areas} now={at} />
         <div class="proj-foot">
           <button type="button" class="note-btn" onClick={() => store.finishProject(p.id, p.doneAt == null)}>
             {p.doneAt == null ? 'Projekt abschließen' : 'wieder öffnen'}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+interface ListProps {
+  project: Project;
+  next: Task | null;
+  today: string;
+  index: Map<string, Entry[]>;
+  follow: ReturnType<typeof followUps>;
+  folds: Folds;
+}
+
+/** Tasks of a project on its page: the arrow for the next step, follow-ups folded under their mother. */
+function ProjectTasks(props: ListProps & { rows: ListRow[] }) {
+  const { project: p, next, today, index, follow, folds } = props;
+  const listRef = useRef<HTMLUListElement>(null);
+  useGridRows(listRef);
+  return (
+    <ul class="task-list proj-tasks" ref={listRef}>
+      {props.rows.map(({ task: t }) => {
+        const cat = store.category(t.categoryId);
+        const color = cat ? categoryColor(cat.color) : null;
+        const waiting = follow(t.id);
+        return (
+          <Fragment key={t.id}>
+            <li
+              class="row"
+              onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'project', color: color?.ink })}
+              onClick={(e) => {
+                if (clickSuppressed()) return;
+                ui.set({ postIt: { kind: 'task', id: t.id, rect: rectOf(e.currentTarget) } });
+              }}
+            >
+              {p.doneAt == null && (t.doneAt == null ? <NextMark task={t} on={t.id === next?.id} /> : <span class="next-mark" />)}
+              <Lead dot={isOpenToday(t, today, index)} bang={t.important} />
+              <TaskText text={t.text} color={color?.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
+              {t.note && <NoteMark />}
+              {hasClip(t) && <ClipMark />}
+              {waiting.length > 0 && <FollowToggle count={waiting.length} open={folds.isOpen(t.id)} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
+            </li>
+            {folds.isOpen(t.id) && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode="text" />}
+          </Fragment>
+        );
+      })}
+    </ul>
+  );
+}
+
+// --- areas: boxes drawn with a marker in the colour of the project ------------------------
+
+const HOLD_MS = 380;
+let boxDragging = false;
+if (typeof document !== 'undefined') {
+  // while a box is carried, the finger must not scroll the page
+  document.addEventListener('touchmove', (e) => { if (boxDragging) e.preventDefault(); }, { passive: false });
+}
+
+interface BoxDrag {
+  id: string;
+  order: string[];
+  /** where in the box it was taken */
+  grabX: number;
+  grabY: number;
+  x: number;
+  y: number;
+}
+
+/**
+ * The areas of a project: one box each, in a grid that fills row by row. A box
+ * is carried elsewhere by holding its name; it snaps into its new place.
+ */
+function AreaGrid(props: { list: ListProps; areas: Area[]; now: number }) {
+  const snap = useStore();
+  const p = props.list.project;
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<BoxDrag | null>(null);
+  const dragRef = useRef<BoxDrag | null>(null);
+  dragRef.current = drag;
+  const suppressClick = useRef(0);
+  const byId = new Map(props.areas.map((a) => [a.id, a]));
+  const shown = drag ? drag.order.map((id) => byId.get(id)).filter((a): a is Area => !!a) : props.areas;
+
+  // the box being carried stays under the finger, wherever its place is now
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    for (const el of Array.from(grid.querySelectorAll<HTMLElement>('[data-area-id]'))) {
+      if (!drag || el.dataset.areaId !== drag.id) {
+        el.style.transform = '';
+        continue;
+      }
+      const g = grid.getBoundingClientRect();
+      el.style.transform = `translate(${drag.x - drag.grabX - g.left - el.offsetLeft}px, ${drag.y - drag.grabY - g.top - el.offsetTop}px) rotate(1.2deg)`;
+    }
+  });
+
+  const hold = (e: PointerEvent, area: Area) => {
+    if (e.button !== 0 || p.doneAt != null) return;
+    const box = (e.currentTarget as HTMLElement).closest<HTMLElement>('[data-area-id]')!;
+    const start = { x: e.clientX, y: e.clientY };
+    const id = e.pointerId;
+    let timer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      timer = null;
+      const r = box.getBoundingClientRect();
+      boxDragging = true;
+      setDrag({ id: area.id, order: props.areas.map((a) => a.id), grabX: start.x - r.left, grabY: start.y - r.top, x: start.x, y: start.y });
+      try { navigator.vibrate?.(8); } catch { /* not available */ }
+    }, HOLD_MS);
+    const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== id) return;
+      const d = dragRef.current;
+      if (!d) {
+        if (timer && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > 9) stop();
+        return;
+      }
+      // over another box: take its place
+      let order = d.order;
+      for (const el of Array.from(gridRef.current?.querySelectorAll<HTMLElement>('[data-area-id]') ?? [])) {
+        if (el.dataset.areaId === d.id) continue;
+        const r = el.getBoundingClientRect();
+        if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
+          order = d.order.filter((x) => x !== d.id);
+          order.splice(d.order.indexOf(el.dataset.areaId!), 0, d.id);
+          break;
+        }
+      }
+      setDrag({ ...d, order, x: ev.clientX, y: ev.clientY });
+    };
+    const up = (ev: PointerEvent) => {
+      if (ev.pointerId !== id) return;
+      const d = dragRef.current;
+      stop();
+      if (!d) return;
+      suppressClick.current = Date.now() + 400;
+      store.reorderAreas(p.id, d.order);
+      setDrag(null);
+    };
+    const stop = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      boxDragging = false;
+      removeEventListener('pointermove', move);
+      removeEventListener('pointerup', up);
+      removeEventListener('pointercancel', cancel);
+    };
+    const cancel = (ev: PointerEvent) => {
+      if (ev.pointerId !== id) return;
+      stop();
+      setDrag(null);
+    };
+    addEventListener('pointermove', move);
+    addEventListener('pointerup', up);
+    addEventListener('pointercancel', cancel);
+  };
+
+  return (
+    <div class={`proj-areas ${drag ? 'sorting' : ''}`} ref={gridRef}>
+      {shown.map((a) => {
+        const rows = areaRows(snap, p.id, a.id, props.now);
+        const open = snap.tasks.filter((t) => !t.deleted && t.projectId === p.id && t.areaId === a.id && t.doneAt == null).length;
+        const editing = (e: MouseEvent) => {
+          if (Date.now() < suppressClick.current) return;
+          ui.set({ postIt: { kind: 'area', id: a.id, rect: rectOf(e.currentTarget) } });
+        };
+        return (
+          <div
+            key={a.id}
+            class={`area-box ${drag?.id === a.id ? 'lifted' : ''} ${store.isFresh(a.id) ? 'ink-in' : ''}`}
+            data-area-id={a.id}
+            data-drop="area"
+            data-area={a.id}
+            data-project={p.id}
+          >
+            <HandBox
+              marker
+              seed={a.id}
+              title={(
+                <button type="button" class="area-title" onPointerDown={(e) => hold(e, a)} onClick={editing} title="antippen: ändern · gedrückt halten: verschieben">
+                  {a.name}
+                  {open > 0 && <span class="area-count">{open}</span>}
+                </button>
+              )}
+            >
+              <ProjectTasks {...props.list} rows={rows} />
+              {!rows.length && <p class="area-empty">noch leer</p>}
+              {p.doneAt == null && (
+                <NewLine placeholder="Aufgabe …" onEnter={(text) => store.addTask(text, null, { projectId: p.id, areaId: a.id })} />
+              )}
+            </HandBox>
+          </div>
+        );
+      })}
+      {p.doneAt == null && (
+        <div class="area-new">
+          <NewLine placeholder="Neuer Bereich …" onEnter={(name) => store.addArea(p.id, name)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Name and place of an area; deleting it keeps its tasks (they stand above the boxes). */
+export function AreaNote(props: { id: string; close: () => void }) {
+  const snap = useStore();
+  const area = snap.areas.find((a) => a.id === props.id && !a.deleted);
+  const [name, setName] = useState(area?.name ?? '');
+  const [sure, setSure] = useState(false);
+  const latest = useRef(name);
+  latest.current = name;
+  useEffect(() => () => store.renameArea(props.id, latest.current), []);
+  if (!area) return null;
+  const ids = projectAreas(snap, area.projectId).map((a) => a.id);
+  const at = ids.indexOf(area.id);
+  return (
+    <div class="note">
+      <input
+        class="note-text area-name"
+        value={name}
+        onInput={(e) => setName((e.target as HTMLInputElement).value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') props.close(); }}
+        aria-label="Name des Bereichs"
+      />
+      <div class="note-row area-move">
+        <span class="note-label">Platz</span>
+        <button type="button" class="chip" disabled={at <= 0} onClick={() => store.moveArea(area.id, 'first')}>ganz nach vorn</button>
+        <button type="button" class="chip" disabled={at <= 0} onClick={() => store.moveArea(area.id, -1)} aria-label="einen Platz nach vorn">‹</button>
+        <button type="button" class="chip" disabled={at >= ids.length - 1} onClick={() => store.moveArea(area.id, 1)} aria-label="einen Platz nach hinten">›</button>
+      </div>
+      <p class="note-hint">Oder den Namen der Box gedrückt halten und sie an einen anderen Platz ziehen.</p>
+      <div class="note-actions">
+        <button type="button" class="note-btn save" onClick={props.close}>speichern</button>
+        <button
+          type="button"
+          class={`note-btn danger ${sure ? 'sure' : ''}`}
+          onClick={() => {
+            if (!sure) { setSure(true); return; }
+            store.deleteArea(area.id);
+            props.close();
+          }}
+        >{sure ? 'Bereich wirklich löschen?' : 'löschen'}</button>
+      </div>
+      {sure && <p class="note-hint">Die Aufgaben bleiben im Projekt, über den Boxen.</p>}
+    </div>
+  );
+}
+
+/** In the post-it of a task of a project with areas: which one it belongs to. */
+export function AreaChips(props: { task: Task }) {
+  const snap = useStore();
+  const t = props.task;
+  if (!t.projectId) return null;
+  const areas = projectAreas(snap, t.projectId);
+  if (!areas.length) return null;
+  const current = t.areaId && areas.some((a) => a.id === t.areaId) ? t.areaId : null;
+  const project = store.project(t.projectId);
+  return (
+    <div class="note-cats note-areas" style={{ '--proj-ink': project ? projectInk(project.color) : undefined }}>
+      <span class="note-label">Bereich</span>
+      <button type="button" class={`chip ${!current ? 'on' : ''}`} onClick={() => store.updateTask(t.id, { areaId: null })}>ohne</button>
+      {areas.map((a) => (
+        <button key={a.id} type="button" class={`chip area-chip ${current === a.id ? 'on' : ''}`} onClick={() => store.updateTask(t.id, { areaId: a.id })}>
+          {a.name}
+        </button>
+      ))}
     </div>
   );
 }
