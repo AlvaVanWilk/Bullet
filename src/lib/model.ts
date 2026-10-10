@@ -54,6 +54,16 @@ export interface Task extends Base {
   next?: boolean;
   /** The area of its project it belongs to (none: it stands above the boxes). */
   areaId?: string | null;
+  /** The task it is part of (a subtask; one level only, within a project). */
+  parentId?: string | null;
+  /** Lies with someone else for now ("wartet auf …"): who, and since when. */
+  pending?: Pending | null;
+}
+
+export interface Pending {
+  /** whom or what it waits for, e.g. "Thomas", "Claude", "Antwort von Lena" */
+  who: string;
+  since: number;
 }
 
 export interface Payment {

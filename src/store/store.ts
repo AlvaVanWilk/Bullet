@@ -169,10 +169,55 @@ export class Store {
   updateTask(id: string, patch: Partial<Omit<Task, 'id' | 'type'>>) {
     const task = this.task(id);
     if (!task) return;
-    // in another project (or none) it is no next step any more, and in an area only if said so
+    // in another project (or none) it is no next step any more, and in an area or under a task only if said so
     const moved = patch.projectId !== undefined && (patch.projectId ?? null) !== (task.projectId ?? null);
-    this.put({ ...task, ...patch, ...(moved ? { next: false, areaId: patch.areaId ?? null } : {}) });
+    const next: Task = { ...task, ...patch, ...(moved ? { next: false, areaId: patch.areaId ?? null, parentId: patch.parentId ?? null } : {}) };
+    this.put(next);
+    // its subtasks go along, into the other project or area
+    if ((next.projectId ?? null) !== (task.projectId ?? null) || (next.areaId ?? null) !== (task.areaId ?? null)) {
+      for (const r of this.records.values()) {
+        if (r.type === 'task' && !r.deleted && r.parentId === id) {
+          this.put({ ...r, projectId: next.projectId ?? null, areaId: next.areaId ?? null, ...(moved ? { next: false } : {}) });
+        }
+      }
+    }
     this.changed(true);
+  }
+
+  /**
+   * A subtask of another task of the same project (one level only: a task with
+   * subtasks of its own stays on top), or none any more. False if not possible.
+   */
+  setParent(taskId: string, parentId: string | null): boolean {
+    const task = this.task(taskId);
+    if (!task) return false;
+    if (parentId == null) {
+      if (task.parentId) this.updateTask(taskId, { parentId: null });
+      return true;
+    }
+    const parent = this.task(parentId);
+    const hasOwn = [...this.records.values()].some((r) => r.type === 'task' && !r.deleted && r.parentId === taskId);
+    if (!parent || parent.id === taskId || parent.parentId || hasOwn || !task.projectId || parent.projectId !== task.projectId) return false;
+    this.updateTask(taskId, { parentId, areaId: parent.areaId ?? null });
+    return true;
+  }
+
+  /** Lies with someone else for now ("wartet auf …"), or not any more (who: null). */
+  setPending(ids: string[], who: string | null) {
+    const clean = who?.trim() ?? '';
+    for (const id of ids) {
+      const t = this.task(id);
+      if (!t || t.doneAt != null) continue;
+      this.put({ ...t, pending: clean ? { who: clean, since: t.pending?.who === clean ? t.pending.since : this.now() } : null });
+    }
+    this.changed(true);
+  }
+
+  /** The open subtasks of a task done, too (on the same day, without writing them into it). */
+  finishSubtasks(parentId: string, day: DayKey) {
+    for (const t of [...this.records.values()]) {
+      if (t.type === 'task' && !t.deleted && t.parentId === parentId && t.doneAt == null) this.toggleDone(t.id, day);
+    }
   }
 
   /** The next step of its project (the one open before loses the mark), or not any more. */
@@ -294,7 +339,8 @@ export class Store {
       return;
     }
     const wasDone = task.doneAt != null;
-    const done = { ...task, doneDay: day, doneAt: wasDone ? task.doneAt : this.now() };
+    // done: it lies with nobody any more
+    const done = { ...task, doneDay: day, doneAt: wasDone ? task.doneAt : this.now(), pending: null };
     this.put(done);
     if (!wasDone) {
       this.passOnStep(done);

@@ -10,14 +10,14 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor, projectInk } from '../lib/colors';
 import {
   areaRows, entriesByTask, followUps, isOpenToday, liveProjects, nextStep, projectAreas, projectMarks, projectProgress, projectRows,
-  projectSuggestions, type ListRow,
+  projectSuggestions, subtaskRows, type ListRow,
 } from '../lib/logic';
 import type { Area, Entry, Project, Task } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
 import { FollowRows, FollowToggle, useFolds, type Folds } from './Follow';
 import { useGridRows } from './gridRows';
-import { Bang, ClipMark, HandBox, hasClip, NoteMark, ScheduledDot, seedOf, TaskText } from './ink';
+import { Bang, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, ScheduledDot, seedOf, TaskText } from './ink';
 import { NewLine } from './NewLine';
 import { ColorWheel } from './ColorWheel';
 import { DrawPad } from './DrawPad';
@@ -32,12 +32,15 @@ const rectOf = (el: EventTarget | null) => (el as HTMLElement).getBoundingClient
  * project its icon under them, as if the marks were drawn over it. With
  * onIcon, a tap on the icon does that instead of opening the task.
  */
-export function Lead(props: { dot: boolean; bang: boolean; project?: Project | null; onIcon?: (el: HTMLElement) => void }) {
+export function Lead(props: {
+  dot: boolean; bang: boolean; project?: Project | null; onIcon?: (el: HTMLElement) => void; pending?: boolean;
+}) {
   const p = props.project;
   const marks = (
     <>
       {p && <ProjectIcon project={p} />}
-      {props.dot && <ScheduledDot />}
+      {/* lying with someone else: an hourglass instead of the dot */}
+      {props.pending ? <Hourglass /> : props.dot && <ScheduledDot />}
       {props.bang && <Bang />}
     </>
   );
@@ -108,14 +111,18 @@ export function ProjectCard(props: { id: string; close: () => void }) {
   const rest = open.filter((t) => t.id !== next?.id);
   const areas = projectAreas(snap, p.id);
   const areaIds = new Set(areas.map((a) => a.id));
-  const inArea = (id: string | null) => rest.filter((t) => (t.areaId && areaIds.has(t.areaId) ? t.areaId : null) === id);
-  const row = (t: Task) => {
+  // a subtask stands under its task while that is open here, otherwise on its own
+  const shownIds = new Set(rest.map((t) => t.id));
+  const under = (t: Task) => !!t.parentId && shownIds.has(t.parentId);
+  const inArea = (id: string | null) => rest.filter((t) => !under(t) && (t.areaId && areaIds.has(t.areaId) ? t.areaId : null) === id);
+  const withSubs = (t: Task) => [row(t), ...rest.filter((c) => c.parentId === t.id).map((c) => row(c, true))];
+  const row = (t: Task, sub = false) => {
     const cat = store.category(t.categoryId);
     const color = cat ? categoryColor(cat.color) : null;
     return (
       <li
         key={t.id}
-        class={`row pslip-row ${t.id === next?.id ? 'is-next' : ''}`}
+        class={`row pslip-row ${t.id === next?.id ? 'is-next' : ''} ${sub ? 'sub' : ''} ${t.pending ? 'pending' : ''}`}
         onPointerDown={(e) => startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'project', color: color?.ink })}
         onClick={(e) => {
           if (clickSuppressed()) return;
@@ -123,8 +130,9 @@ export function ProjectCard(props: { id: string; close: () => void }) {
         }}
       >
         <NextMark task={t} on={t.id === next?.id} />
-        <Lead dot={isOpenToday(t, today, index)} bang={t.important} />
+        <Lead dot={isOpenToday(t, today, index)} bang={t.important} pending={!!t.pending} />
         <TaskText text={t.text} color={color?.ink} fresh={store.isFresh(t.id)} />
+        {t.pending && <PendingWho who={t.pending.who} />}
         {t.note && <NoteMark />}
         {hasClip(t) && <ClipMark />}
       </li>
@@ -152,14 +160,14 @@ export function ProjectCard(props: { id: string; close: () => void }) {
         </section>
       )}
       <ul class="pslip-list pslip-rest" ref={listRef}>
-        {inArea(null).map(row)}
+        {inArea(null).map(withSubs)}
         {/* the areas as small headings, each with its open tasks */}
         {areas.map((a) => {
           const tasks = inArea(a.id);
           return tasks.length ? (
             <Fragment key={a.id}>
               <li class="pslip-area">{a.name}</li>
-              {tasks.map(row)}
+              {tasks.map(withSubs)}
             </Fragment>
           ) : null;
         })}
@@ -318,40 +326,49 @@ interface ListProps {
   folds: Folds;
 }
 
-/** Tasks of a project on its page: the arrow for the next step, follow-ups folded under their mother. */
+/**
+ * Tasks of a project on its page: the arrow for the next step, follow-ups
+ * folded under their mother, subtasks indented under their task. A task held
+ * and dropped on another one becomes a part of it.
+ */
 function ProjectTasks(props: ListProps & { rows: ListRow[] }) {
+  const snap = useStore();
+  const now = useNow();
   const { project: p, next, today, index, follow, folds } = props;
   const listRef = useRef<HTMLUListElement>(null);
   useGridRows(listRef);
-  return (
-    <ul class="task-list proj-tasks" ref={listRef}>
-      {props.rows.map(({ task: t }) => {
-        const cat = store.category(t.categoryId);
-        const color = cat ? categoryColor(cat.color) : null;
-        const waiting = follow(t.id);
-        return (
-          <Fragment key={t.id}>
-            <li
-              class="row"
-              onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'project', color: color?.ink })}
-              onClick={(e) => {
-                if (clickSuppressed()) return;
-                ui.set({ postIt: { kind: 'task', id: t.id, rect: rectOf(e.currentTarget) } });
-              }}
-            >
-              {p.doneAt == null && (t.doneAt == null ? <NextMark task={t} on={t.id === next?.id} /> : <span class="next-mark" />)}
-              <Lead dot={isOpenToday(t, today, index)} bang={t.important} />
-              <TaskText text={t.text} color={color?.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
-              {t.note && <NoteMark />}
-              {hasClip(t) && <ClipMark />}
-              {waiting.length > 0 && <FollowToggle count={waiting.length} open={folds.isOpen(t.id)} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
-            </li>
-            {folds.isOpen(t.id) && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode="text" />}
-          </Fragment>
-        );
-      })}
-    </ul>
-  );
+  const row = (t: Task, sub: boolean) => {
+    const cat = store.category(t.categoryId);
+    const color = cat ? categoryColor(cat.color) : null;
+    const waiting = follow(t.id);
+    // an open task on top takes others dropped on it
+    const takes = !sub && p.doneAt == null && t.doneAt == null;
+    return (
+      <Fragment key={t.id}>
+        <li
+          class={`row ${sub ? 'sub' : ''} ${t.pending && t.doneAt == null ? 'pending' : ''}`}
+          data-drop={takes ? 'subtask' : undefined}
+          data-task={takes ? t.id : undefined}
+          onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'project', color: color?.ink })}
+          onClick={(e) => {
+            if (clickSuppressed()) return;
+            ui.set({ postIt: { kind: 'task', id: t.id, rect: rectOf(e.currentTarget) } });
+          }}
+        >
+          {p.doneAt == null && (t.doneAt == null ? <NextMark task={t} on={t.id === next?.id} /> : <span class="next-mark" />)}
+          <Lead dot={isOpenToday(t, today, index)} bang={t.important} pending={!!t.pending && t.doneAt == null} />
+          <TaskText text={t.text} color={color?.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
+          {t.pending && t.doneAt == null && <PendingWho who={t.pending.who} />}
+          {t.note && <NoteMark />}
+          {hasClip(t) && <ClipMark />}
+          {waiting.length > 0 && <FollowToggle count={waiting.length} open={folds.isOpen(t.id)} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
+        </li>
+        {folds.isOpen(t.id) && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode="text" />}
+        {!sub && subtaskRows(snap, t.id, Math.max(now, Date.now())).map((r) => row(r.task, true))}
+      </Fragment>
+    );
+  };
+  return <ul class="task-list proj-tasks" ref={listRef}>{props.rows.map(({ task: t }) => row(t, false))}</ul>;
 }
 
 // --- areas: boxes drawn with a marker in the colour of the project ------------------------

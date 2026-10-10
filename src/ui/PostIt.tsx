@@ -9,12 +9,15 @@ import { CATEGORY_COLORS, categoryColor } from '../lib/colors';
 import { eventStartDay } from '../google/events';
 import { addDays, compareDays, parseDay, shortWeekday, timeLabel, type DayKey } from '../lib/dates';
 import {
-  deadlineShowsOn, entriesByTask, isOpenToday, isWaiting, liveCategories, prepRows, prepSuggestions, seriesKey, specialLinkKey,
+  deadlineShowsOn, entriesByTask, isOpenToday, isWaiting, liveCategories, pendingNames, prepRows, prepSuggestions, seriesKey,
+  specialLinkKey,
 } from '../lib/logic';
 import type { CalEvent, Special, Task, TaskLink } from '../lib/model';
 import { store } from '../store/store';
 import { ui, useStore, useToday, useUi, type PostItTarget } from './state';
+import { sinceLabel } from './Waiting';
 import { forgetPhotosOf } from '../photos';
+import { Hourglass } from './ink';
 import { FollowSection } from './Follow';
 import { PaySection } from './Pay';
 import { PhotoStrip } from './Photos';
@@ -134,6 +137,12 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         }}
         aria-label="Aufgabe"
       />
+      {task.parentId && store.task(task.parentId) && (
+        <div class="note-for">
+          Teil von: {store.task(task.parentId)!.text}
+          <button type="button" class="note-for-x" onClick={() => store.setParent(task.id, null)} aria-label="Nicht mehr Teil davon" title="nicht mehr Teil davon">×</button>
+        </div>
+      )}
       {task.link && (
         <div class="note-for">
           für: {task.link.title} · {shortDate(task.link.day)}
@@ -173,6 +182,8 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         </div>
       )}
 
+      {task.doneAt == null && <PendingRow task={task} today={today} />}
+
       <label class="note-row note-date">
         <span class="note-label">Deadline</span>
         <input
@@ -211,6 +222,11 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
       <AreaChips task={task} />
 
       <div class="note-extras">
+        <button
+          type="button"
+          class="photo-add share-open"
+          onClick={() => { props.close(); ui.set({ share: task.id }); }}
+        >↗ teilen</button>
         <PhotoStrip task={task} />
         <PaySection task={task} />
         <FollowSection task={task} />
@@ -246,6 +262,70 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
           }}
         >{confirmDelete ? 'wirklich löschen?' : 'löschen'}</button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * "Wartet auf …": the task lies with someone else for now (whom: chips of
+ * those given something before, or written). Set, it shows since when, and
+ * "×" takes it back.
+ */
+function PendingRow(props: { task: Task; today: DayKey }) {
+  const snap = useStore();
+  const t = props.task;
+  const [asking, setAsking] = useState(false);
+  const [who, setWho] = useState('');
+  if (t.pending) {
+    return (
+      <div class="note-row note-pending on">
+        <span class="note-bang on"><Hourglass /> wartet auf {t.pending.who}</span>
+        <span class="note-since">{sinceLabel(t.pending.since, props.today)}</span>
+        <button type="button" class="note-clear" onClick={() => store.setPending([t.id], null)} aria-label="wartet nicht mehr" title="wartet nicht mehr">×</button>
+      </div>
+    );
+  }
+  const set = (name: string) => {
+    if (!name.trim()) return;
+    store.setPending([t.id], name);
+    setAsking(false);
+    setWho('');
+  };
+  return (
+    <div class="note-row note-pending">
+      <button type="button" class="note-bang" aria-expanded={asking} onClick={() => setAsking(!asking)}>
+        <Hourglass /> wartet auf …
+      </button>
+      {asking && (
+        <WhoPicker names={pendingNames(snap)} who={who} setWho={setWho} onPick={set} />
+      )}
+    </div>
+  );
+}
+
+/** Whom (or what) a task waits for: one given something before, or a new name. */
+export function WhoPicker(props: { names: string[]; who: string; setWho: (v: string) => void; onPick: (name: string) => void; first?: string }) {
+  const names = props.first && !props.names.some((n) => n.toLowerCase() === props.first!.toLowerCase())
+    ? [props.first, ...props.names]
+    : props.names;
+  return (
+    <div class="who-picker">
+      {names.length > 0 && (
+        <div class="who-names">
+          {names.slice(0, 6).map((n) => <button key={n} type="button" class="chip" onClick={() => props.onPick(n)}>{n}</button>)}
+        </div>
+      )}
+      <input
+        class="who-input"
+        value={props.who}
+        placeholder="auf wen oder was? (z. B. Antwort von Lena)"
+        enterKeyHint="done"
+        onInput={(e) => props.setWho((e.target as HTMLInputElement).value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') props.onPick(props.who);
+          if (e.key === 'Escape') props.setWho('');
+        }}
+      />
     </div>
   );
 }

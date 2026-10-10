@@ -533,6 +533,7 @@
 .page-tab:active { transform: translateX(1px); }
 .tab-planner { background: #cfdeea; }
 .tab-archive { background: #e4d6bf; }
+.tab-waiting { background: #d6e0cf; }
 .page-tab .icon path { fill: none; stroke: var(--ink); stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; }
 
 /* --- the archive as a page --- */
@@ -579,3 +580,16 @@
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
+
+/* --- what waits: one box per person, filling the page row by row --- */
+.waiting-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: calc(var(--grid) * 1.5) 22px;
+  align-items: start;
+  margin-top: calc(var(--grid) * 1.2);
+}
+.waiting-box { padding: 18px 10px 6px 8px; }
+.waiting-who { display: inline-flex; align-items: baseline; gap: 8px; font-variant-caps: small-caps; letter-spacing: 0.05em; }
+.waiting-list { padding: 0; background: none; overflow: visible; }
+.waiting-list .arch-date { margin-left: auto; }

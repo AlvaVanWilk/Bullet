@@ -18,7 +18,7 @@ import { GRID } from './baseline';
 import { DayHeading } from './DayHeading';
 import { beyondContent, DecoLayer, onDecoMenu, onDecoPress } from './Deco';
 import { clickSuppressed, startDrag } from './drag';
-import { Checkbox, ClipMark, HandBox, hasClip, NoteMark, TaskText } from './ink';
+import { Checkbox, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, TaskText } from './ink';
 import { ProjectIcon } from './ProjectIcon';
 import { StatusNote } from './StatusNote';
 import { ui, useNow, useStore, useToday, useUi } from './state';
@@ -158,6 +158,7 @@ function WeekHead(props: { monday: DayKey; today: DayKey; events: CalEvent[]; no
               >
                 <span class="wd">{shortWeekday(task.deadline!)}</span>
                 <span class="what">{task.text}</span>
+                {task.pending && mark !== 'done' && <Hourglass />}
               </li>
             ))}
             {!deadlines.length && <li class="none">keine</li>}
@@ -400,6 +401,7 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
         }}
       >
         <TaskText text={task.text} fresh={item.entry ? store.isFresh(item.entry.id) : false} />
+        {item.state === 'pending' && task.pending && <PendingWho who={task.pending.who} />}
         {task.note && <NoteMark />}
         {hasClip(task) && <ClipMark />}
       </span>

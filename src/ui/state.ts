@@ -21,7 +21,7 @@ export type PostItTarget =
   | { kind: 'area'; id: string; rect: DOMRect };
 
 export interface UiState {
-  view: { kind: 'week' } | { kind: 'category'; id: string } | { kind: 'project'; id: string } | { kind: 'archive' };
+  view: { kind: 'week' } | { kind: 'category'; id: string } | { kind: 'project'; id: string } | { kind: 'archive' } | { kind: 'waiting' };
   /** 0 = this week, -1 = last week … */
   weekOffset: number;
   postIt: PostItTarget | null;
@@ -30,6 +30,8 @@ export interface UiState {
   photo: { taskId: string; id: string } | null;
   /** The GiroCode of a task, to scan with the banking app. */
   qr: string | null;
+  /** A task to share (as a picture or a PDF), with its subtasks, notes and photos. */
+  share: string | null;
 }
 
 export function observable<T extends object>(initial: T) {
@@ -55,6 +57,7 @@ export const ui = observable<UiState>({
   settingsOpen: false,
   photo: null,
   qr: null,
+  share: null,
 });
 
 export const device = observable<DeviceState>(loadDevice());

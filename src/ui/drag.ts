@@ -14,12 +14,14 @@ export interface DragSource {
 }
 
 export interface DropTarget {
-  kind: 'day' | 'category' | 'project' | 'area';
+  kind: 'day' | 'category' | 'project' | 'area' | 'subtask';
   day?: DayKey;
   categoryId?: string;
   projectId?: string;
   /** an area of the project; none: above the boxes */
   areaId?: string | null;
+  /** the task it is dropped on, to become a part of it (on the project page) */
+  taskId?: string;
 }
 
 type Accept = (source: DragSource, target: DropTarget) => boolean;
@@ -128,6 +130,7 @@ function targetOf(el: HTMLElement): DropTarget | null {
   if (kind === 'category') return { kind, categoryId: el.dataset.cat };
   if (kind === 'project') return { kind, projectId: el.dataset.project };
   if (kind === 'area') return { kind, projectId: el.dataset.project, areaId: el.dataset.area || null };
+  if (kind === 'subtask') return { kind, taskId: el.dataset.task };
   return null;
 }
 

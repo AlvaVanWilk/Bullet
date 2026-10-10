@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaRows, projectAreas } from '../../src/lib/logic';
+import { areaRows, dayItems, openSubtasks, pendingGroups, pendingNames, projectAreas, subtaskRows } from '../../src/lib/logic';
 import { Store } from '../../src/store/store';
 
 function makeStore() {
@@ -295,5 +295,64 @@ describe('hiding appointments', () => {
     expect(names()).toEqual(['Abgleich', 'Doku']);
     expect(rows(null)).toEqual(['Knöpfe zeichnen']);
     expect(s.addArea(p.id, '  ')).toBeNull();
+  });
+
+  it('makes subtasks within a project, one level deep; they go along with their task', () => {
+    const s = makeStore();
+    const p = s.addProject('App')!;
+    const ui = s.addArea(p.id, 'Oberfläche')!;
+    const send = s.addTask('Aufgaben an Claude weitergeben', null, { projectId: p.id, areaId: ui.id })!;
+    const bug = s.addTask('Knopf springt', null, { projectId: p.id })!;
+    const idea = s.addTask('Dunkles Papier', null, { projectId: p.id })!;
+    const loose = s.addTask('Einkaufen')!;
+    expect(s.setParent(bug.id, send.id)).toBe(true);
+    expect(s.setParent(idea.id, send.id)).toBe(true);
+    expect(s.task(bug.id)).toMatchObject({ parentId: send.id, areaId: ui.id });
+    // one level: no subtask under a subtask, a task with subtasks stays on top; only within the project
+    expect(s.setParent(idea.id, bug.id)).toBe(false);
+    expect(s.setParent(send.id, bug.id)).toBe(false);
+    expect(s.setParent(loose.id, send.id)).toBe(false);
+    const snap = () => s.snapshot();
+    expect(areaRows(snap(), p.id, ui.id, Date.now()).map((r) => r.task.text)).toEqual(['Aufgaben an Claude weitergeben']);
+    expect(subtaskRows(snap(), send.id, Date.now()).map((r) => r.task.text)).toEqual(['Knopf springt', 'Dunkles Papier']);
+    // the task moves to another area: its subtasks go along
+    s.updateTask(send.id, { areaId: null });
+    expect(s.task(idea.id)!.areaId).toBeNull();
+    // taken out again
+    s.setParent(idea.id, null);
+    expect(subtaskRows(snap(), send.id, Date.now()).map((r) => r.task.text)).toEqual(['Knopf springt']);
+    expect(openSubtasks(snap(), send.id).map((t) => t.text)).toEqual(['Knopf springt']);
+  });
+
+  it('lets tasks wait on someone, grouped by whom; done, they wait no more', () => {
+    const s = makeStore();
+    const a = s.addTaskOn('Wunsch von Lena erfragen', '2026-10-09')!;
+    const b = s.addTask('Knopf springt')!;
+    const c = s.addTask('Regal aufbauen')!;
+    s.setPending([a.id], 'Lena');
+    s.setPending([b.id], 'Claude');
+    s.setPending([c.id], ' lena ');
+    expect(pendingGroups(s.snapshot()).map((g) => [g.who, g.tasks.map((t) => t.text)]))
+      .toEqual([['Lena', ['Wunsch von Lena erfragen', 'Regal aufbauen']], ['Claude', ['Knopf springt']]]);
+    expect(pendingNames(s.snapshot())).toEqual(['lena', 'Claude']);
+    // in its day an hourglass, also when the day is over
+    expect(dayItems(s.snapshot(), '2026-10-09', '2026-10-10')[0].state).toBe('pending');
+    s.toggleDone(a.id, '2026-10-10');
+    expect(s.task(a.id)!.pending).toBeNull();
+    s.setPending([b.id], null);
+    expect(pendingGroups(s.snapshot()).map((g) => g.who)).toEqual(['lena']);
+  });
+
+  it('finishes the open subtasks of a task together with it, without writing them into the day', () => {
+    const s = makeStore();
+    const p = s.addProject('App')!;
+    const send = s.addTaskOn('Aufgaben weitergeben', '2026-10-10')!;
+    s.updateTask(send.id, { projectId: p.id });
+    const bug = s.addTask('Knopf springt', null, { projectId: p.id })!;
+    s.setParent(bug.id, send.id);
+    s.toggleDone(send.id, '2026-10-10');
+    s.finishSubtasks(send.id, '2026-10-10');
+    expect(s.task(bug.id)).toMatchObject({ doneDay: '2026-10-10' });
+    expect(s.snapshot().entries.filter((e) => !e.deleted).map((e) => e.taskId)).toEqual([send.id]);
   });
 });

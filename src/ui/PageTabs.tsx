@@ -1,7 +1,7 @@
 // Tabs on the right edge of the page, like flags stuck into a notebook: the
-// planner (a checkbox) and the archive (a box). Room for more below.
+// planner (a checkbox), the archive (a box) and what waits (an hourglass).
 
-import { ArchiveIcon, BoxIcon } from './ink';
+import { ArchiveIcon, BoxIcon, HourglassIcon } from './ink';
 import { ui, useUi } from './state';
 
 export function PageTabs() {
@@ -29,6 +29,16 @@ export function PageTabs() {
         onClick={() => ui.set({ view: { kind: 'archive' } })}
       >
         <ArchiveIcon />
+      </button>
+      <button
+        type="button"
+        class={`page-tab tab-waiting ${view === 'waiting' ? 'on' : ''}`}
+        aria-current={view === 'waiting' ? 'page' : undefined}
+        aria-label="Wartet: was gerade bei anderen liegt"
+        title="Wartet"
+        onClick={() => ui.set({ view: { kind: 'waiting' } })}
+      >
+        <HourglassIcon />
       </button>
     </nav>
   );

@@ -25,8 +25,9 @@ const DAY_MS = 86400000;
  * doneBefore  the task was done on an earlier day
  * migrated    ">" in the box: the task went on to a later day
  * dropped     a line through the box: left undone, not carried on
+ * pending     an hourglass in the box: it lies with someone else for now
  */
-export type BoxState = 'open' | 'done' | 'doneBefore' | 'migrated' | 'dropped';
+export type BoxState = 'open' | 'done' | 'doneBefore' | 'migrated' | 'dropped' | 'pending';
 
 export interface DayItem {
   key: string;
@@ -96,7 +97,68 @@ export function projectAreas(s: Snapshot, projectId: string): Area[] {
 export function areaRows(s: Snapshot, projectId: string, areaId: string | null, now: number): ListRow[] {
   const areas = new Set(projectAreas(s, projectId).map((a) => a.id));
   const areaOf = (t: Task) => (t.areaId && areas.has(t.areaId) ? t.areaId : null);
-  return listRows(s, now, (t) => t.projectId === projectId && areaOf(t) === areaId);
+  const under = shownUnderParent(s, now);
+  return listRows(s, now, (t) => t.projectId === projectId && areaOf(t) === areaId && !under(t));
+}
+
+/** A subtask stands under its task while that is shown in the lists; after that on its own. */
+function shownUnderParent(s: Snapshot, now: number): (t: Task) => boolean {
+  const byId = new Map(s.tasks.filter((t) => !t.deleted).map((t) => [t.id, t]));
+  const sub = isSubtask(s);
+  return (t) => sub(t) && isVisibleInLists(byId.get(t.parentId!)!, s.settings, now);
+}
+
+// --- subtasks: parts of a task, within a project --------------------------------------
+
+/** Whether a task stands under another one (whose own line is still there, in the same project). */
+export function isSubtask(s: Snapshot): (t: Task) => boolean {
+  const byId = new Map(s.tasks.filter((t) => !t.deleted).map((t) => [t.id, t]));
+  return (t) => {
+    const parent = t.parentId ? byId.get(t.parentId) : undefined;
+    return !!parent && !!t.projectId && parent.projectId === t.projectId;
+  };
+}
+
+/** The subtasks of a task in the order of the lists. */
+export function subtaskRows(s: Snapshot, parentId: string, now: number): ListRow[] {
+  const sub = isSubtask(s);
+  return listRows(s, now, (t) => t.parentId === parentId && sub(t));
+}
+
+/** Its subtasks not done yet (waiting follow-ups too). */
+export function openSubtasks(s: Snapshot, parentId: string): Task[] {
+  const sub = isSubtask(s);
+  return s.tasks.filter((t) => !t.deleted && t.parentId === parentId && t.doneAt == null && sub(t)).sort(byCreated);
+}
+
+// --- lying with someone else ("wartet auf …") -------------------------------------------
+
+/** What waits, grouped by whom (the one waited on longest first), for the tab "Wartet". */
+export function pendingGroups(s: Snapshot): { who: string; tasks: Task[] }[] {
+  const groups = new Map<string, { who: string; tasks: Task[] }>();
+  for (const t of s.tasks) {
+    if (t.deleted || t.doneAt != null || !t.pending) continue;
+    const key = t.pending.who.trim().toLowerCase();
+    const g = groups.get(key) ?? { who: t.pending.who.trim(), tasks: [] };
+    g.tasks.push(t);
+    groups.set(key, g);
+  }
+  const since = (t: Task) => t.pending!.since;
+  return [...groups.values()]
+    .map((g) => ({ ...g, tasks: g.tasks.sort((a, b) => since(a) - since(b)) }))
+    .sort((a, b) => since(a.tasks[0]) - since(b.tasks[0]));
+}
+
+/** Whom things were given to before, the latest first (to pick again). */
+export function pendingNames(s: Snapshot): string[] {
+  const latest = new Map<string, { who: string; at: number }>();
+  for (const t of s.tasks) {
+    if (t.deleted || !t.pending?.who.trim()) continue;
+    const key = t.pending.who.trim().toLowerCase();
+    const at = t.pending.since;
+    if ((latest.get(key)?.at ?? -1) < at) latest.set(key, { who: t.pending.who.trim(), at });
+  }
+  return [...latest.values()].sort((a, b) => b.at - a.at).map((x) => x.who);
 }
 
 function listRows(s: Snapshot, now: number, include: (t: Task) => boolean): ListRow[] {
@@ -226,7 +288,7 @@ export function deadlineShowsOn(task: Task, day: DayKey, today: DayKey): boolean
 function deadlineState(task: Task, day: DayKey, today: DayKey): BoxState {
   if (task.doneDay === day) return 'done';
   if (compareDays(day, today) < 0 || task.deferredOn === day) return 'migrated';
-  return 'open';
+  return task.pending ? 'pending' : 'open';
 }
 
 function entryState(task: Task, entry: Entry, today: DayKey, laterEntryExists: boolean): BoxState {
@@ -235,8 +297,10 @@ function entryState(task: Task, entry: Entry, today: DayKey, laterEntryExists: b
     if (c === 0) return 'done';
     return c < 0 ? 'doneBefore' : 'migrated';
   }
-  if (compareDays(entry.day, today) >= 0) return 'open';
-  return laterEntryExists ? 'migrated' : 'dropped';
+  if (compareDays(entry.day, today) >= 0) return task.pending ? 'pending' : 'open';
+  if (laterEntryExists) return 'migrated';
+  // not left undone: it lies with someone else
+  return task.pending ? 'pending' : 'dropped';
 }
 
 export function entriesByTask(entries: Entry[]): Map<string, Entry[]> {

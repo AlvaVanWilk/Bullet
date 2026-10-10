@@ -50,6 +50,18 @@ export function seedDemo(today: DayKey) {
   store.addTask('Bretter am Dach prüfen', null, { projectId: garten.id, areaId: holz.id });
   store.addTask('Morsche Latte ersetzen', null, { projectId: garten.id, areaId: holz.id });
   store.addTask('Farbton aussuchen', null, { projectId: garten.id, areaId: farbeArea.id });
+  const app = store.addProject('Bullet')!;
+  store.updateProject(app.id, { icon: 'feder', color: '#3f6f8c' });
+  const ideen = store.addArea(app.id, 'Ideen und Bugs')!;
+  const send = store.addTask('Aufgaben an Claude weitergeben', null, { projectId: app.id, areaId: ideen.id })!;
+  const bug = store.addTask('Knopf springt beim Tippen', null, { projectId: app.id })!;
+  store.updateTask(bug.id, { note: 'Auf dem iPad hüpft der Knopf „speichern“ ein Stück nach oben, sobald die Tastatur aufgeht.' });
+  const idea = store.addTask('Dunkles Papier für abends', null, { projectId: app.id })!;
+  store.updateTask(idea.id, { note: 'Ein Papier in warmem Grau, das abends nicht so blendet.\nVielleicht automatisch ab 20 Uhr?' });
+  store.setParent(bug.id, send.id);
+  store.setParent(idea.id, send.id);
+  const wunsch = t('Wunschzettel von Lena erfragen', familie.id);
+  store.setPending([wunsch.id], 'Lena');
   const umzug = store.addProject('Keller ausmisten')!;
   store.updateProject(umzug.id, { icon: 'koffer', color: 'orange' });
   store.addTask('Sperrmüll anmelden', null, { projectId: umzug.id, deadline: today });

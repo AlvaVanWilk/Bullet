@@ -21,9 +21,12 @@ import { PhotoViewer } from './Photos';
 import { PostItLayer } from './PostIt';
 import { ProjectView } from './Projects';
 import { SettingsSheet } from './Settings';
+import { ShareSheet } from './Share';
 import { Sidebar } from './Sidebar';
+import { SubtaskQuestion } from './SubtaskQuestion';
 import { currentDay, useStore, useUi } from './state';
 import { useServerState } from './useEvents';
+import { WaitingView } from './Waiting';
 import { WeekView } from './WeekView';
 
 configureDrops(
@@ -37,14 +40,23 @@ configureDrops(
     }
     if (target.kind === 'project') return !!target.projectId && task.projectId !== target.projectId;
     if (target.kind === 'area') {
-      return !!target.projectId && (task.projectId !== target.projectId || (task.areaId ?? null) !== (target.areaId ?? null));
+      return !!target.projectId
+        && (task.projectId !== target.projectId || (task.areaId ?? null) !== (target.areaId ?? null) || !!task.parentId);
+    }
+    if (target.kind === 'subtask') {
+      // onto another task of the project: a part of it (one level only)
+      const parent = target.taskId ? store.task(target.taskId) : undefined;
+      const hasOwn = store.snapshot().tasks.some((t) => !t.deleted && t.parentId === task.id);
+      return !!parent && parent.id !== task.id && !parent.parentId && !hasOwn
+        && !!task.projectId && parent.projectId === task.projectId && task.parentId !== parent.id;
     }
     return source.from !== 'category' && task.categoryId !== target.categoryId;
   },
   (source, target) => {
     if (target.kind === 'day') store.addEntry(source.taskId, target.day!);
     else if (target.kind === 'project') store.updateTask(source.taskId, { projectId: target.projectId });
-    else if (target.kind === 'area') store.updateTask(source.taskId, { projectId: target.projectId, areaId: target.areaId ?? null });
+    else if (target.kind === 'area') store.updateTask(source.taskId, { projectId: target.projectId, areaId: target.areaId ?? null, parentId: null });
+    else if (target.kind === 'subtask') store.setParent(source.taskId, target.taskId!);
     else store.updateTask(source.taskId, { categoryId: target.categoryId ?? null });
   },
 );
@@ -81,6 +93,7 @@ export function App() {
         {state.view.kind === 'category' ? <CategoryView id={state.view.id} />
           : state.view.kind === 'project' ? <ProjectView id={state.view.id} />
           : state.view.kind === 'archive' ? <ArchiveView />
+          : state.view.kind === 'waiting' ? <WaitingView />
           : <WeekView />}
       </main>
       <PageTabs />
@@ -91,6 +104,8 @@ export function App() {
       <DecoDefs />
       <DecoFan />
       <AwardNote />
+      <SubtaskQuestion />
+      <ShareSheet />
       {STAGE === 'test' && <div class="test-badge" aria-hidden="true">Test</div>}
     </div>
   );

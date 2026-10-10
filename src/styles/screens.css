@@ -13,6 +13,7 @@
 
 /* phone upright (and narrow windows): the list lies over the page instead of beside it */
 @media (max-width: 760px) {
+  .waiting-groups { grid-template-columns: 1fr; }
   :root { --sidebar-w: min(272px, calc(100vw - 56px)); }
   .sidebar { position: absolute; top: 0; bottom: 0; left: 0; }
   .sidebar.closed { width: var(--spine-w); }

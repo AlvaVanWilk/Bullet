@@ -78,6 +78,7 @@ export function Checkbox(props: { state: BoxState; important: boolean; seed: str
   );
   const arrow = paths(`cba|${s}`, () => gen.linearPath([[7.5, 6.5], [14.5, 11], [7.5, 15.5]], { roughness: 0.6, strokeWidth: 1.6, seed: s }));
   const dash = paths(`cbd|${s}`, () => gen.line(0.5, 11.2, 21.5, 10.6, { roughness: 0.5, strokeWidth: 1.6, seed: s }));
+  const glass = paths(`cbh|${s}`, () => gen.path(HOURGLASS, { roughness: 0.45, strokeWidth: 1.4, seed: s }));
   const filled = props.state === 'done' || props.state === 'doneBefore';
   return (
     <button
@@ -95,9 +96,28 @@ export function Checkbox(props: { state: BoxState; important: boolean; seed: str
         </g>
         {props.state === 'migrated' && arrow.map((p, i) => <path key={`a${i}`} class="cb-mark" d={p.d} />)}
         {props.state === 'dropped' && dash.map((p, i) => <path key={`d${i}`} class="cb-mark" d={p.d} />)}
+        {props.state === 'pending' && glass.map((p, i) => <path key={`h${i}`} class="cb-mark" d={p.d} />)}
       </svg>
     </button>
   );
+}
+
+/** An hourglass: it lies with someone else for now (in the box, 22 × 22). */
+const HOURGLASS = 'M7.4 6.6 H14.6 M7.4 15.4 H14.6 M8 7 C8.4 9.6 10.2 10.4 11 11 C11.8 11.6 13.6 12.4 14 15 M14 7 C13.6 9.6 11.8 10.4 11 11 C10.2 11.6 8.4 12.4 8 15';
+
+/** The hourglass before a task in the lists (where the dot would be). */
+export function Hourglass() {
+  const glass = paths('hourglass', () => gen.path(HOURGLASS, { roughness: 0.4, strokeWidth: 1.3, seed: 11 }));
+  return (
+    <svg class="hourglass" width="16" height="16" viewBox="4 4 14 14" aria-label="wartet">
+      {glass.map((p, i) => <path key={i} d={p.d} />)}
+    </svg>
+  );
+}
+
+/** Whom a task waits on, small after it. */
+export function PendingWho(props: { who: string }) {
+  return <span class="pending-who">· {props.who}</span>;
 }
 
 /**
@@ -121,6 +141,17 @@ export function ArchiveIcon() {
       <path d="M3.4 6.2c5.6-.3 11.4-.3 17.3.1l-.2 3.6c-5.7.2-11.4.2-17-.1z" />
       <path d="M4.7 10.1c-.1 3.4 0 6.6.3 9.6 4.6.3 9.3.3 14 0 .3-3.1.3-6.3.2-9.6" />
       <path d="M9.6 13.3c1.6.2 3.3.2 4.9 0" />
+    </svg>
+  );
+}
+
+/** A hand-drawn hourglass (the tab of what waits). */
+export function HourglassIcon() {
+  return (
+    <svg class="icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6.2 3.8c3.9-.2 7.8-.2 11.7.1M6.1 20.3c3.9.2 7.9.2 11.8-.1" />
+      <path d="M7.2 4.1c.4 3.6 2.3 5.4 4.8 7.8 2.5-2.4 4.4-4.2 4.9-7.7M7.1 20c.5-3.5 2.4-5.6 4.9-8.1 2.5 2.4 4.4 4.6 4.8 8" />
+      <path d="M10 18.4c1.3-.6 2.7-.6 4 0" />
     </svg>
   );
 }

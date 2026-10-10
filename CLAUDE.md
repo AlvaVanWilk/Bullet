@@ -37,7 +37,7 @@ Bedienung und Einrichtung: `README.md`.
   Besen neben „Masterliste“ räumt Durchgestrichenes sofort weg (`settings.listClearedAt`).
 - Rechts an der Hauptseite stecken Laschen wie Klebe-Fähnchen, mit gezeichneten Symbolen
   statt Schrift: Kästchen = Planer (Woche; schon offen → aktuelle Woche), Kiste = Archiv
-  (eine eigene Seite). Die aktive liegt vorn auf dem Papier. Darunter ist Platz für mehr.
+  (eine eigene Seite), Sanduhr = Wartet. Die aktive liegt vorn auf dem Papier.
 - Folgeaufgaben (`task.after`): Eine Aufgabe, die noch auf offene „Mütter“ wartet, steht
   nicht in der Masterliste. Ein kleines, mit Fineliner gezeichnetes Dreieck neben der
   Mutter (zu: nach rechts, offen: nach unten) klappt nur die nächste Ebene eingerückt
@@ -71,6 +71,24 @@ Bedienung und Einrichtung: `README.md`.
   ‹ ›, umbenennen, löschen (Aufgaben bleiben, dann über den Boxen). Aufgaben zwischen
   Boxen ziehen oder im Post-it „Bereich“ wählen; Folgeaufgaben bleiben im Bereich der
   Mutter. Auf dem Projekt-Zettel: Bereiche als kleine Zwischenüberschriften.
+- Unteraufgaben (`task.parentId`, eine Ebene, nur innerhalb eines Projekts): auf der
+  Projektseite eine Aufgabe auf eine andere ziehen (nur dort, damit sich das Ziehen sonst
+  nicht verheddert); eingerückt darunter, auch auf dem Projekt-Zettel. In eine Box oder
+  über die Boxen gezogen bzw. „Teil von: … ×“ im Post-it → wieder eigenständig. Sie
+  gehören zum Bereich ihrer Aufgabe und wandern mit. Wird eine Aufgabe erledigt, unter
+  der noch etwas offen ist, fragt ein Zettel: „alle erledigt“ (ohne sie in den Tag zu
+  schreiben), „wartet auf …“ (Name aus dem Text vorgeschlagen, z. B. „an Claude“) oder
+  „offen lassen“. Wie das im Alltag passt, probiert die Nutzerin noch aus.
+- „Wartet auf …“ (`task.pending`: wer, seit wann): Eine Aufgabe liegt bei jemand anderem
+  (abgegeben, Antwort steht aus). Im Post-it setzen (Namen von früher als Chips) und mit
+  „×“ zurücknehmen. Sanduhr im Kästchen (auch an vergangenen Tagen statt des Strichs), in
+  den Listen blass mit Sanduhr statt Punkt und „· wer“ dahinter; Deadlines wandern weiter.
+  Seite „Wartet“ (Lasche mit Sanduhr): eine Fineliner-Box pro Person, „seit …“. Erledigt
+  → wartet nicht mehr.
+- Teilen (Post-it „↗ teilen“): Fensterchen mit Auswahl (nur diese Aufgabe / mit
+  Unteraufgaben, erledigte auch, Notizen, Bilder), Vorschau wie es aussieht, unten „als
+  Bild“ (PNG, sehr lang → mehrere) oder „als PDF“ (A4-Seiten als Bilder, `src/lib/pdf.ts`),
+  dann das Teilen-Menü des Geräts (Claude, Mail, Dateien, Drucken; ohne Menü: Download).
 - Nächster Schritt (`task.next`): höchstens einer offen pro Projekt (sonst plant man,
   statt zu handeln), gesetzt mit dem kleinen Pfeil vor einer Aufgabe auf Zettel oder
   Projektseite. Dann steht in der Masterliste statt der Projektzeile dieser Schritt mit

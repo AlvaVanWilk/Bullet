@@ -11,7 +11,7 @@ import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
 import { FollowRows, FollowToggle, useFolds } from './Follow';
 import { useGridRows } from './gridRows';
-import { ClipMark, hasClip, NoteMark, TaskText } from './ink';
+import { ClipMark, hasClip, NoteMark, PendingWho, TaskText } from './ink';
 import { NewLine } from './NewLine';
 import { Lead, ProjectLine, ProjectList } from './Projects';
 import { playPaperSlide, playStrike } from './sound';
@@ -273,7 +273,7 @@ function MasterList(props: { active: boolean }) {
     return (
       <Fragment key={t.id}>
         <li
-          class={`row ${editing ? 'editing' : ''} ${sweeping && isStruck ? 'swept' : ''}`}
+          class={`row ${editing ? 'editing' : ''} ${sweeping && isStruck ? 'swept' : ''} ${t.pending && t.doneAt == null ? 'pending' : ''}`}
           // a task dragged onto a next step goes into its project
           data-drop={project ? 'project' : undefined}
           data-project={project?.id}
@@ -287,6 +287,7 @@ function MasterList(props: { active: boolean }) {
             bang={t.important}
             project={project}
             onIcon={project ? (el) => openSlip(project, el) : undefined}
+            pending={!!t.pending && t.doneAt == null}
           />
           <TaskText
             text={t.text}
@@ -296,6 +297,7 @@ function MasterList(props: { active: boolean }) {
             animate={striking.has(t.id)}
             fresh={store.isFresh(t.id) || (!!anchor && striking.has(anchor))}
           />
+          {t.pending && t.doneAt == null && <PendingWho who={t.pending.who} />}
           {t.note && <NoteMark />}
           {hasClip(t) && <ClipMark />}
           {waiting.length > 0 && <FollowToggle count={waiting.length} open={!folded} seed={t.id} onToggle={() => folds.toggle(t.id)} />}

@@ -270,6 +270,52 @@ async function device(browser, name) {
       boxes.join() === 'Farbe,Holz' && inHolz.join() === 'Bretter prüfen' && slipAreas.join() === 'Holz' && slipTasks.includes('Bretter prüfen'),
       { boxes, inHolz, slipAreas, slipTasks });
 
+    // a subtask: on the project page a task dropped on another becomes part of it; then it waits on someone; then shared as PDF and picture
+    await ipad.locator('.tab-projects').click();
+    await ipad.waitForTimeout(800);
+    await ipad.locator('.proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
+    await ipad.locator('.proj-loose input').first().fill('Leiter leihen');
+    await ipad.locator('.proj-loose input').first().press('Enter');
+    await ipad.waitForTimeout(400);
+    const from = await ipad.locator('.proj-tasks .row', { hasText: 'Leiter leihen' }).boundingBox();
+    const onto = await ipad.locator('.proj-tasks .row', { hasText: 'Holz bestellen' }).boundingBox();
+    await ipad.mouse.move(from.x + 90, from.y + 12);
+    await ipad.mouse.down();
+    await ipad.waitForTimeout(450);
+    await ipad.mouse.move(from.x + 110, from.y + 30, { steps: 4 });
+    await ipad.mouse.move(onto.x + 130, onto.y + 14, { steps: 10 });
+    await ipad.mouse.up();
+    await ipad.waitForTimeout(500);
+    const subs = await ipad.$$eval('.proj-tasks .row.sub .tt-text', (els) => els.map((e) => e.textContent));
+    await ipad.locator('.proj-tasks .row.sub', { hasText: 'Leiter leihen' }).click();
+    await ipad.locator('.note-pending .note-bang').click();
+    await ipad.locator('.who-input').fill('Thomas');
+    await ipad.locator('.who-input').press('Enter');
+    await ipad.locator('.postit .note-btn.save').click();
+    await ipad.locator('.page-tab.tab-waiting').click();
+    await ipad.waitForTimeout(400);
+    const waits = await ipad.$$eval('.waiting-box', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').trim()));
+    await ipad.locator('.page-tab.tab-planner').click();
+    await ipad.waitForTimeout(300);
+    await ipad.locator('.proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
+    await ipad.locator('.proj-tasks .row', { hasText: 'Holz bestellen' }).first().click();
+    await ipad.locator('.share-open').click();
+    await ipad.waitForSelector('.share-preview img');
+    await ipad.waitForFunction(() => !document.querySelector('.share-preview.busy'));
+    const pdfDl = ipad.waitForEvent('download');
+    await ipad.locator('.share-foot .note-btn', { hasText: 'als PDF' }).click();
+    const pdfPath = await (await pdfDl).path();
+    const pngDl = ipad.waitForEvent('download');
+    await ipad.locator('.share-foot .note-btn', { hasText: 'als Bild' }).click();
+    const pngPath = await (await pngDl).path();
+    await ipad.locator('.share-head .close-x').click();
+    await ipad.locator('.projview .close-x').click();
+    const pdfHead = fs.readFileSync(pdfPath).subarray(0, 5).toString();
+    const pngHead = fs.readFileSync(pngPath).subarray(1, 4).toString();
+    check('a task dropped on another becomes its subtask; waiting on someone it stands under that name; shared as PDF and picture',
+      subs.includes('Leiter leihen') && waits.some((w) => w.includes('Thomas') && w.includes('Leiter leihen')) && pdfHead === '%PDF-' && pngHead === 'PNG',
+      { subs, waits, pdfHead, pngHead });
+
     // a milestone: a finished project gives a doodle (announced once); held on free paper in today, it sticks there, on both devices
     await ipad.locator('.tab-projects').click();
     await ipad.waitForTimeout(800);
