@@ -255,6 +255,10 @@ test('the letterbox takes tasks with the right key only (Siri shortcut)', async 
   const two = await post({ schluessel: key, text: 'Brot\n\n Käse  ' }, true);
   assert.equal(two.text, '2 Aufgaben stehen jetzt in Bullet.');
   assert.equal((await post({ schluessel: key, text: '  ' })).status, 400);
+  // the fields named as people type them in the Shortcuts app
+  const typed = await post({ 'Schlüssel': key, Text: 'Milch' });
+  assert.equal(typed.text, 'Steht in Bullet: Milch');
+  assert.equal((await post({ 'Schlu\u0308ssel ': key, TEXT: 'Eier' })).status, 200);
   assert.equal((await fetch(base + 'briefkasten.php')).status, 405);
 
   const all = (await ipad.call({ action: 'sync', since: 0, changes: [] })).body.changes;

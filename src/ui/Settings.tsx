@@ -498,7 +498,11 @@ function SiriSection() {
               <li>In dieser Aktion auf den kleinen Pfeil tippen: „Methode“ auf „POST“, „Anfragetext“ auf „JSON“.</li>
               <li>„Neues Feld hinzufügen“, „Text“: als Schlüssel <code>schluessel</code> eintragen, als Text den Schlüssel von oben einfügen.</li>
               <li>Noch ein Feld, wieder „Text“: Schlüssel <code>text</code>, und als Text über der Tastatur das Ergebnis von „Nach Eingabe fragen“ wählen (die blaue Variable).</li>
-              <li>Wer eine Antwort hören möchte: zum Schluss die Aktion „Text sprechen“ hinzufügen. Dann sagt Siri „Steht in Bullet: …“.</li>
+              <li>
+                Damit du hörst, ob es geklappt hat: zum Schluss die Aktion „Text sprechen“ hinzufügen und als Text die blaue
+                Variable „Inhalte der URL“ wählen (nicht die Eingabe). Dann sagt Siri, was Bullet geantwortet hat: „Steht in
+                Bullet: …“, oder was nicht gepasst hat.
+              </li>
               <li>Fertig. Ausprobieren mit „Hey Siri, Bullet“.</li>
             </ol>
           </details>

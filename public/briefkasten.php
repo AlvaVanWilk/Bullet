@@ -6,7 +6,8 @@
 //
 // Each line becomes a task at the end of that person's master list; "wichtig"
 // or "!" in front marks it important. The answer is a short sentence, so Siri
-// can say what happened. The key comes from Einstellungen → Konto.
+// can say what happened. The key comes from Einstellungen → Konto. The names
+// of the fields may be written as people do ("Schlüssel", "Text").
 
 declare(strict_types=1);
 
@@ -15,6 +16,29 @@ require __DIR__ . '/lib/bullet.php';
 header('Content-Type: text/plain; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
+
+/**
+ * The fields of the request by plain names, however they were typed in the
+ * Shortcuts app: "Schlüssel", "schluessel" and "SCHLUESSEL" are all "schluessel".
+ *
+ * @return array<string, string>
+ */
+function inboxFields(array $data): array
+{
+    $plain = [
+        'ü' => 'ue', 'Ü' => 'ue', "u\u{308}" => 'ue', "U\u{308}" => 'ue',
+        'ä' => 'ae', 'Ä' => 'ae', "a\u{308}" => 'ae', "A\u{308}" => 'ae',
+        'ö' => 'oe', 'Ö' => 'oe', "o\u{308}" => 'oe', "O\u{308}" => 'oe',
+        'ß' => 'ss',
+    ];
+    $fields = [];
+    foreach ($data as $name => $value) {
+        if (is_string($value) || is_int($value) || is_float($value)) {
+            $fields[strtolower(trim(strtr((string) $name, $plain)))] = (string) $value;
+        }
+    }
+    return $fields;
+}
 
 function answer(int $status, string $text): void
 {
@@ -35,11 +59,12 @@ try {
     if (!is_array($data)) {
         $data = $_POST;
     }
-    $uid = inboxOwner(trim((string) ($data['schluessel'] ?? '')));
+    $fields = inboxFields($data);
+    $uid = inboxOwner(trim($fields['schluessel'] ?? $fields['key'] ?? ''));
     if ($uid === null) {
         answer(403, 'Der Schlüssel passt nicht. Den richtigen findest du in Bullet unter Einstellungen, Konto.');
     }
-    $tasks = inboxTasks((string) ($data['text'] ?? ''), nowMs());
+    $tasks = inboxTasks($fields['text'] ?? $fields['aufgabe'] ?? '', nowMs());
     if (!$tasks) {
         answer(400, 'Da kam kein Text an.');
     }
