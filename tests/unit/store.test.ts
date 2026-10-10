@@ -343,16 +343,37 @@ describe('hiding appointments', () => {
     expect(pendingGroups(s.snapshot()).map((g) => g.who)).toEqual(['lena']);
   });
 
-  it('finishes the open subtasks of a task together with it, without writing them into the day', () => {
+  it('settles each open subtask of a task done (done, waiting, open) and takes it back when the task opens again', () => {
     const s = makeStore();
     const p = s.addProject('App')!;
     const send = s.addTaskOn('Aufgaben weitergeben', '2026-10-10')!;
     s.updateTask(send.id, { projectId: p.id });
-    const bug = s.addTask('Knopf springt', null, { projectId: p.id })!;
-    s.setParent(bug.id, send.id);
+    const [bug, idea, rest] = ['Knopf springt', 'Dunkles Papier', 'Liste scrollt'].map((x) => s.addTask(x, null, { projectId: p.id })!);
+    [bug, idea, rest].forEach((t) => s.setParent(t.id, send.id));
     s.toggleDone(send.id, '2026-10-10');
-    s.finishSubtasks(send.id, '2026-10-10');
+    s.settleSubtasks(send.id, [{ id: bug.id, choice: 'done' }, { id: idea.id, choice: 'pending' }, { id: rest.id, choice: 'open' }], 'Claude');
     expect(s.task(bug.id)).toMatchObject({ doneDay: '2026-10-10' });
+    expect(s.task(idea.id)!.pending?.who).toBe('Claude');
+    expect(s.task(rest.id)).toMatchObject({ doneAt: null });
+    // not written into the day
     expect(s.snapshot().entries.filter((e) => !e.deleted).map((e) => e.taskId)).toEqual([send.id]);
+    // the task open again: so are they
+    s.toggleDone(send.id, '2026-10-10');
+    expect(s.task(bug.id)).toMatchObject({ doneAt: null, doneDay: null });
+    expect(s.task(idea.id)!.pending).toBeNull();
+  });
+
+  it('keeps what was changed by hand afterwards when the task opens again', () => {
+    const s = makeStore();
+    const p = s.addProject('App')!;
+    const send = s.addTask('Aufgaben weitergeben', null, { projectId: p.id })!;
+    const idea = s.addTask('Dunkles Papier', null, { projectId: p.id })!;
+    s.setParent(idea.id, send.id);
+    s.setDone(send.id, true, '2026-10-10');
+    s.settleSubtasks(send.id, [{ id: idea.id, choice: 'pending' }], 'Claude');
+    // Claude has done it: ticked by hand
+    s.setDone(idea.id, true, '2026-10-11');
+    s.setDone(send.id, false);
+    expect(s.task(idea.id)).toMatchObject({ doneDay: '2026-10-11' });
   });
 });

@@ -805,3 +805,49 @@
 .share-foot { display: flex; align-items: center; gap: 8px; padding: 10px 16px 14px 20px; }
 .share-count { margin-right: auto; font-family: var(--clean); font-size: 13px; color: var(--ink-soft); }
 .share-foot .note-btn:disabled { opacity: 0.45; }
+
+/* category, project and area of a task: a menu each */
+.note-selects { display: flex; flex-direction: column; gap: 2px; }
+.note-select { display: flex; align-items: center; gap: 8px; min-height: 34px; }
+.note-select .note-label { width: 74px; flex: none; }
+.select-mark { flex: none; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
+.select-mark.cat-mark { width: 16px; height: 16px; border-radius: 50%; background: var(--dot); }
+.note-select select {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 19px;
+  color: var(--ink);
+  padding: 2px 26px 2px 4px;
+  border: 0;
+  border-bottom: 1.5px dashed rgba(43, 43, 48, 0.3);
+  border-radius: 0;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1.5 1.8 6 6.2l4.5-4.4' fill='none' stroke='%2355555d' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 6px center;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+.note-select select:focus { border-bottom-color: var(--ink); }
+
+/* sharing: only the sign, right of "löschen" */
+.note-btn.icon-btn { display: inline-flex; align-items: center; justify-content: center; padding: 3px 8px; margin-left: auto; }
+.note-btn.icon-btn svg { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* the question about open subtasks: a choice for each */
+.sq-list { list-style: none; padding: 0; }
+.sq-list li { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+.sq-list .sq-text { flex: 1; min-width: 0; }
+.sq-list .sq-all { margin-top: 4px; padding-top: 6px; border-top: 1px dashed rgba(43, 43, 48, 0.25); color: var(--ink-soft); }
+.sq-choice { flex: none; display: inline-flex; border-radius: 10px; box-shadow: inset 0 0 0 1.2px rgba(43, 43, 48, 0.35); overflow: hidden; }
+.sq-choice button { min-width: 34px; height: 30px; padding: 0 8px; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; }
+.sq-choice button + button { box-shadow: inset 1.2px 0 0 rgba(43, 43, 48, 0.25); }
+.sq-choice button.on { background: rgba(43, 43, 48, 0.82); color: #fff; }
+.sq-choice button.on .hourglass path { stroke: #fff; }
+.sq-choice .sq-open { font-size: 15px; }
+.sq-who { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.sq-actions .note-btn:disabled { opacity: 0.45; }
+.share-size { display: inline-flex; gap: 4px; margin-left: 2px; }
+/* the row at the foot of a task's note: the sign for sharing still fits beside "löschen" */
+.note > .note-actions { flex-wrap: nowrap; gap: 6px; }
+.note > .note-actions .note-btn { padding: 3px 9px 1px; font-size: 17px; white-space: nowrap; }
+.note > .note-actions .note-btn.icon-btn { padding: 3px 6px; flex: none; }

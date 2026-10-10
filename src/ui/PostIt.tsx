@@ -21,7 +21,7 @@ import { Hourglass } from './ink';
 import { FollowSection } from './Follow';
 import { PaySection } from './Pay';
 import { PhotoStrip } from './Photos';
-import { AreaChips, AreaNote, ProjectCard, ProjectChips, ProjectEditNote } from './Projects';
+import { AreaNote, AreaSelect, ProjectCard, ProjectEditNote, ProjectSelect } from './Projects';
 import { movePick, SuggestList } from './Suggest';
 
 const WIDTH = 312;
@@ -109,6 +109,7 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
   useEffect(() => () => saveTask(props.target.id, latest.current.text, latest.current.note), []);
   if (!task) return null;
   const cats = liveCategories(snap);
+  const cat = cats.find((c) => c.id === task.categoryId);
   // a deadline open in today's page can be pushed on to tomorrow
   const deferrable = task.doneAt == null && deadlineShowsOn(task, today, today)
     && !isWaiting(task, new Map(snap.tasks.map((t) => [t.id, t])));
@@ -156,6 +157,13 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         rows={Math.min(6, Math.max(2, note.split('\n').length + 1))}
         placeholder="Notiz …"
         onInput={(e) => setNote((e.target as HTMLTextAreaElement).value)}
+        // Enter ends the note, Shift+Enter starts a new line
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            (e.target as HTMLTextAreaElement).blur();
+          }
+        }}
         aria-label="Notiz"
       />
 
@@ -199,34 +207,25 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         )}
       </label>
 
-      <div class="note-cats">
-        <button
-          type="button"
-          class={`chip ${task.categoryId == null ? 'on' : ''}`}
-          onClick={() => store.updateTask(task.id, { categoryId: null })}
-        >ohne</button>
-        {cats.map((c) => {
-          const color = categoryColor(c.color);
-          return (
-            <button
-              key={c.id}
-              type="button"
-              class={`chip ${task.categoryId === c.id ? 'on' : ''}`}
-              style={{ '--chip': color.marker, color: color.ink }}
-              onClick={() => store.updateTask(task.id, { categoryId: task.categoryId === c.id ? null : c.id })}
-            >{c.name}</button>
-          );
-        })}
+      {/* category, project and area: each a menu of those there are */}
+      <div class="note-selects">
+        <label class="note-select">
+          <span class="note-label">Kategorie</span>
+          <span class="select-mark cat-mark" style={{ '--dot': cat ? categoryColor(cat.color).marker : 'transparent' }} aria-hidden="true" />
+          <select
+            value={cat?.id ?? ''}
+            style={{ color: cat ? categoryColor(cat.color).ink : undefined }}
+            onChange={(e) => store.updateTask(task.id, { categoryId: (e.target as HTMLSelectElement).value || null })}
+          >
+            <option value="">ohne</option>
+            {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+        <ProjectSelect task={task} />
+        <AreaSelect task={task} />
       </div>
-      <ProjectChips task={task} />
-      <AreaChips task={task} />
 
       <div class="note-extras">
-        <button
-          type="button"
-          class="photo-add share-open"
-          onClick={() => { props.close(); ui.set({ share: task.id }); }}
-        >↗ teilen</button>
         <PhotoStrip task={task} />
         <PaySection task={task} />
         <FollowSection task={task} />
@@ -243,6 +242,10 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
             aria-expanded={openToday ? undefined : askDay}
             onClick={() => (openToday ? finish(today) : setAskDay(!askDay))}
           >erledigt</button>
+        )}
+        {task.doneAt != null && !props.target.day && (
+          // (in a day, its box does this)
+          <button type="button" class="note-btn" onClick={() => store.setDone(task.id, false)}>wieder offen</button>
         )}
         {props.target.entryId && props.target.day === today && task.doneAt == null && (
           <button
@@ -261,8 +264,27 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
             props.close();
           }}
         >{confirmDelete ? 'wirklich löschen?' : 'löschen'}</button>
+        <button
+          type="button"
+          class="note-btn icon-btn share-open"
+          aria-label="teilen"
+          title="teilen"
+          onClick={() => { props.close(); ui.set({ share: task.id }); }}
+        >
+          <ShareIcon />
+        </button>
       </div>
     </div>
+  );
+}
+
+/** The usual sign for sharing, drawn by hand: a box with an arrow going up out of it. */
+function ShareIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8.2 9.6H6.4c-.9 0-1.4.5-1.4 1.4v8.1c0 .9.5 1.4 1.4 1.4h11.2c.9 0 1.4-.5 1.4-1.4V11c0-.9-.5-1.4-1.4-1.4h-1.8" />
+      <path d="M12 3.4v11.3M8.6 6.6 12 3.3l3.4 3.3" />
+    </svg>
   );
 }
 
@@ -304,7 +326,9 @@ function PendingRow(props: { task: Task; today: DayKey }) {
 }
 
 /** Whom (or what) a task waits for: one given something before, or a new name. */
-export function WhoPicker(props: { names: string[]; who: string; setWho: (v: string) => void; onPick: (name: string) => void; first?: string }) {
+export function WhoPicker(props: {
+  names: string[]; who: string; setWho: (v: string) => void; onPick: (name: string) => void; first?: string; selected?: string;
+}) {
   const names = props.first && !props.names.some((n) => n.toLowerCase() === props.first!.toLowerCase())
     ? [props.first, ...props.names]
     : props.names;
@@ -312,7 +336,14 @@ export function WhoPicker(props: { names: string[]; who: string; setWho: (v: str
     <div class="who-picker">
       {names.length > 0 && (
         <div class="who-names">
-          {names.slice(0, 6).map((n) => <button key={n} type="button" class="chip" onClick={() => props.onPick(n)}>{n}</button>)}
+          {names.slice(0, 6).map((n) => (
+            <button
+              key={n}
+              type="button"
+              class={`chip ${props.selected?.trim().toLowerCase() === n.toLowerCase() ? 'on' : ''}`}
+              onClick={() => props.onPick(n)}
+            >{n}</button>
+          ))}
         </div>
       )}
       <input

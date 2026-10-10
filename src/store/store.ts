@@ -208,16 +208,36 @@ export class Store {
     for (const id of ids) {
       const t = this.task(id);
       if (!t || t.doneAt != null) continue;
-      this.put({ ...t, pending: clean ? { who: clean, since: t.pending?.who === clean ? t.pending.since : this.now() } : null });
+      this.put({
+        ...t,
+        pending: clean ? { who: clean, since: t.pending?.who === clean ? t.pending.since : this.now() } : null,
+        byParent: null,
+      });
     }
     this.changed(true);
   }
 
-  /** The open subtasks of a task done, too (on the same day, without writing them into it). */
-  finishSubtasks(parentId: string, day: DayKey) {
-    for (const t of [...this.records.values()]) {
-      if (t.type === 'task' && !t.deleted && t.parentId === parentId && t.doneAt == null) this.toggleDone(t.id, day);
+  /**
+   * A task was done while some of its subtasks were open: each is done too
+   * (on the same day, without writing it into the day), waits on someone, or
+   * stays open. Opened again, the task takes back what happened here.
+   */
+  settleSubtasks(parentId: string, choices: { id: string; choice: 'done' | 'pending' | 'open' }[], who: string) {
+    const parent = this.task(parentId);
+    if (!parent?.doneAt) return;
+    const at = parent.doneAt;
+    for (const { id, choice } of choices) {
+      if (choice === 'done') {
+        this.toggleDone(id, parent.doneDay ?? this.today());
+        const t = this.task(id);
+        if (t) this.put({ ...t, byParent: { at, was: 'done' } });
+      } else if (choice === 'pending' && who.trim()) {
+        this.setPending([id], who);
+        const t = this.task(id);
+        if (t) this.put({ ...t, byParent: { at, was: 'pending' } });
+      }
     }
+    this.changed(true);
   }
 
   /** The next step of its project (the one open before loses the mark), or not any more. */
@@ -340,7 +360,7 @@ export class Store {
     }
     const wasDone = task.doneAt != null;
     // done: it lies with nobody any more
-    const done = { ...task, doneDay: day, doneAt: wasDone ? task.doneAt : this.now(), pending: null };
+    const done = { ...task, doneDay: day, doneAt: wasDone ? task.doneAt : this.now(), pending: null, byParent: null };
     this.put(done);
     if (!wasDone) {
       this.passOnStep(done);
@@ -359,6 +379,15 @@ export class Store {
 
   /** Open again; a next step open again is the next step again. */
   private reopen(task: Task) {
+    // what was done or given away together with it is taken back
+    if (task.doneAt != null) {
+      for (const r of [...this.records.values()]) {
+        if (r.type !== 'task' || r.deleted || r.parentId !== task.id || r.byParent?.at !== task.doneAt) continue;
+        this.put(r.byParent.was === 'done'
+          ? { ...r, doneAt: null, doneDay: null, byParent: null }
+          : { ...r, pending: null, byParent: null });
+      }
+    }
     // written in afterwards only as done: it leaves that day again
     for (const r of this.records.values()) {
       if (r.type === 'entry' && !r.deleted && r.retro && r.taskId === task.id && r.day === task.doneDay) this.put({ ...r, deleted: true });

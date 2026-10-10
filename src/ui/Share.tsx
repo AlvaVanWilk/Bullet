@@ -25,14 +25,14 @@ const INK = '#2b2b30';
 const SOFT = '#5d5d66';
 const PAPER = '#fbf8f1';
 
-interface Options { subtasks: boolean; done: boolean; notes: boolean; photos: boolean }
+interface Options { subtasks: boolean; done: boolean; notes: boolean; photos: boolean; small: boolean }
 
 type Block =
   | { kind: 'title'; lines: string[]; h: number }
   | { kind: 'meta'; text: string; h: number }
   | { kind: 'task'; task: Task; lines: string[]; indent: number; h: number }
   | { kind: 'note'; lines: string[]; indent: number; h: number }
-  | { kind: 'photo'; img: ImageBitmap; w: number; h: number; indent: number }
+  | { kind: 'photo'; imgs: { img: ImageBitmap; w: number; h: number }[]; h: number; indent: number }
   | { kind: 'gap'; h: number };
 
 const TITLE = 54;
@@ -127,16 +127,27 @@ async function layout(task: Task, opts: Options, photos: Map<string, ImageBitmap
       blocks.push({ kind: 'note', lines, indent: indent + BOX, h: lines.length * NOTE_LINE + 8 });
     }
     if (opts.photos) {
+      const imgs: ImageBitmap[] = [];
       for (const id of t.photos ?? []) {
         if (!photos.has(id)) {
           const blob = await photoBlob(id).catch(() => null);
           photos.set(id, blob ? await createImageBitmap(blob).catch(() => null) : null);
         }
         const img = photos.get(id);
-        if (!img) continue;
-        const scale = Math.min(1, (CONTENT - indent - BOX) / img.width, maxPhoto / img.height);
+        if (img) imgs.push(img);
+      }
+      // large: one under the other, as wide as the page; small: three side by side
+      const width = CONTENT - indent - BOX;
+      const perRow = opts.small ? 3 : 1;
+      const cell = (width - (perRow - 1) * 16) / perRow;
+      const tall = opts.small ? 300 : maxPhoto;
+      for (let i = 0; i < imgs.length; i += perRow) {
+        const row = imgs.slice(i, i + perRow).map((img) => {
+          const scale = Math.min(1, cell / img.width, tall / img.height);
+          return { img, w: Math.round(img.width * scale), h: Math.round(img.height * scale) };
+        });
         blocks.push({ kind: 'gap', h: 10 });
-        blocks.push({ kind: 'photo', img, w: Math.round(img.width * scale), h: Math.round(img.height * scale), indent: indent + BOX });
+        blocks.push({ kind: 'photo', imgs: row, h: Math.max(...row.map((r) => r.h)), indent: indent + BOX });
       }
     }
     if (!sub && tasksOf(task, opts).length > 1) blocks.push({ kind: 'gap', h: 22 });
@@ -229,7 +240,11 @@ function draw(page: Block[], height: number, foot: string): HTMLCanvasElement {
       c.shadowColor = 'rgba(40, 30, 15, 0.22)';
       c.shadowBlur = 10;
       c.shadowOffsetY = 3;
-      c.drawImage(b.img, M + b.indent, y, b.w, b.h);
+      let x = M + b.indent;
+      for (const p of b.imgs) {
+        c.drawImage(p.img, x, y, p.w, p.h);
+        x += p.w + 16;
+      }
       c.restore();
     }
     y += b.h;
@@ -332,7 +347,7 @@ function ShareWindow(props: { taskId: string }) {
   const task = store.task(props.taskId);
   const subs = task ? subtaskRows(snap, task.id, Date.now()).map((r) => r.task) : [];
   const openSubs = subs.filter((t) => t.doneAt == null);
-  const [opts, setOpts] = useState<Options>({ subtasks: subs.length > 0, done: false, notes: true, photos: true });
+  const [opts, setOpts] = useState<Options>({ subtasks: subs.length > 0, done: false, notes: true, photos: true, small: false });
   const [made, setMade] = useState<Made | null>(null);
   const [busy, setBusy] = useState(true);
   const photos = useRef(new Map<string, ImageBitmap | null>());
@@ -352,7 +367,7 @@ function ShareWindow(props: { taskId: string }) {
         .catch(() => { if (!stale) setBusy(false); });
     }, 120);
     return () => { stale = true; clearTimeout(timer); };
-  }, [opts.subtasks, opts.done, opts.notes, opts.photos, task?.updatedAt]);
+  }, [opts.subtasks, opts.done, opts.notes, opts.photos, opts.small, task?.updatedAt]);
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
@@ -376,8 +391,7 @@ function ShareWindow(props: { taskId: string }) {
         <div class="share-options">
           {subs.length > 0 && (
             <>
-              <button type="button" class={`chip ${!opts.subtasks ? 'on' : ''}`} aria-pressed={!opts.subtasks} onClick={() => setOpts({ ...opts, subtasks: false })}>nur diese Aufgabe</button>
-              <button type="button" class={`chip ${opts.subtasks ? 'on' : ''}`} aria-pressed={opts.subtasks} onClick={() => setOpts({ ...opts, subtasks: true })}>
+              <button type="button" class={`chip ${opts.subtasks ? 'on' : ''}`} aria-pressed={opts.subtasks} onClick={() => toggle('subtasks')}>
                 mit Unteraufgaben ({opts.done ? subs.length : openSubs.length})
               </button>
               {opts.subtasks && subs.length > openSubs.length && (
@@ -388,6 +402,12 @@ function ShareWindow(props: { taskId: string }) {
           )}
           {hasNotes && <button type="button" class={`chip ${opts.notes ? 'on' : ''}`} aria-pressed={opts.notes} onClick={() => toggle('notes')}>mit Notizen</button>}
           {hasPhotos && <button type="button" class={`chip ${opts.photos ? 'on' : ''}`} aria-pressed={opts.photos} onClick={() => toggle('photos')}>mit Bildern</button>}
+          {hasPhotos && opts.photos && (
+            <span class="share-size" role="group" aria-label="Größe der Bilder">
+              <button type="button" class={`chip ${opts.small ? 'on' : ''}`} aria-pressed={opts.small} onClick={() => setOpts({ ...opts, small: true })}>klein</button>
+              <button type="button" class={`chip ${!opts.small ? 'on' : ''}`} aria-pressed={!opts.small} onClick={() => setOpts({ ...opts, small: false })}>groß</button>
+            </span>
+          )}
         </div>
         <div class={`share-preview ${busy ? 'busy' : ''}`} data-scroll>
           {made?.previews.map((url, i) => <img key={url} src={url} alt={`Vorschau${made.previews.length > 1 ? ` ${i + 1}` : ''}`} />)}

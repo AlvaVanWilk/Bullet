@@ -570,24 +570,22 @@ export function AreaNote(props: { id: string; close: () => void }) {
 }
 
 /** In the post-it of a task of a project with areas: which one it belongs to. */
-export function AreaChips(props: { task: Task }) {
+export function AreaSelect(props: { task: Task }) {
   const snap = useStore();
   const t = props.task;
   if (!t.projectId) return null;
   const areas = projectAreas(snap, t.projectId);
   if (!areas.length) return null;
-  const current = t.areaId && areas.some((a) => a.id === t.areaId) ? t.areaId : null;
-  const project = store.project(t.projectId);
+  const current = t.areaId && areas.some((a) => a.id === t.areaId) ? t.areaId : '';
   return (
-    <div class="note-cats note-areas" style={{ '--proj-ink': project ? projectInk(project.color) : undefined }}>
+    <label class="note-select">
       <span class="note-label">Bereich</span>
-      <button type="button" class={`chip ${!current ? 'on' : ''}`} onClick={() => store.updateTask(t.id, { areaId: null })}>ohne</button>
-      {areas.map((a) => (
-        <button key={a.id} type="button" class={`chip area-chip ${current === a.id ? 'on' : ''}`} onClick={() => store.updateTask(t.id, { areaId: a.id })}>
-          {a.name}
-        </button>
-      ))}
-    </div>
+      <span class="select-mark" aria-hidden="true" />
+      <select value={current} onChange={(e) => store.updateTask(t.id, { areaId: (e.target as HTMLSelectElement).value || null })}>
+        <option value="">ohne</option>
+        {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+      </select>
+    </label>
   );
 }
 
@@ -743,26 +741,20 @@ export function ProjectEditNote(props: { id: string; close: () => void }) {
 }
 
 /** In the note of a task: which project it belongs to. */
-export function ProjectChips(props: { task: Task }) {
+export function ProjectSelect(props: { task: Task }) {
   const snap = useStore();
   const t = props.task;
   const projects = liveProjects(snap).filter((p) => p.doneAt == null || p.id === t.projectId);
   if (!projects.length) return null;
+  const current = store.project(t.projectId);
   return (
-    <div class="note-cats note-projects">
+    <label class="note-select">
       <span class="note-label">Projekt</span>
-      <button type="button" class={`chip ${!t.projectId ? 'on' : ''}`} onClick={() => store.updateTask(t.id, { projectId: null })}>ohne</button>
-      {projects.map((p) => (
-        <button
-          key={p.id}
-          type="button"
-          class={`chip proj-chip ${t.projectId === p.id ? 'on' : ''}`}
-          onClick={() => store.updateTask(t.id, { projectId: p.id })}
-        >
-          <ProjectIcon project={p} size={20} />
-          {p.name}
-        </button>
-      ))}
-    </div>
+      <span class="select-mark" aria-hidden="true">{current && <ProjectIcon project={current} size={20} />}</span>
+      <select value={current?.id ?? ''} onChange={(e) => store.updateTask(t.id, { projectId: (e.target as HTMLSelectElement).value || null })}>
+        <option value="">ohne</option>
+        {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+      </select>
+    </label>
   );
 }

@@ -76,19 +76,25 @@ Bedienung und Einrichtung: `README.md`.
   nicht verheddert); eingerückt darunter, auch auf dem Projekt-Zettel. In eine Box oder
   über die Boxen gezogen bzw. „Teil von: … ×“ im Post-it → wieder eigenständig. Sie
   gehören zum Bereich ihrer Aufgabe und wandern mit. Wird eine Aufgabe erledigt, unter
-  der noch etwas offen ist, fragt ein Zettel: „alle erledigt“ (ohne sie in den Tag zu
-  schreiben), „wartet auf …“ (Name aus dem Text vorgeschlagen, z. B. „an Claude“) oder
-  „offen lassen“. Wie das im Alltag passt, probiert die Nutzerin noch aus.
+  der noch etwas offen ist, fragt ein Zettel für jede einzeln (und „alle“): ✓ erledigt
+  (ohne sie in den Tag zu schreiben), ⧗ wartet auf … (Name aus dem Text vorgeschlagen,
+  z. B. „an Claude“) oder offen. Wird die Aufgabe wieder geöffnet („wieder offen“ im
+  Post-it), nimmt sie das zurück (`task.byParent`), außer es wurde inzwischen von Hand
+  geändert. Wie das im Alltag passt, probiert die Nutzerin noch aus.
 - „Wartet auf …“ (`task.pending`: wer, seit wann): Eine Aufgabe liegt bei jemand anderem
   (abgegeben, Antwort steht aus). Im Post-it setzen (Namen von früher als Chips) und mit
   „×“ zurücknehmen. Sanduhr im Kästchen (auch an vergangenen Tagen statt des Strichs), in
   den Listen blass mit Sanduhr statt Punkt und „· wer“ dahinter; Deadlines wandern weiter.
   Seite „Wartet“ (Lasche mit Sanduhr): eine Fineliner-Box pro Person, „seit …“. Erledigt
   → wartet nicht mehr.
-- Teilen (Post-it „↗ teilen“): Fensterchen mit Auswahl (nur diese Aufgabe / mit
-  Unteraufgaben, erledigte auch, Notizen, Bilder), Vorschau wie es aussieht, unten „als
-  Bild“ (PNG, sehr lang → mehrere) oder „als PDF“ (A4-Seiten als Bilder, `src/lib/pdf.ts`),
-  dann das Teilen-Menü des Geräts (Claude, Mail, Dateien, Drucken; ohne Menü: Download).
+- Teilen (im Post-it das Teilen-Zeichen rechts neben „löschen“, ohne Text): Fensterchen
+  mit Auswahl (mit Unteraufgaben, erledigte auch, mit Notizen, mit Bildern klein/groß),
+  Vorschau wie es aussieht, unten „als Bild“ (PNG, sehr lang → mehrere) oder „als PDF“
+  (A4-Seiten als Bilder, `src/lib/pdf.ts`), dann das Teilen-Menü des Geräts (Claude, Mail,
+  Dateien, Drucken; ohne Menü: Download).
+- Post-it einer Aufgabe: Kategorie, Projekt und Bereich je als Auswahlmenü (mit „ohne“).
+  In der Notiz beendet Enter die Eingabe, Shift+Enter macht eine neue Zeile. Erledigte
+  Aufgaben haben „wieder offen“ (außer im Tag, dort ist das Kästchen).
 - Nächster Schritt (`task.next`): höchstens einer offen pro Projekt (sonst plant man,
   statt zu handeln), gesetzt mit dem kleinen Pfeil vor einer Aufgabe auf Zettel oder
   Projektseite. Dann steht in der Masterliste statt der Projektzeile dieser Schritt mit

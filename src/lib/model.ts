@@ -58,6 +58,11 @@ export interface Task extends Base {
   parentId?: string | null;
   /** Lies with someone else for now ("wartet auf …"): who, and since when. */
   pending?: Pending | null;
+  /**
+   * Done or given away together with its task (the question when that was
+   * done): opened again, the task takes it back. `at` is the task's doneAt.
+   */
+  byParent?: { at: number; was: 'done' | 'pending' } | null;
 }
 
 export interface Pending {
