@@ -5,7 +5,7 @@
 import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
-import { allRows, entriesByTask, followUps, isOpenToday, liveCategories, masterEntries, masterRows, type ListRow } from '../lib/logic';
+import { allRows, entriesByTask, followUps, isOpenToday, liveCategories, masterEntries, masterRows, openSubtasks, type ListRow } from '../lib/logic';
 import type { Project } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
@@ -15,6 +15,7 @@ import { ClipMark, hasClip, NoteMark, PendingWho, TaskText } from './ink';
 import { NewLine } from './NewLine';
 import { Lead, ProjectLine, ProjectList } from './Projects';
 import { playPaperSlide, playStrike } from './sound';
+import { SubtaskListRows } from './Subtasks';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
 
 const SWAP_MS = 640;
@@ -270,6 +271,8 @@ function MasterList(props: { active: boolean }) {
       || (!!project && uiState.postIt?.kind === 'project' && uiState.postIt.id === project.id);
     const waiting = follow(t.id);
     const folded = !folds.isOpen(t.id);
+    const subs = t.doneAt == null ? openSubtasks(snap, t.id) : [];
+    const subsOpen = folds.isOpen(`sub|${t.id}`);
     return (
       <Fragment key={t.id}>
         <li
@@ -300,8 +303,12 @@ function MasterList(props: { active: boolean }) {
           {t.pending && t.doneAt == null && <PendingWho who={t.pending.who} />}
           {t.note && <NoteMark />}
           {hasClip(t) && <ClipMark />}
+          {subs.length > 0 && (
+            <FollowToggle count={subs.length} showCount open={subsOpen} seed={`sub${t.id}`} what="Unteraufgaben" onToggle={() => folds.toggle(`sub|${t.id}`)} />
+          )}
           {waiting.length > 0 && <FollowToggle count={waiting.length} open={!folded} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
         </li>
+        {subsOpen && subs.length > 0 && <SubtaskListRows parentId={t.id} colorMode={mode} today={today} />}
         {!folded && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode={mode} />}
       </Fragment>
     );

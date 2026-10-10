@@ -363,6 +363,18 @@ describe('hiding appointments', () => {
     expect(s.task(idea.id)!.pending).toBeNull();
   });
 
+  it('leaves one already waiting as it is, unless it is set open', () => {
+    const s = makeStore();
+    const p = s.addProject('App')!;
+    const send = s.addTask('Aufgaben weitergeben', null, { projectId: p.id })!;
+    const [a, b] = ['Knopf', 'Papier'].map((x) => s.addTask(x, null, { projectId: p.id, parentId: send.id })!);
+    s.setPending([a.id, b.id], 'Thomas');
+    s.setDone(send.id, true, '2026-10-10');
+    s.settleSubtasks(send.id, [{ id: a.id, choice: 'pending' }, { id: b.id, choice: 'open' }], 'Claude');
+    expect(s.task(a.id)!.pending?.who).toBe('Thomas');
+    expect(s.task(b.id)!.pending).toBeNull();
+  });
+
   it('keeps what was changed by hand afterwards when the task opens again', () => {
     const s = makeStore();
     const p = s.addProject('App')!;

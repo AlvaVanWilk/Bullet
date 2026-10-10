@@ -2,6 +2,7 @@
 // Termine, Deadlines and Besonderes, and below it one section per day from
 // Monday up to today.
 
+import { Fragment } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { eventEndDay, eventIsPast, eventOnDay, eventStartDay } from '../google/events';
 import { categoryColor } from '../lib/colors';
@@ -21,6 +22,7 @@ import { clickSuppressed, startDrag } from './drag';
 import { Checkbox, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, TaskText } from './ink';
 import { ProjectIcon } from './ProjectIcon';
 import { StatusNote } from './StatusNote';
+import { daySet, SubtaskDayRows } from './Subtasks';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { movePick, SuggestList } from './Suggest';
 import { useWeekEvents } from './useEvents';
@@ -244,6 +246,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
   const specials = specialsOn(snap.specials, props.day);
   const special = props.events.filter((e) => e.kind === 'besonderes');
   const termine = props.events.filter((e) => e.kind === 'termin');
+  const inDay = daySet(props.items);
 
   return (
     <section
@@ -272,7 +275,13 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
         </ul>
       )}
       <ul class="day-tasks">
-        {props.items.map((item) => <DayTaskRow key={item.key} item={item} day={props.day} today={props.today} />)}
+        {props.items.map((item) => (
+          <Fragment key={item.key}>
+            <DayTaskRow item={item} day={props.day} today={props.today} />
+            {/* its subtasks under it, each with a box of its own */}
+            <SubtaskDayRows task={item.task} day={props.day} today={props.today} inDay={inDay} />
+          </Fragment>
+        ))}
       </ul>
       {isToday && <TodayLine day={props.day} />}
       <DecoLayer anchor={`day|${props.day}`} />

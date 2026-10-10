@@ -297,6 +297,8 @@ async function device(browser, name) {
     const waits = await ipad.$$eval('.waiting-box', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').trim()));
     await ipad.locator('.page-tab.tab-planner').click();
     await ipad.waitForTimeout(300);
+    // in today, under its task (which stands there), with an hourglass in its box
+    const subInDay = await ipad.locator('.day.today .dtask.sub.st-pending', { hasText: 'Leiter leihen' }).count();
     await ipad.locator('.proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
     await ipad.locator('.proj-tasks .row', { hasText: 'Holz bestellen' }).first().click();
     await ipad.locator('.share-open').click();
@@ -312,9 +314,9 @@ async function device(browser, name) {
     await ipad.locator('.projview .close-x').click();
     const pdfHead = fs.readFileSync(pdfPath).subarray(0, 5).toString();
     const pngHead = fs.readFileSync(pngPath).subarray(1, 4).toString();
-    check('a task dropped on another becomes its subtask; waiting on someone it stands under that name; shared as PDF and picture',
-      subs.includes('Leiter leihen') && waits.some((w) => w.includes('Thomas') && w.includes('Leiter leihen')) && pdfHead === '%PDF-' && pngHead === 'PNG',
-      { subs, waits, pdfHead, pngHead });
+    check('a task dropped on another becomes its subtask (in today under it); waiting on someone it stands under that name; shared as PDF and picture',
+      subs.includes('Leiter leihen') && subInDay === 1 && waits.some((w) => w.includes('Thomas') && w.includes('Leiter leihen')) && pdfHead === '%PDF-' && pngHead === 'PNG',
+      { subs, subInDay, waits, pdfHead, pngHead });
 
     // a milestone: a finished project gives a doodle (announced once); held on free paper in today, it sticks there, on both devices
     await ipad.locator('.tab-projects').click();

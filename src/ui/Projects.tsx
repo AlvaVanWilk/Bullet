@@ -108,7 +108,9 @@ export function ProjectCard(props: { id: string; close: () => void }) {
   const index = entriesByTask(snap.entries);
   const open = projectRows(snap, p.id, Math.max(now, Date.now())).map((r) => r.task).filter((t) => t.doneAt == null);
   const next = nextStep(snap, p.id);
-  const rest = open.filter((t) => t.id !== next?.id);
+  // the next step on top, with its subtasks under it
+  const nextSubs = next ? open.filter((t) => t.parentId === next.id) : [];
+  const rest = open.filter((t) => t.id !== next?.id && !nextSubs.includes(t));
   const areas = projectAreas(snap, p.id);
   const areaIds = new Set(areas.map((a) => a.id));
   // a subtask stands under its task while that is open here, otherwise on its own
@@ -155,7 +157,7 @@ export function ProjectCard(props: { id: string; close: () => void }) {
         <section class="pslip-next">
           <h4 class="pslip-label">nächster Schritt</h4>
           {next
-            ? <ul class="pslip-list" ref={nextRef}>{row(next)}</ul>
+            ? <ul class="pslip-list" ref={nextRef}>{row(next)}{nextSubs.map((t) => row(t, true))}</ul>
             : <p class="pslip-none">Noch keiner – tipp auf den Pfeil vor einer Aufgabe.</p>}
         </section>
       )}

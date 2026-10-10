@@ -851,3 +851,16 @@
 .note > .note-actions { flex-wrap: nowrap; gap: 6px; }
 .note > .note-actions .note-btn { padding: 3px 9px 1px; font-size: 17px; white-space: nowrap; }
 .note > .note-actions .note-btn.icon-btn { padding: 3px 6px; flex: none; }
+
+/* subtasks under their task: in a day, on the post-it */
+.dtask.sub { padding-left: 30px; }
+.dtask.sub .tt { font-size: 0.95em; }
+.sub-section { flex-basis: 100%; order: 2; display: flex; flex-direction: column; gap: 2px; }
+.sub-list { list-style: none; margin: 0; padding: 0; }
+.sub-list li { display: flex; align-items: center; gap: 4px; min-height: 30px; }
+.sub-list li.done .follow-name { text-decoration: line-through; color: var(--ink-faint); }
+.sub-list .cb { flex: none; }
+.sub-who { font-family: var(--clean); font-size: 12px; color: var(--ink-faint); }
+.sq-who-now { display: block; font-family: var(--clean); font-size: 12px; color: var(--ink-soft); }
+.note > .note-actions { flex-wrap: wrap; }
+.note-out { align-self: flex-end; font-size: 15px; margin: -2px 2px -4px 0; }

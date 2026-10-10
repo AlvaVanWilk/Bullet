@@ -1,6 +1,7 @@
 // A task done while some of its subtasks are still open: a small card asks
 // what about each of them – done too, waiting on someone ("wartet auf …"),
-// or left open. Opening the task again takes back what was chosen here.
+// or left open. Opening the task again takes back what was chosen here;
+// "abbrechen" means it was not done after all.
 
 import { useEffect, useState } from 'preact/hooks';
 import { openSubtasks, pendingNames } from '../lib/logic';
@@ -40,13 +41,20 @@ export function SubtaskQuestion() {
     queueMicrotask(close);
     return null;
   }
-  const choiceOf = (t: Task): Choice => choices[t.id] ?? 'open';
+  // one waiting already shows it, and keeps whom it waits on unless set otherwise
+  const choiceOf = (t: Task): Choice => choices[t.id] ?? (t.pending ? 'pending' : 'open');
+  const newlyWaiting = (t: Task) => choiceOf(t) === 'pending' && !t.pending;
   const set = (ids: string[], c: Choice) => setChoices({ ...choices, ...Object.fromEntries(ids.map((id) => [id, c])) });
-  const waiting = open.some((t) => choiceOf(t) === 'pending');
+  const waiting = open.some(newlyWaiting);
   const ready = !waiting || !!who.trim();
   const apply = () => {
     if (!ready) return;
     store.settleSubtasks(parent.id, open.map((t) => ({ id: t.id, choice: choiceOf(t) })), who);
+    close();
+  };
+  // not done after all: the task is open again, nothing else changes
+  const cancel = () => {
+    store.setDone(parent.id, false);
     close();
   };
   const segment = (ids: string[], current: Choice | null) => (
@@ -65,7 +73,10 @@ export function SubtaskQuestion() {
       <ul class="sq-list">
         {open.map((t) => (
           <li key={t.id}>
-            <span class="sq-text">{t.text}</span>
+            <span class="sq-text">
+              {t.text}
+              {t.pending && choiceOf(t) === 'pending' && <small class="sq-who-now">wartet auf {t.pending.who}</small>}
+            </span>
             {segment([t.id], choiceOf(t))}
           </li>
         ))}
@@ -84,6 +95,7 @@ export function SubtaskQuestion() {
       )}
       <div class="sq-actions">
         <button type="button" class="note-btn save" disabled={!ready} onClick={apply}>fertig</button>
+        <button type="button" class="note-btn" onClick={cancel} title="doch nicht erledigt">abbrechen</button>
       </div>
     </div>
   );

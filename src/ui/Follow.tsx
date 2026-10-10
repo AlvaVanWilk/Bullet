@@ -17,19 +17,20 @@ const openNote = (id: string, el: HTMLElement) =>
   ui.set({ postIt: { kind: 'task', id, rect: el.getBoundingClientRect() } });
 
 /** The little triangle next to a task in a list; tapping folds the next ones out or in. */
-export function FollowToggle(props: { count: number; open: boolean; seed: string; onToggle: () => void }) {
+export function FollowToggle(props: { count: number; open: boolean; seed: string; onToggle: () => void; what?: string; showCount?: boolean }) {
+  const what = props.what ?? 'Folgeaufgaben';
   return (
     <button
       type="button"
       class={`follow-toggle ${props.open ? 'open' : ''}`}
       aria-expanded={props.open}
-      aria-label={props.open ? 'Folgeaufgaben einklappen' : 'Folgeaufgaben zeigen'}
+      aria-label={props.open ? `${what} einklappen` : `${what} zeigen`}
       // a tap here neither drags the task nor opens its post-it
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); props.onToggle(); }}
     >
       <FoldMark open={props.open} seed={props.seed} />
-      {props.count > 1 && <small>{props.count}</small>}
+      {(props.count > 1 || props.showCount) && <small>{props.count}</small>}
     </button>
   );
 }

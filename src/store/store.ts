@@ -153,7 +153,7 @@ export class Store {
     return t != null && this.clock() - t < withinMs;
   }
 
-  addTask(text: string, categoryId: string | null = null, extra: Partial<Pick<Task, 'deadline' | 'link' | 'after' | 'projectId' | 'areaId'>> = {}): Task | null {
+  addTask(text: string, categoryId: string | null = null, extra: Partial<Pick<Task, 'deadline' | 'link' | 'after' | 'projectId' | 'areaId' | 'parentId'>> = {}): Task | null {
     const clean = text.trim();
     if (!clean) return null;
     const task: Task = {
@@ -232,9 +232,14 @@ export class Store {
         const t = this.task(id);
         if (t) this.put({ ...t, byParent: { at, was: 'done' } });
       } else if (choice === 'pending' && who.trim()) {
+        // one waiting already keeps whom it waits on
+        if (this.task(id)?.pending) continue;
         this.setPending([id], who);
         const t = this.task(id);
         if (t) this.put({ ...t, byParent: { at, was: 'pending' } });
+      } else if (choice === 'open') {
+        const t = this.task(id);
+        if (t?.pending) this.put({ ...t, pending: null, byParent: null });
       }
     }
     this.changed(true);

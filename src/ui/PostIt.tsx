@@ -19,6 +19,7 @@ import { sinceLabel } from './Waiting';
 import { forgetPhotosOf } from '../photos';
 import { Hourglass } from './ink';
 import { FollowSection } from './Follow';
+import { SubtaskSection } from './Subtasks';
 import { PaySection } from './Pay';
 import { PhotoStrip } from './Photos';
 import { AreaNote, AreaSelect, ProjectCard, ProjectEditNote, ProjectSelect } from './Projects';
@@ -228,10 +229,18 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
       <div class="note-extras">
         <PhotoStrip task={task} />
         <PaySection task={task} />
+        <SubtaskSection task={task} today={today} />
         <FollowSection task={task} />
       </div>
 
       {askDay && <DonePicker today={today} onPick={finish} />}
+      {props.target.entryId && props.target.day === today && task.doneAt == null && (
+        <button
+          type="button"
+          class="link quiet note-out"
+          onClick={() => { store.removeEntry(props.target.entryId!); props.close(); }}
+        >aus heute nehmen</button>
+      )}
 
       <div class="note-actions">
         <button type="button" class="note-btn save" onClick={props.close}>speichern</button>
@@ -246,13 +255,6 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         {task.doneAt != null && !props.target.day && (
           // (in a day, its box does this)
           <button type="button" class="note-btn" onClick={() => store.setDone(task.id, false)}>wieder offen</button>
-        )}
-        {props.target.entryId && props.target.day === today && task.doneAt == null && (
-          <button
-            type="button"
-            class="note-btn"
-            onClick={() => { store.removeEntry(props.target.entryId!); props.close(); }}
-          >aus heute nehmen</button>
         )}
         <button
           type="button"

@@ -75,12 +75,18 @@ Bedienung und Einrichtung: `README.md`.
   Projektseite eine Aufgabe auf eine andere ziehen (nur dort, damit sich das Ziehen sonst
   nicht verheddert); eingerückt darunter, auch auf dem Projekt-Zettel. In eine Box oder
   über die Boxen gezogen bzw. „Teil von: … ×“ im Post-it → wieder eigenständig. Sie
-  gehören zum Bereich ihrer Aufgabe und wandern mit. Wird eine Aufgabe erledigt, unter
-  der noch etwas offen ist, fragt ein Zettel für jede einzeln (und „alle“): ✓ erledigt
-  (ohne sie in den Tag zu schreiben), ⧗ wartet auf … (Name aus dem Text vorgeschlagen,
-  z. B. „an Claude“) oder offen. Wird die Aufgabe wieder geöffnet („wieder offen“ im
-  Post-it), nimmt sie das zurück (`task.byParent`), außer es wurde inzwischen von Hand
-  geändert. Wie das im Alltag passt, probiert die Nutzerin noch aus.
+  gehören zum Bereich ihrer Aufgabe und wandern mit. Überall sichtbar: im Tag stehen
+  unter der Aufgabe ihre offenen (und dort erledigten) Unteraufgaben mit eigenem
+  Kästchen; in der Masterliste (nächster Schritt) klappt ein Dreieck mit Zahl sie aus
+  (einzeln in heute ziehbar); im Post-it der Aufgabe „Unteraufgaben“ mit Kästchen und
+  Zeile für neue. Wird eine Aufgabe erledigt, unter der noch etwas offen ist, fragt ein
+  Zettel für jede einzeln (und „alle“): ✓ erledigt (ohne sie in den Tag zu schreiben),
+  ⧗ wartet auf … (Name aus dem Text vorgeschlagen, z. B. „an Claude“) oder offen; schon
+  wartende stehen mit ⧗ und ihrem Namen vorausgewählt („offen“ nimmt das Warten
+  zurück). „fertig“ oder „abbrechen“ (= doch nicht erledigt). Wird die Aufgabe wieder
+  geöffnet („wieder offen“ im Post-it), nimmt sie das zurück (`task.byParent`), außer es
+  wurde inzwischen von Hand geändert. Wie das im Alltag passt, probiert die Nutzerin
+  noch aus.
 - „Wartet auf …“ (`task.pending`: wer, seit wann): Eine Aufgabe liegt bei jemand anderem
   (abgegeben, Antwort steht aus). Im Post-it setzen (Namen von früher als Chips) und mit
   „×“ zurücknehmen. Sanduhr im Kästchen (auch an vergangenen Tagen statt des Strichs), in
