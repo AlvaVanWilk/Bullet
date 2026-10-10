@@ -39,9 +39,10 @@ Bedienung und Einrichtung: `README.md`.
   statt Schrift: Kästchen = Planer (Woche; schon offen → aktuelle Woche), Kiste = Archiv
   (eine eigene Seite), Sanduhr = Wartet. Die aktive liegt vorn auf dem Papier.
 - Folgeaufgaben (`task.after`): Eine Aufgabe, die noch auf offene „Mütter“ wartet, steht
-  nicht in der Masterliste. Ein kleines, mit Fineliner gezeichnetes Dreieck neben der
-  Mutter (zu: nach rechts, offen: nach unten) klappt nur die nächste Ebene eingerückt
-  aus; jede Folgeaufgabe mit eigenen Folgeaufgaben hat ihr eigenes. Noch ein Tipp
+  nicht in der Masterliste. Ein kleiner, mit Fineliner gezeichneter abbiegender Pfeil
+  (erst nach rechts, dann nach unten; ausgeklappt dunkler) neben der Mutter klappt nur
+  die nächste Ebene eingerückt aus; jede Folgeaufgabe mit eigenen Folgeaufgaben hat
+  ihren eigenen. (Das Dreieck gehört den Unteraufgaben.) Noch ein Tipp
   klappt ein (alles darunter mit). Nie gespeichert, anfangs immer zu. Ist die Mutter durchgestrichen, erscheint die
   Folgeaufgabe vollständig darunter (nach dem Durchstreichen, mit Schreib-Animation).
   Mehrere Mütter: wartet auf alle, hängt unter jeder offenen („auch nach: …“), erscheint

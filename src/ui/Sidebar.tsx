@@ -304,7 +304,7 @@ function MasterList(props: { active: boolean }) {
           {t.note && <NoteMark />}
           {hasClip(t) && <ClipMark />}
           {subs.length > 0 && (
-            <FollowToggle count={subs.length} showCount open={subsOpen} seed={`sub${t.id}`} what="Unteraufgaben" onToggle={() => folds.toggle(`sub|${t.id}`)} />
+            <FollowToggle count={subs.length} showCount mark="triangle" open={subsOpen} seed={`sub${t.id}`} what="Unteraufgaben" onToggle={() => folds.toggle(`sub|${t.id}`)} />
           )}
           {waiting.length > 0 && <FollowToggle count={waiting.length} open={!folded} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
         </li>

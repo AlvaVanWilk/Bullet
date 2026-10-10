@@ -134,6 +134,23 @@ export function FoldMark(props: { open: boolean; seed: string }) {
   );
 }
 
+/**
+ * A small arrow drawn with the fineliner that goes right and then turns down:
+ * something comes after this task. Folded out, it is drawn in darker ink.
+ */
+export function TurnMark(props: { open: boolean; seed: string }) {
+  const s = seedOf(props.seed);
+  const arrow = [
+    ...paths(`turn|${s}`, () => gen.path('M2.6 4.6 H9.6 Q12.2 4.6 12.2 7.2 V13', { roughness: 0.45, bowing: 0.6, strokeWidth: 1.35, seed: s })),
+    ...paths(`turnhead|${s}`, () => gen.linearPath([[9.3, 10.4], [12.2, 13.4], [15, 10.4]], { roughness: 0.45, strokeWidth: 1.35, seed: s + 1 })),
+  ];
+  return (
+    <svg class={`turn-mark ${props.open ? 'open' : ''}`} width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      {arrow.map((p, i) => <path key={i} d={p.d} />)}
+    </svg>
+  );
+}
+
 /** A small hand-drawn archive box (the tab of the archive). */
 export function ArchiveIcon() {
   return (

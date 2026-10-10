@@ -1,6 +1,6 @@
-// Tasks that come after others. In the lists a small hand-drawn triangle next
-// to a task folds out what waits right after it, indented; those have
-// triangles of their own for the next level. Never remembered, always folded at first. On the post-it: what comes after this
+// Tasks that come after others. In the lists a small hand-drawn arrow that
+// turns down next to a task folds out what waits right after it, indented;
+// those have arrows of their own for the next level. Never remembered, always folded at first. On the post-it: what comes after this
 // task, and what it comes after.
 
 import { Fragment } from 'preact';
@@ -9,15 +9,26 @@ import { categoryColor } from '../lib/colors';
 import { followSuggestions, type FollowUp } from '../lib/logic';
 import type { Task } from '../lib/model';
 import { store } from '../store/store';
-import { FoldMark, TaskText } from './ink';
+import { FoldMark, TaskText, TurnMark } from './ink';
 import { ui, useStore } from './state';
 import { movePick, SuggestList } from './Suggest';
 
 const openNote = (id: string, el: HTMLElement) =>
   ui.set({ postIt: { kind: 'task', id, rect: el.getBoundingClientRect() } });
 
-/** The little triangle next to a task in a list; tapping folds the next ones out or in. */
-export function FollowToggle(props: { count: number; open: boolean; seed: string; onToggle: () => void; what?: string; showCount?: boolean }) {
+/**
+ * The little mark next to a task in a list; tapping folds the next ones out or
+ * in. A turning arrow for what comes after it, a triangle for what is part of it.
+ */
+export function FollowToggle(props: {
+  count: number;
+  open: boolean;
+  seed: string;
+  onToggle: () => void;
+  what?: string;
+  showCount?: boolean;
+  mark?: 'turn' | 'triangle';
+}) {
   const what = props.what ?? 'Folgeaufgaben';
   return (
     <button
@@ -29,7 +40,9 @@ export function FollowToggle(props: { count: number; open: boolean; seed: string
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); props.onToggle(); }}
     >
-      <FoldMark open={props.open} seed={props.seed} />
+      {props.mark === 'triangle'
+        ? <FoldMark open={props.open} seed={props.seed} />
+        : <TurnMark open={props.open} seed={props.seed} />}
       {(props.count > 1 || props.showCount) && <small>{props.count}</small>}
     </button>
   );
