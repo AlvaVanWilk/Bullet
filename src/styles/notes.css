@@ -163,6 +163,12 @@
 .note-btn:active { transform: translateY(1px); }
 .note-btn.danger { border-color: rgba(204, 58, 46, 0.5); color: var(--red); }
 .note-btn.sure { background: var(--red); color: #fff; border-color: var(--red); }
+.note-btn.on { background: rgba(255, 255, 255, 0.75); box-shadow: inset 0 0 0 1px rgba(43, 43, 48, 0.4); }
+/* "erledigt" for a task that stands in no day: on which day? */
+.note-when { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.35); }
+.note-when-days { display: flex; flex-wrap: wrap; gap: 6px; }
+.note-when-older { display: flex; align-items: center; gap: 8px; font-family: var(--clean); font-size: 14px; color: var(--ink-soft); }
+.note-when-older input { font: inherit; padding: 2px 6px; border-radius: 8px; border: 1px solid rgba(43, 43, 48, 0.3); background: rgba(255, 255, 255, 0.6); }
 .palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
 .swatch { width: 44px; height: 40px; border-radius: 10px; }
 .swatch.on { box-shadow: inset 0 0 0 1.5px var(--ink); }

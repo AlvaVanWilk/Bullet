@@ -94,7 +94,12 @@ Bedienung und Einrichtung: `README.md`.
   verschiebbar, Reiter Aussehen / Tage und Liste / Kalender / Konto. Jede Änderung
   ist sofort auf der Seite zu sehen.
 - Leise Geräusche: Papier über Papier beim Laschenwechsel, Stift beim Durchstreichen
-  (abschaltbar). Post-it: „speichern“, Notizfeld; kein „erledigt“ dort.
+  (abschaltbar). Post-it: „speichern“, Notizfeld.
+- „erledigt“ im Post-it (nicht im Tag, dort ist das Kästchen): Steht die Aufgabe heute
+  offen, ist sie heute erledigt. Sonst fragt es, an welchem Tag (heute, die sechs Tage
+  davor, „früher“ mit Datum), und schreibt sie dort abgehakt hinein (`entry.retro`;
+  dort wieder angetippt, verschwindet sie aus dem Tag). In Tage ziehen geht weiterhin
+  nur nach heute.
 - Deko (`deco`, `award`; Regeln in `src/lib/milestones.ts`, Motive in `src/ui/decoPieces.tsx`):
   Besondere Momente schenken je einmal einen Stempel, Sticker, eine Kritzelei oder
   Washi-Tape. Belohnung als kleines Extra, kein Fokus: keine Liste, kein Fortschritt,

@@ -236,4 +236,28 @@ describe('hiding appointments', () => {
     a.unhideEvent(a.snapshot().hides[0].id);
     expect(a.snapshot().hides[0].deleted).toBe(true);
   });
+
+  it('marks a task done on an earlier day it stood in no day of: written in there, ticked; unticked, it leaves the day', () => {
+    const s = makeStore();
+    s.today = () => '2026-10-10';
+    const t = s.addTask('Fahrrad flicken')!;
+    s.doneOn(t.id, '2026-10-09');
+    expect(s.task(t.id)).toMatchObject({ doneDay: '2026-10-09' });
+    expect(s.snapshot().entries.filter((e) => !e.deleted).map((e) => [e.day, e.retro])).toEqual([['2026-10-09', true]]);
+    // a second "erledigt" does nothing
+    s.doneOn(t.id, '2026-10-08');
+    expect(s.task(t.id)!.doneDay).toBe('2026-10-09');
+    // unticked in that day: open again, and gone from the day
+    s.toggleDone(t.id, '2026-10-09');
+    expect(s.task(t.id)).toMatchObject({ doneAt: null, doneDay: null });
+    expect(s.snapshot().entries.filter((e) => !e.deleted)).toEqual([]);
+  });
+
+  it('keeps an entry that was there before when a task is marked done on its day', () => {
+    const s = makeStore();
+    const t = s.addTaskOn('Brief einwerfen', '2026-10-09')!;
+    s.doneOn(t.id, '2026-10-09');
+    s.toggleDone(t.id, '2026-10-09');
+    expect(s.snapshot().entries.filter((e) => !e.deleted).map((e) => e.day)).toEqual(['2026-10-09']);
+  });
 });

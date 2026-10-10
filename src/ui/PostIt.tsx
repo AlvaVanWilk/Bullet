@@ -7,8 +7,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CATEGORY_COLORS, categoryColor } from '../lib/colors';
 import { eventStartDay } from '../google/events';
-import { compareDays, parseDay, shortWeekday, timeLabel, type DayKey } from '../lib/dates';
-import { deadlineShowsOn, isWaiting, liveCategories, prepRows, prepSuggestions, seriesKey, specialLinkKey } from '../lib/logic';
+import { addDays, compareDays, parseDay, shortWeekday, timeLabel, type DayKey } from '../lib/dates';
+import {
+  deadlineShowsOn, entriesByTask, isOpenToday, isWaiting, liveCategories, prepRows, prepSuggestions, seriesKey, specialLinkKey,
+} from '../lib/logic';
 import type { CalEvent, Special, Task, TaskLink } from '../lib/model';
 import { store } from '../store/store';
 import { ui, useStore, useToday, useUi, type PostItTarget } from './state';
@@ -96,6 +98,7 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
   const [text, setText] = useState(task?.text ?? '');
   const [note, setNote] = useState(task?.note ?? '');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [askDay, setAskDay] = useState(false);
   const latest = useRef({ text, note });
   latest.current = { text, note };
   // Saving happens when the note goes away, by "speichern" or by tapping beside it.
@@ -106,6 +109,14 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
   const deferrable = task.doneAt == null && deadlineShowsOn(task, today, today)
     && !isWaiting(task, new Map(snap.tasks.map((t) => [t.id, t])));
   const deferred = task.deferredOn === today;
+  // "erledigt": what stands open today is done today; otherwise it asks for the day
+  // (in a day the box is right there)
+  const finishable = task.doneAt == null && !props.target.day;
+  const openToday = isOpenToday(task, today, entriesByTask(snap.entries));
+  const finish = (day: DayKey) => {
+    store.doneOn(task.id, day);
+    props.close();
+  };
 
   return (
     <div class="note">
@@ -203,8 +214,18 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
         <FollowSection task={task} />
       </div>
 
+      {askDay && <DonePicker today={today} onPick={finish} />}
+
       <div class="note-actions">
         <button type="button" class="note-btn save" onClick={props.close}>speichern</button>
+        {finishable && (
+          <button
+            type="button"
+            class={`note-btn ${askDay ? 'on' : ''}`}
+            aria-expanded={openToday ? undefined : askDay}
+            onClick={() => (openToday ? finish(today) : setAskDay(!askDay))}
+          >erledigt</button>
+        )}
         {props.target.entryId && props.target.day === today && task.doneAt == null && (
           <button
             type="button"
@@ -223,6 +244,33 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
           }}
         >{confirmDelete ? 'wirklich löschen?' : 'löschen'}</button>
       </div>
+    </div>
+  );
+}
+
+/** On which day a task was done that stands in no day (today, the six days before, or earlier). */
+function DonePicker(props: { today: DayKey; onPick: (day: DayKey) => void }) {
+  const days = [0, 1, 2, 3, 4, 5, 6].map((n) => addDays(props.today, -n));
+  const label = (day: DayKey, i: number) => (i === 0 ? 'heute' : i === 1 ? 'gestern' : `${shortWeekday(day)} ${parseDay(day).getDate()}.`);
+  return (
+    <div class="note-when">
+      <span class="note-label">Wann erledigt?</span>
+      <div class="note-when-days">
+        {days.map((day, i) => (
+          <button key={day} type="button" class="chip" onClick={() => props.onPick(day)}>{label(day, i)}</button>
+        ))}
+      </div>
+      <label class="note-when-older">
+        <span>früher:</span>
+        <input
+          type="date"
+          max={addDays(props.today, -7)}
+          onChange={(e) => {
+            const v = (e.target as HTMLInputElement).value;
+            if (v && compareDays(v, props.today) <= 0) props.onPick(v);
+          }}
+        />
+      </label>
     </div>
   );
 }

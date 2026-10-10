@@ -102,6 +102,8 @@ export interface Entry extends Base {
   taskId: string;
   day: DayKey;
   createdAt: number;
+  /** Written in afterwards, done (the post-it's "erledigt"): unticked, it leaves the day again. */
+  retro?: boolean;
 }
 
 export interface Special extends Base {

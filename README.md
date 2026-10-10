@@ -33,6 +33,7 @@ sich auch so anfühlt, nur ein bisschen magisch.
 | in eine Kategorie legen | Kategorie öffnen (Seite rechts), Aufgabe aus der Masterliste hineinziehen, oder oben in der Kategorie tippen und eine vorgeschlagene Aufgabe wählen |
 | Farbe einer Kategorie | auf den Farbklecks vor ihrem Namen tippen |
 | abhaken | Kästchen im Tag antippen (geht auch nachträglich in früheren Tagen und Wochen) |
+| etwas erledigt, das in keinem Tag stand (z. B. gestern vergessen) | Aufgabe in der Masterliste antippen → „erledigt“ → den Tag wählen (heute, gestern, die Tage davor oder „früher“ mit Datum). Sie steht dann in diesem Tag, abgehakt. Steht sie heute offen, ist sie gleich heute erledigt. Versehen? Im Tag das Kästchen wieder antippen: Sie ist wieder offen und verschwindet aus dem Tag. |
 | unerledigte Aufgabe von gestern weitertragen | aus dem alten Tag in heute ziehen; im alten Tag steht dann „>“ |
 | auf dem Handy | Die Liste ist schmaler und anfangs eingeklappt (Lasche „Liste“ antippen); ein Tipp auf die Seite klappt sie wieder ein. Die Wochenübersicht ist kleiner, Pfeile und Zahnrad stehen in der Zeile der Kalenderwoche. |
 | frühere und kommende Wochen ansehen | Pfeile neben der Kalenderwoche, „heute“ führt zurück; in kommenden Wochen steht nur die Wochenübersicht |

@@ -312,6 +312,10 @@ export class Store {
 
   /** Open again; a next step open again is the next step again. */
   private reopen(task: Task) {
+    // written in afterwards only as done: it leaves that day again
+    for (const r of this.records.values()) {
+      if (r.type === 'entry' && !r.deleted && r.retro && r.taskId === task.id && r.day === task.doneDay) this.put({ ...r, deleted: true });
+    }
     if (task.next) this.unmarkOtherSteps(task);
     this.put({ ...task, doneAt: null, doneDay: null });
     this.changed(true);
@@ -341,6 +345,22 @@ export class Store {
     this.markFresh(entry.id);
     this.changed(true);
     return entry;
+  }
+
+  /**
+   * Done on a day (the post-it's "erledigt"): written into that day if it is
+   * not there yet, and ticked. Unticked there, it leaves the day again.
+   */
+  doneOn(taskId: string, day: DayKey) {
+    const task = this.task(taskId);
+    if (!task || task.doneAt != null) return;
+    const there = [...this.records.values()].some((r) => r.type === 'entry' && !r.deleted && r.taskId === taskId && r.day === day);
+    if (!there) {
+      const entry: Entry = { id: newId(), type: 'entry', updatedAt: 0, taskId, day, createdAt: this.now(), retro: true };
+      this.put(entry);
+      this.markFresh(entry.id);
+    }
+    this.toggleDone(taskId, day);
   }
 
   /** A task written straight into a day: it is a new task of the master list, standing in that day. */

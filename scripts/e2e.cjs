@@ -223,6 +223,23 @@ async function device(browser, name) {
       onTop.join() === 'Holz bestellen' && withStep.includes('I:Holz bestellen') && !withStep.some((t) => t.includes('Gartenhaus')) && slipAgain === 'Gartenhaus',
       { onTop, withStep, slipAgain });
 
+    // done yesterday, but never written into a day: "erledigt" on its post-it asks for the day
+    await ipad.locator('.sheet.front .new-line input').fill('Fahrrad flicken');
+    await ipad.locator('.sheet.front .new-line input').press('Enter');
+    await ipad.waitForTimeout(300);
+    await ipad.locator('.sheet.front .task-list > li.row', { hasText: 'Fahrrad flicken' }).click();
+    await ipad.locator('.note-actions .note-btn', { hasText: 'erledigt' }).click();
+    await ipad.locator('.note-when .chip', { hasText: 'gestern' }).click();
+    await ipad.waitForTimeout(2200);
+    const struckNow = await ipad.locator('.sheet.front .task-list > li.row', { hasText: 'Fahrrad flicken' }).locator('.tt.struck').count();
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const yesterday = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
+    // (on a Monday yesterday lies in last week)
+    const inYesterday = y.getDay() === 0 ? 1 : await ipad.locator(`.day[data-day="${yesterday}"] .dtask`, { hasText: 'Fahrrad flicken' }).locator('.cb-done').count();
+    while (await ipad.locator('.award-note').count()) { await ipad.locator('.award-note').click(); await ipad.waitForTimeout(400); }
+    check('a task done yesterday but in no day: "erledigt" on its post-it, then "gestern" – done there, struck in the list',
+      struckNow === 1 && inYesterday === 1, { struckNow, inYesterday });
+
     // a milestone: a finished project gives a doodle (announced once); held on free paper in today, it sticks there, on both devices
     await ipad.locator('.tab-projects').click();
     await ipad.waitForTimeout(800);
