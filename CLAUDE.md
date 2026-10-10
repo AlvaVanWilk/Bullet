@@ -177,8 +177,10 @@ Bedienung und Einrichtung: `README.md`.
   `briefkasten.php` schickt (POST, `schluessel` + `text`); jede Zeile wird eine Aufgabe
   am Ende der Masterliste, „wichtig“ vorne → „!“. Jede Person hat einen eigenen Schlüssel
   (Einstellungen → Konto), erneuerbar und abschaltbar; wer nicht mehr zur Familie gehört,
-  kommt auch mit dem Schlüssel nicht mehr hinein. Erinnerungen von Apple liest eine
-  Web-App nicht.
+  kommt auch mit dem Schlüssel nicht mehr hinein. Feldnamen tolerant („Schlüssel“,
+  „Text“). Ohne Neustart: Solange Bullet vorn ist, gleicht es alle 20 s ab, außerdem
+  beim ersten Tippen nach einer Pause; neue Aufgaben von woanders schreiben sich dann
+  sichtbar in die Liste. Erinnerungen von Apple liest eine Web-App nicht.
 - Vorplanen künftiger Tage ist (vorerst) nicht vorgesehen. Vorausblättern in kommende
   Wochen geht, aber dort steht nur der Kopf (Wochenübersicht mit Terminen, Deadlines,
   Besonderem), keine Tage – Tage gibt es immer nur bis heute.

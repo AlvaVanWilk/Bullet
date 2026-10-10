@@ -163,13 +163,28 @@ function startSyncLoop() {
     if (syncTimer) clearTimeout(syncTimer);
     syncTimer = setTimeout(() => void syncNow(), 1200);
   };
-  setInterval(() => void syncNow(), 60000);
+  // while the page is in front, what was written elsewhere (another device, Siri) comes by itself
+  setInterval(() => {
+    if (document.visibilityState === 'visible') void syncNow();
+  }, POLL_MS);
   addEventListener('online', () => void syncNow());
+  addEventListener('focus', () => void syncNow());
+  addEventListener('pageshow', () => void syncNow());
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') void syncNow();
     else void store.saveNow();
   });
+  // Siri over the open page does not hide it: the first touch after a quiet while fetches what is new
+  addEventListener('pointerdown', () => {
+    if (Date.now() - lastSync > TOUCH_SYNC_MS) void syncNow();
+  }, { capture: true, passive: true });
 }
+
+/** How often a page in front asks the server for news. */
+const POLL_MS = 20000;
+/** A touch fetches news if the last sync is longer ago than this. */
+const TOUCH_SYNC_MS = 5000;
+let lastSync = 0;
 
 export async function syncNow(): Promise<void> {
   if (state.mode !== 'signedIn') return;
@@ -178,6 +193,7 @@ export async function syncNow(): Promise<void> {
     return;
   }
   syncing = true;
+  lastSync = Date.now();
   try {
     do {
       syncAgain = false;

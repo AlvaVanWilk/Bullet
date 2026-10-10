@@ -22,6 +22,11 @@ interface Saved {
 }
 
 type Listener = () => void;
+/** A task from elsewhere this new (by its clock) writes itself in when it arrives … */
+const ARRIVING_MS = 15 * 60 * 1000;
+/** … if no more than these arrive at once. */
+const ARRIVING_MAX = 5;
+
 type Effect = { kind: 'done'; taskId: string } | { kind: 'written'; id: string };
 
 let idb: ReturnType<typeof createStore> | null = null;
@@ -714,16 +719,26 @@ export class Store {
 
   // --- sync and storage ----------------------------------------------------------
 
-  /** Records from the server; the newer version of each wins. */
+  /**
+   * Records from the server; the newer version of each wins. A few tasks just
+   * written elsewhere (another device, Siri) write themselves in, as if by hand;
+   * not on the first sync of a device, when everything arrives at once.
+   */
   applyRemote(records: AnyRecord[]) {
     let any = false;
+    const arriving: string[] = [];
     for (const r of records) {
+      const known = this.records.has(r.id);
       if (isNewer(r, this.records.get(r.id))) {
         this.records.set(r.id, r);
         this.dirty.delete(r.id);
         any = true;
+        if (!known && this.lastSeq > 0 && r.type === 'task' && !r.deleted && Math.abs(this.clock() - r.createdAt) < ARRIVING_MS) {
+          arriving.push(r.id);
+        }
       }
     }
+    if (arriving.length <= ARRIVING_MAX) for (const id of arriving) this.markFresh(id);
     if (any) this.changed(false);
   }
 

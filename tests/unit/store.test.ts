@@ -217,6 +217,24 @@ describe('store', () => {
     expect(s.task(t.id)!.text).toBe('neu');
   });
 
+  it('lets a few tasks just written elsewhere write themselves in, not the first sync of a device', () => {
+    const s = makeStore();
+    const remote = (id: string, createdAt: number) => ({
+      id, type: 'task' as const, updatedAt: createdAt, text: id, categoryId: null, important: false, deadline: null, createdAt, doneAt: null, doneDay: null,
+    });
+    // the first sync: everything arrives at once, nothing is written in
+    s.applyRemote([remote('alt', 1000)]);
+    expect(s.isFresh('alt')).toBe(false);
+    s.acknowledge([], 3);
+    // later: Siri's task appears as if written by hand; an old one coming late does not
+    s.applyRemote([remote('siri', 1100), remote('vorjahr', 1000 - 3600 * 1000)]);
+    expect(s.isFresh('siri')).toBe(true);
+    expect(s.isFresh('vorjahr')).toBe(false);
+    // a known task changed elsewhere is not new
+    s.applyRemote([{ ...remote('siri', 1100), text: 'geändert', updatedAt: 99999 }]);
+    expect(s.task('siri')?.text).toBe('geändert');
+  });
+
   it('keeps a change made while a sync was under way', () => {
     const s = makeStore();
     const t = s.addTask('eins')!;

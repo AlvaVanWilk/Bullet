@@ -371,6 +371,22 @@ async function device(browser, name) {
     check('a finished project gives a doodle; held on free paper it sticks to today, and shows on the other device (not announced again)',
       award.includes('Kritzelei') && award.includes('Projekt abgeschlossen') && stuck === 1 && onPhone === 1 && announcedAgain === 0,
       { award: award.split('\n')[0], stuck, onPhone, announcedAgain });
+
+    // Siri writes a task while the page stays in front: it comes by itself (the first touch fetches it) and writes itself in
+    await ipad.locator('.tab-master').click();
+    const siriKey = await ipad.evaluate(async () => (await (await fetch('api.php', {
+      method: 'POST', headers: { 'X-Bullet': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'inbox_new' }),
+    })).json()).key);
+    const said = await (await fetch(base + 'briefkasten.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ 'Schlüssel': siriKey, Text: 'Brief einwerfen' }),
+    })).text();
+    await ipad.waitForTimeout(5500);
+    await ipad.locator('.sheet.front .sheet-title-text').first().click();
+    await ipad.waitForSelector('.sheet.front .row .ink-in', { timeout: 4000 }).catch(() => {});
+    const fromSiri = await ipad.locator('.sheet.front .row', { hasText: 'Brief einwerfen' }).count();
+    const inked = await ipad.locator('.sheet.front .row', { hasText: 'Brief einwerfen' }).locator('.ink-in').count();
+    check('a task from Siri arrives while the page stays open (no reload) and writes itself into the list',
+      said === 'Steht in Bullet: Brief einwerfen' && fromSiri === 1 && inked === 1, { said, fromSiri, inked });
   } catch (err) {
     failed = true;
     console.log('✗', err.message);
