@@ -10,7 +10,7 @@ import {
   addDays, compareDays, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekRangeLabel, type DayKey,
 } from '../lib/dates';
 import {
-  DEADLINE_LEAVE_MS, dayItems, entriesByTask, hiddenKeys, openLinkCounts, specialLinkKey, specialsOn, todaySuggestions, visibleEvents,
+  DEADLINE_LEAVE_MS, dayItems, entriesByTask, nestDayItems, hiddenKeys, openLinkCounts, specialLinkKey, specialsOn, todaySuggestions, visibleEvents,
   weekDeadlines, weekSpecials, type DayItem,
 } from '../lib/logic';
 import type { CalEvent, Task } from '../lib/model';
@@ -247,6 +247,8 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
   const special = props.events.filter((e) => e.kind === 'besonderes');
   const termine = props.events.filter((e) => e.kind === 'termin');
   const inDay = daySet(props.items);
+  const list = useRef<HTMLUListElement>(null);
+  useSlideUnder(list);
 
   return (
     <section
@@ -274,12 +276,19 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
           ))}
         </ul>
       )}
-      <ul class="day-tasks">
-        {props.items.map((item) => (
+      <ul class="day-tasks" ref={list}>
+        {nestDayItems(snap, props.items).map(({ item, subs }) => (
           <Fragment key={item.key}>
             <DayTaskRow item={item} day={props.day} today={props.today} />
-            {/* its subtasks under it, each with a box of its own */}
-            <SubtaskDayRows task={item.task} day={props.day} today={props.today} inDay={inDay} />
+            {/* its subtasks under it, each with a box of its own; one written into the day itself too */}
+            <SubtaskDayRows
+              task={item.task}
+              day={props.day}
+              today={props.today}
+              inDay={inDay}
+              placed={subs}
+              render={(sub) => <DayTaskRow key={sub.key} item={sub} day={props.day} today={props.today} sub />}
+            />
           </Fragment>
         ))}
       </ul>
@@ -371,7 +380,37 @@ function startOnDay(ev: CalEvent, day: DayKey): string {
   return eventStartDay(ev) === day ? timeLabel(start) : 'ab 00:00';
 }
 
-function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
+/**
+ * A row of a day that goes under its task (or out from under it again) slides
+ * there from where it stood, instead of jumping.
+ */
+function useSlideUnder(list: { current: HTMLUListElement | null }) {
+  const last = useRef(new Map<string, { top: number; sub: boolean }>());
+  useLayoutEffect(() => {
+    const ul = list.current;
+    if (!ul) return;
+    const now = new Map<string, { top: number; sub: boolean }>();
+    for (const li of ul.querySelectorAll<HTMLElement>('li[data-item]')) {
+      const key = li.dataset.item!;
+      const here = { top: li.offsetTop, sub: li.classList.contains('sub') };
+      const before = last.current.get(key);
+      if (before && before.sub !== here.sub && typeof li.animate === 'function') {
+        const dx = before.sub ? SUB_INDENT : -SUB_INDENT;
+        li.animate(
+          [{ transform: `translate(${dx}px, ${before.top - here.top}px)` }, { transform: 'none' }],
+          { duration: 360, easing: 'cubic-bezier(0.3, 0.7, 0.2, 1)' },
+        );
+      }
+      now.set(key, here);
+    }
+    last.current = now;
+  });
+}
+
+/** How far a subtask stands in under its task (`.dtask.sub`). */
+const SUB_INDENT = 30;
+
+function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey; sub?: boolean }) {
   const { item } = props;
   const task = item.task;
   const cat = store.category(task.categoryId);
@@ -384,14 +423,15 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
 
   return (
     <li
-      class={`dtask ${item.kind} st-${item.state} ${faded ? 'faded' : ''}`}
+      class={`dtask ${item.kind} st-${item.state} ${faded ? 'faded' : ''} ${props.sub ? 'sub' : ''}`}
+      data-item={task.id}
       // right of the writing the row is free paper (for decoration), not the task
       onPointerDown={(e) => draggable && !beyondContent(e.currentTarget as HTMLElement, e.clientX) && startDrag(e, e.currentTarget as HTMLElement, {
         taskId: task.id, text: task.text, from: 'day', day: props.day, color: item.kind === 'deadline' ? 'var(--red)' : undefined,
       })}
     >
-      {/* a task of a project: its icon in the margin before the box */}
-      {project && <ProjectIcon project={project} class="margin-icon" />}
+      {/* a task of a project: its icon in the margin before the box (under its task, that one has it) */}
+      {project && !props.sub && <ProjectIcon project={project} class="margin-icon" />}
       <Checkbox
         state={item.state}
         important={task.important}
@@ -414,7 +454,7 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey }) {
         {task.note && <NoteMark />}
         {hasClip(task) && <ClipMark />}
       </span>
-      {color && <span class="cat-dot" style={{ '--dot': color.marker }} aria-label={cat!.name} />}
+      {color && !props.sub && <span class="cat-dot" style={{ '--dot': color.marker }} aria-label={cat!.name} />}
     </li>
   );
 }

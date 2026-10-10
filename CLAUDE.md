@@ -78,7 +78,8 @@ Bedienung und Einrichtung: `README.md`.
   über die Boxen gezogen bzw. „Teil von: … ×“ im Post-it → wieder eigenständig. Sie
   gehören zum Bereich ihrer Aufgabe und wandern mit. Überall sichtbar: im Tag stehen
   unter der Aufgabe ihre offenen (und dort erledigten) Unteraufgaben mit eigenem
-  Kästchen; in der Masterliste (nächster Schritt) klappt ein Dreieck mit Zahl sie aus
+  Kästchen; steht eine schon allein im Tag und die Aufgabe kommt dazu, rutscht sie
+  darunter an ihren Platz; in der Masterliste (nächster Schritt) klappt ein Dreieck mit Zahl sie aus
   (einzeln in heute ziehbar); im Post-it der Aufgabe „Unteraufgaben“ mit Kästchen und
   Zeile für neue. Wird eine Aufgabe erledigt, unter der noch etwas offen ist, fragt ein
   Zettel für jede einzeln (und „alle“): ✓ erledigt (ohne sie in den Tag zu schreiben),

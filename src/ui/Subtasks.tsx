@@ -2,10 +2,11 @@
 // box), in the master list folded out by a triangle (to drag one into
 // today), and on the post-it of the task (tick, open, write a new one).
 
+import type { ComponentChild } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
 import type { DayKey } from '../lib/dates';
-import { entriesByTask, isOpenToday, openSubtasks, subtaskRows } from '../lib/logic';
+import { entriesByTask, isOpenToday, openSubtasks, subtaskRows, type DayItem } from '../lib/logic';
 import type { Task } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
@@ -19,22 +20,33 @@ const openNote = (id: string, el: HTMLElement, day?: DayKey) =>
 /**
  * Under a task in a day: its subtasks still open (today), and those done on
  * this day – each with a box of its own. One written into the day itself
- * stands there in its own place instead.
+ * (`placed`) stands among them as the row of the day (`render`), in its order.
  */
-export function SubtaskDayRows(props: { task: Task; day: DayKey; today: DayKey; inDay: Set<string> }) {
+export function SubtaskDayRows(props: {
+  task: Task;
+  day: DayKey;
+  today: DayKey;
+  inDay: Set<string>;
+  placed?: DayItem[];
+  render?: (item: DayItem) => ComponentChild;
+}) {
   const snap = useStore();
   const now = useNow();
   const isToday = props.day === props.today;
   const subs = subtaskRows(snap, props.task.id, Math.max(now, Date.now()))
     .map((r) => r.task)
     .filter((t) => !props.inDay.has(t.id) && (t.doneDay === props.day || (isToday && t.doneAt == null)));
-  if (!subs.length) return null;
+  const placed = props.render ? props.placed ?? [] : [];
+  if (!subs.length && !placed.length) return null;
+  const rows = [...subs.map((t) => ({ t, item: null as DayItem | null })), ...placed.map((item) => ({ t: item.task, item }))]
+    .sort((a, b) => a.t.createdAt - b.t.createdAt || (a.t.id < b.t.id ? -1 : 1));
   return (
     <>
-      {subs.map((t) => {
+      {rows.map(({ t, item }) => {
+        if (item) return props.render!(item);
         const state = t.doneDay === props.day ? 'done' : t.pending ? 'pending' : 'open';
         return (
-          <li key={t.id} class={`dtask sub st-${state}`}>
+          <li key={t.id} class={`dtask sub st-${state}`} data-item={t.id}>
             <Checkbox
               state={state}
               important={t.important}

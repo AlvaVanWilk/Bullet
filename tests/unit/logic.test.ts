@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ALL_DONE, archiveList, dayItems, deadlineFor, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
+  ALL_DONE, archiveList, dayItems, deadlineFor, nestDayItems, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
   openLinkCounts, prepRows, prepSuggestions, wouldLoop, masterEntries, nextStep, projectMarks, projectProgress, projectRows, projectSuggestions, categoryTasks,
   specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type ArchiveQuery, type Snapshot,
 } from '../../src/lib/logic';
@@ -46,6 +46,25 @@ describe('tasks written into days', () => {
     const s = snap([task('a', { doneDay: TODAY, doneAt: NOW })], [entry('e1', 'a', '2026-10-05'), entry('e2', 'a', TODAY)]);
     expect(states(s, '2026-10-05')).toEqual(['a:entry:migrated']);
     expect(states(s, TODAY)).toEqual(['a:entry:done']);
+  });
+});
+
+describe('subtasks in a day', () => {
+  it('go under their task once it stands in the day too, in their own order', () => {
+    const p = { projectId: 'p' };
+    const s = snap(
+      [task('mum', p), task('b', { ...p, parentId: 'mum', createdAt: 3 }), task('a', { ...p, parentId: 'mum', createdAt: 2 }), task('x')],
+      [entry('e1', 'b', TODAY), entry('e2', 'x', TODAY), entry('e3', 'a', TODAY)],
+    );
+    const rows = (x: Snapshot) => nestDayItems(x, dayItems(x, TODAY, TODAY)).map((r) => [r.item.task.id, ...r.subs.map((i) => i.task.id)].join('>'));
+    // the task itself not in the day: its subtasks stand on lines of their own
+    expect(rows(s)).toEqual(['b', 'x', 'a']);
+    // written in after them: they slide under it
+    const later = { ...entry('e4', 'mum', TODAY), createdAt: 9 };
+    expect(rows({ ...s, entries: [...s.entries, later] })).toEqual(['x', 'mum>a>b']);
+    // no longer part of it (or of another project): its own line again
+    const loose = { ...s, tasks: s.tasks.map((t) => (t.id === 'a' ? { ...t, parentId: null } : t)), entries: [...s.entries, later] };
+    expect(rows(loose)).toEqual(['x', 'a', 'mum>b']);
   });
 });
 

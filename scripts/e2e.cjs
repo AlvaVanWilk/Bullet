@@ -299,6 +299,23 @@ async function device(browser, name) {
     await ipad.waitForTimeout(300);
     // in today, under its task (which stands there), with an hourglass in its box
     const subInDay = await ipad.locator('.day.today .dtask.sub.st-pending', { hasText: 'Leiter leihen' }).count();
+    // dragged into today from the fold in the master list, it stays under its task (no line of its own)
+    await ipad.locator('.tab-master').click();
+    await ipad.waitForTimeout(400);
+    await ipad.locator('.sheet.front .task-list > li.row', { hasText: 'Holz bestellen' }).locator('.follow-toggle').click();
+    const loose = await ipad.locator('.sheet.front .row.sub', { hasText: 'Leiter leihen' }).boundingBox();
+    const todayNow = await ipad.locator('.day.today').boundingBox();
+    await ipad.mouse.move(loose.x + 90, loose.y + 12);
+    await ipad.mouse.down();
+    await ipad.waitForTimeout(450);
+    await ipad.mouse.move(loose.x + 110, loose.y + 30, { steps: 4 });
+    await ipad.mouse.move(todayNow.x + 300, todayNow.y + todayNow.height - 20, { steps: 12 });
+    await ipad.mouse.up();
+    await ipad.waitForTimeout(600);
+    const dayRows = await ipad.$$eval('.day.today .dtask', (els) => els.map((e) => (e.classList.contains('sub') ? '  ' : '') + e.querySelector('.tt-text').textContent));
+    const underIt = dayRows.indexOf('  Leiter leihen') === dayRows.indexOf('Holz bestellen') + 1 && dayRows.filter((r) => r.includes('Leiter leihen')).length === 1;
+    await ipad.locator('.tab-projects').click();
+    await ipad.waitForTimeout(400);
     await ipad.locator('.proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
     await ipad.locator('.proj-tasks .row', { hasText: 'Holz bestellen' }).first().click();
     await ipad.locator('.share-open').click();
@@ -314,9 +331,9 @@ async function device(browser, name) {
     await ipad.locator('.projview .close-x').click();
     const pdfHead = fs.readFileSync(pdfPath).subarray(0, 5).toString();
     const pngHead = fs.readFileSync(pngPath).subarray(1, 4).toString();
-    check('a task dropped on another becomes its subtask (in today under it); waiting on someone it stands under that name; shared as PDF and picture',
-      subs.includes('Leiter leihen') && subInDay === 1 && waits.some((w) => w.includes('Thomas') && w.includes('Leiter leihen')) && pdfHead === '%PDF-' && pngHead === 'PNG',
-      { subs, subInDay, waits, pdfHead, pngHead });
+    check('a task dropped on another becomes its subtask (in today under it, also once dragged in itself); waiting on someone it stands under that name; shared as PDF and picture',
+      subs.includes('Leiter leihen') && subInDay === 1 && underIt && waits.some((w) => w.includes('Thomas') && w.includes('Leiter leihen')) && pdfHead === '%PDF-' && pngHead === 'PNG',
+      { subs, subInDay, dayRows, waits, pdfHead, pngHead });
 
     // a milestone: a finished project gives a doodle (announced once); held on free paper in today, it sticks there, on both devices
     await ipad.locator('.tab-projects').click();

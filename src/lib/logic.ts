@@ -336,6 +336,26 @@ export function dayItems(s: Snapshot, day: DayKey, today: DayKey, index = entrie
   return [...deadlines, ...entries];
 }
 
+/**
+ * A day's items as its rows: a subtask whose task stands in the day too goes
+ * under it, where its subtasks stand (in their order), not on a line of its own.
+ */
+export function nestDayItems(s: Snapshot, items: DayItem[]): { item: DayItem; subs: DayItem[] }[] {
+  const sub = isSubtask(s);
+  const inDay = new Map(items.map((i) => [i.task.id, i.task]));
+  // one level only: a task that is itself a subtask keeps nothing under it
+  const under = (i: DayItem) => {
+    const parent = sub(i.task) ? inDay.get(i.task.parentId!) : undefined;
+    return !!parent && !sub(parent);
+  };
+  return items
+    .filter((i) => !under(i))
+    .map((item) => ({
+      item,
+      subs: items.filter((i) => i.task.parentId === item.task.id && under(i)).sort((a, b) => byCreated(a.task, b.task)),
+    }));
+}
+
 /** Whether the task stands open in today's page: the small dot in the master list (a deadline pushed to tomorrow does not). */
 export function isOpenToday(task: Task, today: DayKey, index: Map<string, Entry[]>): boolean {
   if (task.deleted || task.doneDay) return false;
