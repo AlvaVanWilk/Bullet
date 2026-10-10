@@ -593,3 +593,7 @@
 .waiting-who { display: inline-flex; align-items: baseline; gap: 8px; font-variant-caps: small-caps; letter-spacing: 0.05em; }
 .waiting-list { padding: 0; background: none; overflow: visible; }
 .waiting-list .arch-date { margin-left: auto; }
+
+/* subtasks of a task in a day, folded out again by its triangle: they come out from under it */
+.dtask.sub.unfold { animation: fold-out 0.18s ease-out both; }
+.dtask .follow-toggle { margin-left: 4px; }

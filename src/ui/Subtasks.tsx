@@ -1,52 +1,76 @@
 // Subtasks wherever their task stands: in a day under it (each with its own
-// box), in the master list folded out by a triangle (to drag one into
-// today), and on the post-it of the task (tick, open, write a new one).
+// box; a triangle folds them away), in the master list folded out by a
+// triangle (to drag one into today), and on the post-it of the task (tick,
+// open, write a new one).
 
 import type { ComponentChild } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
 import type { DayKey } from '../lib/dates';
-import { entriesByTask, isOpenToday, openSubtasks, subtaskRows, type DayItem } from '../lib/logic';
+import { entriesByTask, isOpenToday, openSubtasks, subtaskRows, type DayItem, type Snapshot } from '../lib/logic';
 import type { Task } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
 import { Checkbox, ClipMark, hasClip, NoteMark, PendingWho, TaskText } from './ink';
 import { Lead } from './Projects';
-import { ui, useNow, useStore } from './state';
+import { observable, ui, useObservable, useStore } from './state';
 
 const openNote = (id: string, el: HTMLElement, day?: DayKey) =>
   ui.set({ postIt: { kind: 'task', id, day, rect: el.getBoundingClientRect() } });
 
+/** Under a task in a day without being written in themselves: its subtasks done there, or (today) still open. */
+export function daySubtasks(snap: Snapshot, taskId: string, day: DayKey, today: DayKey, inDay: Set<string>, now: number): Task[] {
+  return subtaskRows(snap, taskId, now)
+    .map((r) => r.task)
+    .filter((t) => !inDay.has(t.id) && (t.doneDay === day || (day === today && t.doneAt == null)));
+}
+
+/**
+ * Which tasks in the days have their subtasks folded away (`day|taskId`), and
+ * which was folded out a moment ago. Only while Bullet is open, never saved:
+ * at first everything stands open.
+ */
+const dayFolds = observable<{ folded: Set<string>; opened: string | null }>({ folded: new Set(), opened: null });
+let openedTimer = 0;
+
+export function useDayFolds() {
+  return useObservable(dayFolds);
+}
+
+export function setDayFold(key: string, open: boolean) {
+  const folded = new Set(dayFolds.get().folded);
+  if (open === !folded.has(key)) return;
+  if (open) folded.delete(key);
+  else folded.add(key);
+  dayFolds.set({ folded, opened: open ? key : null });
+  // the rows fold out once, not every time they are drawn again
+  clearTimeout(openedTimer);
+  if (open) openedTimer = window.setTimeout(() => dayFolds.set({ opened: null }), 400);
+}
+
 /**
  * Under a task in a day: its subtasks still open (today), and those done on
- * this day – each with a box of its own. One written into the day itself
- * (`placed`) stands among them as the row of the day (`render`), in its order.
+ * this day (`subs`) – each with a box of its own. One written into the day
+ * itself (`placed`) stands among them as the row of the day (`render`), in its order.
  */
 export function SubtaskDayRows(props: {
-  task: Task;
+  subs: Task[];
   day: DayKey;
-  today: DayKey;
-  inDay: Set<string>;
-  placed?: DayItem[];
-  render?: (item: DayItem) => ComponentChild;
+  placed: DayItem[];
+  render: (item: DayItem, unfold: boolean) => ComponentChild;
+  /** folded out just now: the rows come out from under the task */
+  unfold?: boolean;
 }) {
-  const snap = useStore();
-  const now = useNow();
-  const isToday = props.day === props.today;
-  const subs = subtaskRows(snap, props.task.id, Math.max(now, Date.now()))
-    .map((r) => r.task)
-    .filter((t) => !props.inDay.has(t.id) && (t.doneDay === props.day || (isToday && t.doneAt == null)));
-  const placed = props.render ? props.placed ?? [] : [];
-  if (!subs.length && !placed.length) return null;
-  const rows = [...subs.map((t) => ({ t, item: null as DayItem | null })), ...placed.map((item) => ({ t: item.task, item }))]
+  if (!props.subs.length && !props.placed.length) return null;
+  const rows = [...props.subs.map((t) => ({ t, item: null as DayItem | null })), ...props.placed.map((item) => ({ t: item.task, item }))]
     .sort((a, b) => a.t.createdAt - b.t.createdAt || (a.t.id < b.t.id ? -1 : 1));
   return (
     <>
       {rows.map(({ t, item }) => {
-        if (item) return props.render!(item);
+        if (item) return props.render(item, !!props.unfold);
         const state = t.doneDay === props.day ? 'done' : t.pending ? 'pending' : 'open';
         return (
-          <li key={t.id} class={`dtask sub st-${state}`} data-item={t.id}>
+          <li key={t.id} class={`dtask sub st-${state} ${props.unfold ? 'unfold' : ''}`} data-item={t.id}>
             <Checkbox
               state={state}
               important={t.important}

@@ -79,7 +79,9 @@ Bedienung und Einrichtung: `README.md`.
   gehören zum Bereich ihrer Aufgabe und wandern mit. Überall sichtbar: im Tag stehen
   unter der Aufgabe ihre offenen (und dort erledigten) Unteraufgaben mit eigenem
   Kästchen; steht eine schon allein im Tag und die Aufgabe kommt dazu, rutscht sie
-  darunter an ihren Platz; in der Masterliste (nächster Schritt) klappt ein Dreieck mit Zahl sie aus
+  darunter an ihren Platz; das Dreieck mit Zahl hinter der Aufgabe klappt sie ein und
+  aus (anfangs offen, nicht gespeichert; eine neu hineingezogene klappt wieder auf);
+  in der Masterliste (nächster Schritt) klappt ein Dreieck mit Zahl sie aus
   (einzeln in heute ziehbar); im Post-it der Aufgabe „Unteraufgaben“ mit Kästchen und
   Zeile für neue. Wird eine Aufgabe erledigt, unter der noch etwas offen ist, fragt ein
   Zettel für jede einzeln (und „alle“): ✓ erledigt (ohne sie in den Tag zu schreiben),

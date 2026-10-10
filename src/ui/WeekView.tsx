@@ -19,10 +19,11 @@ import { GRID } from './baseline';
 import { DayHeading } from './DayHeading';
 import { beyondContent, DecoLayer, onDecoMenu, onDecoPress } from './Deco';
 import { clickSuppressed, startDrag } from './drag';
+import { FollowToggle } from './Follow';
 import { Checkbox, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, TaskText } from './ink';
 import { ProjectIcon } from './ProjectIcon';
 import { StatusNote } from './StatusNote';
-import { daySet, SubtaskDayRows } from './Subtasks';
+import { daySet, daySubtasks, setDayFold, SubtaskDayRows, useDayFolds } from './Subtasks';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { movePick, SuggestList } from './Suggest';
 import { useWeekEvents } from './useEvents';
@@ -239,6 +240,9 @@ function GearIcon() {
 
 // --- one day ------------------------------------------------------------------------------
 
+/** Entries of subtasks already seen arriving under their task (it folds out for them only once). */
+const arrived = new Set<string>();
+
 function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; events: CalEvent[]; now: number }) {
   const snap = useStore();
   const isToday = props.day === props.today;
@@ -249,6 +253,21 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
   const inDay = daySet(props.items);
   const list = useRef<HTMLUListElement>(null);
   useSlideUnder(list);
+  const folds = useDayFolds();
+  const rows = nestDayItems(snap, props.items).map(({ item, subs }) => {
+    const key = `${props.day}|${item.task.id}`;
+    const loose = daySubtasks(snap, item.task.id, props.day, props.today, inDay, Math.max(props.now, Date.now()));
+    return { item, placed: subs, loose, key, open: !folds.folded.has(key) };
+  });
+  // a subtask dragged in under a task folded away: folded out once, so it is seen arriving
+  const fresh = rows.flatMap((r) => r.placed.filter((i) => i.entry && store.isFresh(i.entry.id)).map((i) => ({ id: i.entry!.id, key: r.key, open: r.open })));
+  useEffect(() => {
+    for (const f of fresh) {
+      if (arrived.has(f.id)) continue;
+      arrived.add(f.id);
+      if (!f.open) setDayFold(f.key, true);
+    }
+  }, [fresh.map((f) => f.id).join()]);
 
   return (
     <section
@@ -277,18 +296,24 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
         </ul>
       )}
       <ul class="day-tasks" ref={list}>
-        {nestDayItems(snap, props.items).map(({ item, subs }) => (
+        {rows.map(({ item, placed, loose, key, open }) => (
           <Fragment key={item.key}>
-            <DayTaskRow item={item} day={props.day} today={props.today} />
-            {/* its subtasks under it, each with a box of its own; one written into the day itself too */}
-            <SubtaskDayRows
-              task={item.task}
+            <DayTaskRow
+              item={item}
               day={props.day}
               today={props.today}
-              inDay={inDay}
-              placed={subs}
-              render={(sub) => <DayTaskRow key={sub.key} item={sub} day={props.day} today={props.today} sub />}
+              fold={placed.length + loose.length ? { count: placed.length + loose.length, open, key } : undefined}
             />
+            {/* its subtasks under it, each with a box of its own (one written into the day itself too); the triangle folds them away */}
+            {open && (
+              <SubtaskDayRows
+                subs={loose}
+                day={props.day}
+                placed={placed}
+                unfold={folds.opened === key}
+                render={(sub, unfold) => <DayTaskRow key={sub.key} item={sub} day={props.day} today={props.today} sub unfold={unfold} />}
+              />
+            )}
           </Fragment>
         ))}
       </ul>
@@ -410,7 +435,17 @@ function useSlideUnder(list: { current: HTMLUListElement | null }) {
 /** How far a subtask stands in under its task (`.dtask.sub`). */
 const SUB_INDENT = 30;
 
-function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey; sub?: boolean }) {
+function DayTaskRow(props: {
+  item: DayItem;
+  day: DayKey;
+  today: DayKey;
+  /** standing under its task */
+  sub?: boolean;
+  /** come out from under its task just now */
+  unfold?: boolean;
+  /** subtasks stand under it: the triangle that folds them away */
+  fold?: { count: number; open: boolean; key: string };
+}) {
   const { item } = props;
   const task = item.task;
   const cat = store.category(task.categoryId);
@@ -423,7 +458,7 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey; sub?: bo
 
   return (
     <li
-      class={`dtask ${item.kind} st-${item.state} ${faded ? 'faded' : ''} ${props.sub ? 'sub' : ''}`}
+      class={`dtask ${item.kind} st-${item.state} ${faded ? 'faded' : ''} ${props.sub ? 'sub' : ''} ${props.unfold ? 'unfold' : ''}`}
       data-item={task.id}
       // right of the writing the row is free paper (for decoration), not the task
       onPointerDown={(e) => draggable && !beyondContent(e.currentTarget as HTMLElement, e.clientX) && startDrag(e, e.currentTarget as HTMLElement, {
@@ -455,6 +490,17 @@ function DayTaskRow(props: { item: DayItem; day: DayKey; today: DayKey; sub?: bo
         {hasClip(task) && <ClipMark />}
       </span>
       {color && !props.sub && <span class="cat-dot" style={{ '--dot': color.marker }} aria-label={cat!.name} />}
+      {props.fold && (
+        <FollowToggle
+          mark="triangle"
+          showCount
+          count={props.fold.count}
+          open={props.fold.open}
+          seed={`dsub${task.id}`}
+          what="Unteraufgaben"
+          onToggle={() => setDayFold(props.fold!.key, !props.fold!.open)}
+        />
+      )}
     </li>
   );
 }
