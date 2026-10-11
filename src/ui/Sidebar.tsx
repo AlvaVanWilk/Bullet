@@ -338,7 +338,7 @@ function MasterList(props: { active: boolean }) {
           <BroomIcon />
         </button>
       </h2>
-      <ul class="task-list master" ref={listRef} data-scroll>
+      <ul class="task-list" ref={listRef} data-scroll>
         {entries.map((entry) => {
           if (entry.kind === 'project') {
             // A project shows its next step (with its icon); without one, the project

@@ -377,5 +377,3 @@
 .broom:not(:disabled):active { transform: rotate(-14deg); }
 @keyframes swept { to { opacity: 0; transform: translateX(-40px) rotate(-2deg); } }
 .row.swept { animation: swept 0.48s ease-in forwards; }
-/* a row of dots between the heading and the first line (the projects on top) */
-.task-list.master { padding-top: var(--grid); }
