@@ -34,7 +34,9 @@ Bedienung und Einrichtung: `README.md`.
   Tagen geteilt, Erledigt-Datum klein am Ende), ein kleines Suchfeld mit Lupe für alles,
   sortieren (neueste/älteste zuerst, A–Z) und filtern (Kategorie, Deadline, wichtig, Foto
   oder Überweisung); Eintrag antippen → Post-it. Der
-  Besen neben „Masterliste“ räumt Durchgestrichenes sofort weg (`settings.listClearedAt`).
+  Besen neben „Masterliste“ räumt Durchgestrichenes sofort weg (`settings.listClearedAt`),
+  aus den Listen (Masterliste, Projektseite, Kategorien); die Tage und das Archiv behalten
+  alles, auch die Unteraufgaben unter ihrer Aufgabe im Tag.
 - Rechts an der Hauptseite stecken Laschen wie Klebe-Fähnchen, mit gezeichneten Symbolen
   statt Schrift: Kästchen = Planer (Woche; schon offen → aktuelle Woche), Kiste = Archiv
   (eine eigene Seite), Sanduhr = Wartet. Die aktive liegt vorn auf dem Papier.

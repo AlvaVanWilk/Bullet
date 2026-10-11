@@ -10,7 +10,7 @@ import {
   addDays, compareDays, isoWeek, mondayOf, shortWeekday, timeLabel, weekDays, weekRangeLabel, type DayKey,
 } from '../lib/dates';
 import {
-  DEADLINE_LEAVE_MS, dayItems, entriesByTask, nestDayItems, hiddenKeys, openLinkCounts, specialLinkKey, specialsOn, todaySuggestions, visibleEvents,
+  DEADLINE_LEAVE_MS, dayItems, daySubtasks, entriesByTask, nestDayItems, hiddenKeys, openLinkCounts, specialLinkKey, specialsOn, todaySuggestions, visibleEvents,
   weekDeadlines, weekSpecials, type DayItem,
 } from '../lib/logic';
 import type { CalEvent, Task } from '../lib/model';
@@ -23,7 +23,7 @@ import { FollowToggle } from './Follow';
 import { Checkbox, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, TaskText } from './ink';
 import { ProjectIcon } from './ProjectIcon';
 import { StatusNote } from './StatusNote';
-import { daySet, daySubtasks, setDayFold, SubtaskDayRows, useDayFolds } from './Subtasks';
+import { daySet, setDayFold, SubtaskDayRows, useDayFolds } from './Subtasks';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { movePick, SuggestList } from './Suggest';
 import { useWeekEvents } from './useEvents';
@@ -256,7 +256,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
   const folds = useDayFolds();
   const rows = nestDayItems(snap, props.items).map(({ item, subs }) => {
     const key = `${props.day}|${item.task.id}`;
-    const loose = daySubtasks(snap, item.task.id, props.day, props.today, inDay, Math.max(props.now, Date.now()));
+    const loose = daySubtasks(snap, item.task.id, props.day, props.today, inDay);
     return { item, placed: subs, loose, key, open: !folds.folded.has(key) };
   });
   // a subtask dragged in under a task folded away: folded out once, so it is seen arriving

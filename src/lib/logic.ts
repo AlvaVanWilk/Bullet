@@ -125,6 +125,19 @@ export function subtaskRows(s: Snapshot, parentId: string, now: number): ListRow
   return listRows(s, now, (t) => t.parentId === parentId && sub(t));
 }
 
+/**
+ * Under a task in a day, without being written in themselves: its subtasks done
+ * on that day, or (today) still open. A day keeps what was done on it, however
+ * long ago, swept off the lists or not.
+ */
+export function daySubtasks(s: Snapshot, parentId: string, day: DayKey, today: DayKey, inDay: Set<string>): Task[] {
+  const sub = isSubtask(s);
+  return s.tasks
+    .filter((t) => !t.deleted && t.parentId === parentId && sub(t) && !inDay.has(t.id))
+    .filter((t) => t.doneDay === day || (day === today && t.doneAt == null))
+    .sort(byCreated);
+}
+
 /** Its subtasks not done yet (waiting follow-ups too). */
 export function openSubtasks(s: Snapshot, parentId: string): Task[] {
   const sub = isSubtask(s);

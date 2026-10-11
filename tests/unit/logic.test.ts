@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ALL_DONE, archiveList, dayItems, deadlineFor, nestDayItems, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
+  ALL_DONE, archiveList, dayItems, daySubtasks, deadlineFor, nestDayItems, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
   openLinkCounts, prepRows, prepSuggestions, wouldLoop, masterEntries, nextStep, projectMarks, projectProgress, projectRows, projectSuggestions, categoryTasks,
   specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type ArchiveQuery, type Snapshot,
 } from '../../src/lib/logic';
@@ -65,6 +65,24 @@ describe('subtasks in a day', () => {
     // no longer part of it (or of another project): its own line again
     const loose = { ...s, tasks: s.tasks.map((t) => (t.id === 'a' ? { ...t, parentId: null } : t)), entries: [...s.entries, later] };
     expect(rows(loose)).toEqual(['x', 'a', 'mum>b']);
+  });
+});
+
+describe('subtasks under their task in a day', () => {
+  it('stay on the day they were done, even swept off the lists or long ago', () => {
+    const p = { projectId: 'p' };
+    const done = { ...p, parentId: 'mum', doneAt: NOW - 1000, doneDay: '2026-10-05' };
+    const s = snap([task('mum', { ...p, doneAt: NOW, doneDay: '2026-10-05' }), task('a', done), task('b', { ...done, createdAt: 2 }), task('c', { ...p, parentId: 'mum' })]);
+    const under = (x: Snapshot, day: string) => daySubtasks(x, 'mum', day, TODAY, new Set()).map((t) => t.id);
+    expect(under(s, '2026-10-05')).toEqual(['a', 'b']);
+    // the broom clears the master list; the day keeps them
+    const swept = { ...s, settings: { ...s.settings, listClearedAt: NOW } };
+    expect(under(swept, '2026-10-05')).toEqual(['a', 'b']);
+    // weeks later too
+    expect(daySubtasks(s, 'mum', '2026-10-05', '2026-12-01', new Set()).map((t) => t.id)).toEqual(['a', 'b']);
+    // today: the open one as well; one written into the day itself is not repeated
+    expect(under(s, TODAY)).toEqual(['c']);
+    expect(daySubtasks(s, 'mum', TODAY, TODAY, new Set(['c']))).toEqual([]);
   });
 });
 

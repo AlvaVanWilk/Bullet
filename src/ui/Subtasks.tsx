@@ -7,7 +7,7 @@ import type { ComponentChild } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
 import type { DayKey } from '../lib/dates';
-import { entriesByTask, isOpenToday, openSubtasks, subtaskRows, type DayItem, type Snapshot } from '../lib/logic';
+import { entriesByTask, isOpenToday, openSubtasks, type DayItem } from '../lib/logic';
 import type { Task } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
@@ -17,13 +17,6 @@ import { observable, ui, useObservable, useStore } from './state';
 
 const openNote = (id: string, el: HTMLElement, day?: DayKey) =>
   ui.set({ postIt: { kind: 'task', id, day, rect: el.getBoundingClientRect() } });
-
-/** Under a task in a day without being written in themselves: its subtasks done there, or (today) still open. */
-export function daySubtasks(snap: Snapshot, taskId: string, day: DayKey, today: DayKey, inDay: Set<string>, now: number): Task[] {
-  return subtaskRows(snap, taskId, now)
-    .map((r) => r.task)
-    .filter((t) => !inDay.has(t.id) && (t.doneDay === day || (day === today && t.doneAt == null)));
-}
 
 /**
  * Which tasks in the days have their subtasks folded away (`day|taskId`), and
