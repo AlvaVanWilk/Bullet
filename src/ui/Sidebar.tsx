@@ -338,20 +338,17 @@ function MasterList(props: { active: boolean }) {
           <BroomIcon />
         </button>
       </h2>
-      <ul class="task-list" ref={listRef} data-scroll>
-        {entries.map((entry, i) => {
+      <ul class="task-list master" ref={listRef} data-scroll>
+        {entries.map((entry) => {
           if (entry.kind === 'project') {
             // A project shows its next step (with its icon); without one, the project
             // itself, once the step done last is struck through.
             const last = entry.rows[entry.rows.length - 1]?.task.id;
             const bare = !entry.next && !(last && unstruck.has(last));
-            const end = entries[i + 1] && entries[i + 1].kind !== 'project';
             return (
               <Fragment key={entry.project.id}>
                 {entry.rows.map((r) => (shown.has(r.task.id) ? taskRow(shown.get(r.task.id)!, entry.project, 'block') : null))}
                 {bare && <ProjectLine project={entry.project} today={today} index={index} fresh={!!last && striking.has(last)} />}
-                {/* the projects on top, a row of dots, then the tasks */}
-                {end && <li class="list-gap" aria-hidden="true" />}
               </Fragment>
             );
           }

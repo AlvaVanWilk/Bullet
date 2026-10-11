@@ -49,7 +49,8 @@ Bedienung und Einrichtung: `README.md`.
   unter der zuletzt erledigten. Schleifen werden verhindert.
 - Projekte (`project`, `task.projectId`): dritte Lasche „Projekte“ in der Seitenleiste.
   In der Masterliste steht nur eine Zeile pro Projekt, alle ganz oben (untereinander nach
-  Anlegezeit; dann eine Punktreihe Abstand, dann die Aufgaben), mit seinem Bild davor; „!“ und „•“ liegen darüber. Antippen → ein Zettel, ganz
+  Anlegezeit, ohne Abstand zu den Aufgaben darunter: oben ja, aber kein Thron; zwischen
+  Überschrift und erster Zeile eine Punktreihe Luft), mit seinem Bild davor; „!“ und „•“ liegen darüber. Antippen → ein Zettel, ganz
   leicht in der Projektfarbe getönt, mit einer Falz längs und quer (Kreuz in der
   Mitte, kein Knittern), klappt sich lang und schmal über der Seitenleiste direkt
   unter der Projektzeile auf (offene Aufgaben, daraus in heute ziehen; daneben tippen
