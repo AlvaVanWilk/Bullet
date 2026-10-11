@@ -219,8 +219,8 @@ async function device(browser, name) {
     await ipad.locator('.sheet.front .lead-icon').first().click();
     const slipAgain = await ipad.locator('.postit.pslip.shown .pslip-title').textContent();
     await ipad.mouse.click(1000, 790);
-    check('the next step stands in the list in place of its project; its icon opens the slip',
-      onTop.join() === 'Holz bestellen' && withStep.includes('I:Holz bestellen') && !withStep.some((t) => t.includes('Gartenhaus')) && slipAgain === 'Gartenhaus',
+    check('the next step stands on top of the list in place of its project; its icon opens the slip',
+      onTop.join() === 'Holz bestellen' && withStep[0] === 'I:Holz bestellen' && !withStep.some((t) => t.includes('Gartenhaus')) && slipAgain === 'Gartenhaus',
       { onTop, withStep, slipAgain });
 
     // done yesterday, but never written into a day: "erledigt" on its post-it asks for the day

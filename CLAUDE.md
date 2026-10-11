@@ -29,7 +29,7 @@ Bedienung und Einrichtung: `README.md`.
   kein Punkt; die Deadline ändert sich nicht, morgen steht sie wieder offen da.
 - Erledigt → Seitenleiste leuchtet auf. Beim Öffnen der Masterliste werden die seither
   erledigten Aufgaben nacheinander (in Erledigungsreihenfolge) dick durchgestrichen.
-  Die Reihenfolge der Liste ändert sich nie. Nach 7 Tagen (einstellbar) verschwinden sie;
+  Die Reihenfolge der Liste ändert sich nie (die Projekte stehen fest oben, s. u.). Nach 7 Tagen (einstellbar) verschwinden sie;
   alle bleiben im Archiv: eine Liste wie die Masterliste (nicht durchgestrichen, nicht nach
   Tagen geteilt, Erledigt-Datum klein am Ende), ein kleines Suchfeld mit Lupe für alles,
   sortieren (neueste/älteste zuerst, A–Z) und filtern (Kategorie, Deadline, wichtig, Foto
@@ -48,8 +48,8 @@ Bedienung und Einrichtung: `README.md`.
   Mehrere Mütter: wartet auf alle, hängt unter jeder offenen („auch nach: …“), erscheint
   unter der zuletzt erledigten. Schleifen werden verhindert.
 - Projekte (`project`, `task.projectId`): dritte Lasche „Projekte“ in der Seitenleiste.
-  In der Masterliste steht nur eine Zeile pro Projekt (an seinem Platz nach Anlegezeit)
-  mit seinem Bild davor; „!“ und „•“ liegen darüber. Antippen → ein Zettel, ganz
+  In der Masterliste steht nur eine Zeile pro Projekt, alle ganz oben (untereinander nach
+  Anlegezeit; dann eine Punktreihe Abstand, dann die Aufgaben), mit seinem Bild davor; „!“ und „•“ liegen darüber. Antippen → ein Zettel, ganz
   leicht in der Projektfarbe getönt, mit einer Falz längs und quer (Kreuz in der
   Mitte, kein Knittern), klappt sich lang und schmal über der Seitenleiste direkt
   unter der Projektzeile auf (offene Aufgaben, daraus in heute ziehen; daneben tippen
@@ -114,7 +114,11 @@ Bedienung und Einrichtung: `README.md`.
   dem Projektbild davor, als normale Zeile (eigenes „!“/„•“, ziehen, Post-it); das Bild
   öffnet den Zettel. Kein Projektname dabei. Auf dem Zettel steht er oben, darunter
   abgesetzt die übrigen (scrollbar). Erledigt → durchgestrichen; seine nächste
-  Folgeaufgabe im Projekt wird von selbst der nächste Schritt und schreibt sich darunter.
+  Folgeaufgabe im Projekt wird von selbst der nächste Schritt und schreibt sich darunter;
+  dann wandert der durchgestrichene eins runter, direkt unter die Projekte (in
+  Erledigungsreihenfolge), und geht wie alles Erledigte. Wartet die Folgeaufgabe noch auf
+  eine andere Mutter, wird sie nächster Schritt, sobald sie frei ist (wenn das Projekt
+  dann keinen hat).
   Ohne nächsten Schritt: die Projektzeile mit blassem „→ ?“.
 - Hauptseite: Kopf (Kalenderwoche, Boxen Termine/Deadlines/Besonderes) scrollt nicht.
   Tage von Montag bis heute; heute nie unterhalb der Fenstermitte. Vergangene Termine

@@ -268,18 +268,26 @@ export class Store {
   }
 
   /**
-   * A next step done: what comes right after it in the project (and waits for
-   * nothing else) becomes the next step.
+   * A task done frees what came after it. One that came after a next step of
+   * its project (this one, or one done earlier while it still waited for this)
+   * becomes the next step, if the project has none open; the oldest of them.
    */
   private passOnStep(task: Task) {
-    if (!task.next || !task.projectId) return;
     const live = [...this.records.values()].filter((r): r is Task => r.type === 'task' && !r.deleted);
-    if (live.some((t) => t.projectId === task.projectId && t.next && t.doneAt == null)) return;
     const byId = new Map(live.map((t) => [t.id, t]));
-    const after = live
-      .filter((t) => t.projectId === task.projectId && t.doneAt == null && t.after?.includes(task.id) && !isWaiting(t, byId))
-      .sort((a, b) => a.createdAt - b.createdAt)[0];
-    if (after) this.put({ ...after, next: true });
+    const afterStep = (t: Task) => (t.after ?? []).some((id) => {
+      const mother = byId.get(id);
+      return !!mother && mother.next === true && mother.doneAt != null && mother.projectId === t.projectId;
+    });
+    const freed = live
+      .filter((t) => t.projectId && t.doneAt == null && t.after?.includes(task.id) && !isWaiting(t, byId) && afterStep(t))
+      .sort((a, b) => a.createdAt - b.createdAt);
+    const given = new Set<string>();
+    for (const t of freed) {
+      if (given.has(t.projectId!) || live.some((x) => x.projectId === t.projectId && x.next && x.doneAt == null)) continue;
+      given.add(t.projectId!);
+      this.put({ ...t, next: true });
+    }
   }
 
   /**

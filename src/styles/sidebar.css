@@ -377,3 +377,5 @@
 .broom:not(:disabled):active { transform: rotate(-14deg); }
 @keyframes swept { to { opacity: 0; transform: translateX(-40px) rotate(-2deg); } }
 .row.swept { animation: swept 0.48s ease-in forwards; }
+/* the projects on top of the master list, then a row of dots, then the tasks */
+.task-list > .list-gap { height: var(--grid); list-style: none; }

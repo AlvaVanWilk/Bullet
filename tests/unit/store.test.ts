@@ -162,6 +162,22 @@ describe('store', () => {
     expect(s.task(b.id)!.next).toBe(false);
   });
 
+  it('makes a follow-up of a step done the next step once it waits for nothing else', () => {
+    const s = makeStore();
+    const p = s.addProject('Gartenhaus')!;
+    const a = s.addTask('Farbe kaufen', null, { projectId: p.id })!;
+    const b = s.addTask('Wetter abwarten')!;
+    s.setNextStep(a.id);
+    const c = s.addFollowUp(a.id, 'Streichen')!;
+    s.linkFollowUp(b.id, c.id);
+    // the step done, but what comes after it still waits for another: no next step yet
+    s.setDone(a.id, true, '2026-10-09');
+    expect(s.task(c.id)!.next).toBeFalsy();
+    // that one done too: now it is the next step
+    s.setDone(b.id, true, '2026-10-10');
+    expect(s.task(c.id)!.next).toBe(true);
+  });
+
   it('copies a task into a day only once', () => {
     const s = makeStore();
     const t = s.addTask('Brot kaufen')!;

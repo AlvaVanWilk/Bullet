@@ -77,6 +77,8 @@ export function ProjectLine(props: { project: Project; today: string; index: Map
       // a task dragged onto the project goes into it
       data-drop="project"
       data-project={p.id}
+      data-glide={p.id}
+      data-place="block"
       onClick={(e) => {
         if (clickSuppressed()) return;
         ui.set({ postIt: showing ? null : { kind: 'project', id: p.id, rect: rectOf(e.currentTarget) } });

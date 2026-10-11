@@ -198,36 +198,40 @@ export function masterTasks(s: Snapshot, now: number): Task[] {
 }
 
 /**
- * A project in the master list: its next steps (those done lately, struck,
- * then the open one), and whether one is open; without one the project itself
- * stands there.
+ * A line of the master list. A project: its next steps (one done lately and not
+ * yet seen struck through, then the open one), and whether one is open; without
+ * one the project itself stands there. A step: one done and seen struck through,
+ * gone down from its project to the tasks.
  */
 export type MasterEntry =
   | { kind: 'task'; row: ListRow }
-  | { kind: 'project'; project: Project; rows: ListRow[]; next: Task | null };
+  | { kind: 'project'; project: Project; rows: ListRow[]; next: Task | null }
+  | { kind: 'step'; row: ListRow; project: Project };
 
-/** The master list with its projects, each in its place by when it was written. */
-export function masterEntries(s: Snapshot, now: number): MasterEntry[] {
+/**
+ * The master list: the projects on top, in the order they were made, each with
+ * its next step; below them the steps done that were seen struck through before
+ * `seenAt` (in the order done); then the tasks, in their place by when they were
+ * written. Nothing changes its place otherwise.
+ */
+export function masterEntries(s: Snapshot, now: number, seenAt = 0): MasterEntry[] {
   const byId = new Map(s.tasks.filter((t) => !t.deleted).map((t) => [t.id, t]));
-  const projects: MasterEntry[] = liveProjects(s)
+  const settled = (r: ListRow) => r.task.doneAt != null && r.task.doneAt <= seenAt;
+  const projects = liveProjects(s)
     .filter((p) => isVisibleInLists(p, s.settings, now))
     .map((p) => {
       const rows = p.doneAt == null ? nextStepRows(s, p.id, now, byId) : [];
       const open = rows.find((r) => r.task.doneAt == null);
-      return { kind: 'project', project: p, rows, next: open?.task ?? null };
+      return { project: p, rows, next: open?.task ?? null };
     });
-  const created = (e: MasterEntry) => (e.kind === 'project' ? e.project : e.row.task);
-  const out: MasterEntry[] = [];
-  let at = 0;
-  for (const row of masterRows(s, now)) {
-    // a task standing under another keeps its place below it
-    if (row.anchor == null) {
-      while (at < projects.length && byCreated(created(projects[at]), row.task) < 0) out.push(projects[at++]);
-    }
-    out.push({ kind: 'task', row });
-  }
-  while (at < projects.length) out.push(projects[at++]);
-  return out;
+  const steps: MasterEntry[] = projects
+    .flatMap(({ project, rows }) => rows.filter(settled).map((row) => ({ kind: 'step' as const, row, project })))
+    .sort((a, b) => a.row.task.doneAt! - b.row.task.doneAt!);
+  return [
+    ...projects.map(({ project, rows, next }) => ({ kind: 'project' as const, project, rows: rows.filter((r) => !settled(r)), next })),
+    ...steps,
+    ...masterRows(s, now).map((row) => ({ kind: 'task' as const, row })),
+  ];
 }
 
 /** The next step of a project: its open task marked as such (not one still waiting). */

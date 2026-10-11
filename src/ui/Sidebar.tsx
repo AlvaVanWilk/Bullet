@@ -3,7 +3,7 @@
 // in and out; switching tabs pulls the front sheet out and tucks it behind.
 
 import { Fragment } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor } from '../lib/colors';
 import { allRows, entriesByTask, followUps, isOpenToday, liveCategories, masterEntries, masterRows, openSubtasks, type ListRow } from '../lib/logic';
 import type { Project } from '../lib/model';
@@ -175,6 +175,7 @@ function longPress(fn: () => void) {
 
 const STRIKE_START_MS = 380;
 const STRIKE_STEP_MS = 430;
+const STRIKE_SETTLE_MS = 1300;
 
 function MasterList(props: { active: boolean }) {
   const snap = useStore();
@@ -186,16 +187,17 @@ function MasterList(props: { active: boolean }) {
   useGridRows(listRef);
   const [striking, setStriking] = useState<Set<string>>(new Set());
   const struckRef = useRef<Set<string>>(new Set());
+  useGlide(listRef);
   const listNow = Math.max(now, Date.now());
-  const entries = masterEntries(snap, listNow);
-  // the tasks of the list, and the next steps standing in for their projects
+  const seen = dev.strikeSeenAt;
+  const entries = masterEntries(snap, listNow, seen);
+  // the tasks of the list, the next steps standing in for their projects, and the steps gone down
   const taskRows = [
     ...masterRows(snap, listNow),
-    ...entries.flatMap((e) => (e.kind === 'project' ? e.rows : [])),
+    ...entries.flatMap((e) => (e.kind === 'project' ? e.rows : e.kind === 'step' ? [e.row] : [])),
   ];
   const tasks = taskRows.map((r) => r.task);
   const index = entriesByTask(snap.entries);
-  const seen = dev.strikeSeenAt;
   const follow = followUps(snap);
   const folds = useFolds();
   const [sweeping, setSweeping] = useState(false);
@@ -217,11 +219,13 @@ function MasterList(props: { active: boolean }) {
       }, STRIKE_START_MS + i * STRIKE_STEP_MS),
     );
     const last = Math.max(...pending.map((t) => t.doneAt!));
+    // a moment to see it struck (and what comes next written under it): then a
+    // next step done goes down from its project to the tasks
     timers.push(setTimeout(() => {
       device.set({ strikeSeenAt: Math.max(device.get().strikeSeenAt, last) });
       struckRef.current = new Set();
       setStriking(new Set());
-    }, STRIKE_START_MS + pending.length * STRIKE_STEP_MS + 450));
+    }, STRIKE_START_MS + pending.length * STRIKE_STEP_MS + STRIKE_SETTLE_MS));
     return () => timers.forEach(clearTimeout);
   }, [props.active, pendingKey]);
 
@@ -262,8 +266,11 @@ function MasterList(props: { active: boolean }) {
     ui.set({ postIt: { kind: 'project', id: project.id, rect: line.getBoundingClientRect() } });
   };
 
-  /** A line of the list: a task, or the next step of a project (its icon in front opens the project). */
-  const taskRow = ({ task: t, anchor }: ListRow, project?: Project) => {
+  /**
+   * A line of the list: a task, or the next step of a project (its icon in front
+   * opens the project), on top with its project or, done, gone down to the tasks.
+   */
+  const taskRow = ({ task: t, anchor }: ListRow, project?: Project, place?: 'block' | 'below') => {
     const cat = store.category(t.categoryId);
     const color = cat ? categoryColor(cat.color) : null;
     const isStruck = t.doneAt != null && (t.doneAt <= seen || striking.has(t.id));
@@ -280,6 +287,8 @@ function MasterList(props: { active: boolean }) {
           // a task dragged onto a next step goes into its project
           data-drop={project ? 'project' : undefined}
           data-project={project?.id}
+          data-glide={place ? t.id : undefined}
+          data-place={place}
           onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, {
             taskId: t.id, text: t.text, from: 'master', color: color?.ink,
           })}
@@ -330,21 +339,25 @@ function MasterList(props: { active: boolean }) {
         </button>
       </h2>
       <ul class="task-list" ref={listRef} data-scroll>
-        {entries.map((entry) => {
+        {entries.map((entry, i) => {
           if (entry.kind === 'project') {
             // A project shows its next step (with its icon); without one, the project
             // itself, once the step done last is struck through.
             const last = entry.rows[entry.rows.length - 1]?.task.id;
             const bare = !entry.next && !(last && unstruck.has(last));
+            const end = entries[i + 1] && entries[i + 1].kind !== 'project';
             return (
               <Fragment key={entry.project.id}>
-                {entry.rows.map((r) => (shown.has(r.task.id) ? taskRow(shown.get(r.task.id)!, entry.project) : null))}
+                {entry.rows.map((r) => (shown.has(r.task.id) ? taskRow(shown.get(r.task.id)!, entry.project, 'block') : null))}
                 {bare && <ProjectLine project={entry.project} today={today} index={index} fresh={!!last && striking.has(last)} />}
+                {/* the projects on top, a row of dots, then the tasks */}
+                {end && <li class="list-gap" aria-hidden="true" />}
               </Fragment>
             );
           }
           const row = shown.get(entry.row.task.id);
-          return row ? taskRow(row) : null;
+          if (!row) return null;
+          return entry.kind === 'step' ? taskRow(row, entry.project, 'below') : taskRow(row);
         })}
         {!entries.length && <li class="empty-hint">Hier entsteht deine Liste. Schreib unten los und drück Enter.</li>}
       </ul>
@@ -357,6 +370,33 @@ function MasterList(props: { active: boolean }) {
       />
     </div>
   );
+}
+
+/**
+ * A next step done and seen struck through goes down from its project to the
+ * tasks: the lines on top glide to their new places instead of jumping.
+ */
+function useGlide(list: { current: HTMLElement | null }) {
+  const last = useRef(new Map<string, { top: number; place: string }>());
+  useLayoutEffect(() => {
+    const root = list.current;
+    if (!root) return;
+    const els = Array.from(root.querySelectorAll<HTMLElement>('[data-glide]'));
+    const here = new Map(els.map((el) => [el.dataset.glide!, { top: el.offsetTop, place: el.dataset.place ?? '' }]));
+    const moved = [...here].some(([key, h]) => {
+      const before = last.current.get(key);
+      return !!before && before.place !== h.place;
+    });
+    if (moved) {
+      for (const el of els) {
+        const before = last.current.get(el.dataset.glide!);
+        const top = here.get(el.dataset.glide!)!.top;
+        if (!before || before.top === top || typeof el.animate !== 'function') continue;
+        el.animate([{ transform: `translateY(${before.top - top}px)` }, { transform: 'none' }], { duration: 420, easing: 'cubic-bezier(0.3, 0.7, 0.2, 1)' });
+      }
+    }
+    last.current = here;
+  });
 }
 
 /** A small hand-drawn broom. */

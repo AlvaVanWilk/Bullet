@@ -184,20 +184,20 @@ describe('projects', () => {
   }
   const withProjects = (tasks: Task[], projects: Project[], entries: Entry[] = []) => ({ ...snap(tasks, entries), projects });
 
-  it('stand in the master list as one line, in their place, without their tasks', () => {
+  it('stand on top of the master list as one line each, in the order made, without their tasks', () => {
     const s = withProjects([
       task('a', { createdAt: 1 }),
       task('p1', { createdAt: 5, projectId: 'garten' }),
       task('b', { createdAt: 10 }),
       task('c', { createdAt: 30, projectId: 'gone' }),
     ], [project('garten', { createdAt: 8 }), project('gone', { createdAt: 2, deleted: true }), project('later', { createdAt: 40 })]);
-    const line = masterEntries(s, NOW).map((e) => (e.kind === 'task' ? e.row.task.id : `[${e.project.id}]`));
+    const line = masterEntries(s, NOW).map((e) => (e.kind === 'project' ? `[${e.project.id}]` : e.row.task.id));
     // the task of a deleted project stands in the list again
-    expect(line).toEqual(['a', '[garten]', 'b', 'c', '[later]']);
+    expect(line).toEqual(['[garten]', '[later]', 'a', 'b', 'c']);
     expect(projectRows(s, 'garten', NOW).map((r) => r.task.id)).toEqual(['p1']);
   });
 
-  it('show their next step in their place instead of themselves; done steps stay struck for a while', () => {
+  it('show their next step instead of themselves; a step done goes down to the tasks once seen struck', () => {
     const tasks = [
       task('a', { createdAt: 1 }),
       task('s1', { createdAt: 3, projectId: 'p', next: true, doneAt: NOW - 1000, doneDay: TODAY }),
@@ -206,9 +206,14 @@ describe('projects', () => {
       task('b', { createdAt: 10 }),
     ];
     const s = withProjects(tasks, [project('p', { createdAt: 2 }), project('q', { createdAt: 6 })]);
-    const line = masterEntries(s, NOW).map((e) => (e.kind === 'task' ? e.row.task.id : `[${e.project.id}:${e.rows.map((r) => r.task.id).join('+')}:${e.next?.id ?? '?'}]`));
-    expect(line).toEqual(['a', '[p:s1+s2:s2]', '[q::?]', 'b']);
-    const p = masterEntries(s, NOW)[1];
+    const line = (seenAt?: number) => masterEntries(s, NOW, seenAt).map((e) => (e.kind === 'task'
+      ? e.row.task.id
+      : e.kind === 'step' ? `step:${e.row.task.id}` : `[${e.project.id}:${e.rows.map((r) => r.task.id).join('+')}:${e.next?.id ?? '?'}]`));
+    // not seen struck yet: it stands with its project, to be struck there
+    expect(line()).toEqual(['[p:s1+s2:s2]', '[q::?]', 'a', 'b']);
+    // seen struck: one down, first among the tasks
+    expect(line(NOW)).toEqual(['[p:s2:s2]', '[q::?]', 'step:s1', 'a', 'b']);
+    const p = masterEntries(s, NOW)[0];
     // the new step hangs under the one done before it (written in once that is struck)
     expect(p.kind === 'project' && p.rows[1].anchor).toBe('s1');
     expect(nextStep(s, 'p')!.id).toBe('s2');
