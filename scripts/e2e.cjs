@@ -257,6 +257,12 @@ async function device(browser, name) {
     await ipad.waitForTimeout(300);
     const boxes = await ipad.$$eval('.area-title', (els) => els.map((e) => e.firstChild.textContent));
     const inHolz = await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.tt-text').allTextContents();
+    // the boxes come first, what belongs to no area below them
+    const areasFirst = await ipad.evaluate(() => {
+      const grid = document.querySelector('.proj-areas');
+      const loose = document.querySelector('.proj-loose');
+      return !!(grid && loose && grid.compareDocumentPosition(loose) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
     await ipad.locator('.projview .close-x').click();
     await ipad.waitForTimeout(1600);
     await phone.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -266,9 +272,9 @@ async function device(browser, name) {
     const slipAreas = await phone.$$eval('.pslip-area', (els) => els.map((e) => e.textContent));
     const slipTasks = await phone.$$eval('.pslip-rest .tt-text', (els) => els.map((e) => e.textContent));
     await phone.mouse.click(1000, 790);
-    check('areas: boxes on the project page in their own order; on the slip of the other device as headings',
-      boxes.join() === 'Farbe,Holz' && inHolz.join() === 'Bretter prüfen' && slipAreas.join() === 'Holz' && slipTasks.includes('Bretter prüfen'),
-      { boxes, inHolz, slipAreas, slipTasks });
+    check('areas: boxes on the project page in their own order, before the tasks in none; on the slip of the other device as headings',
+      boxes.join() === 'Farbe,Holz' && inHolz.join() === 'Bretter prüfen' && areasFirst && slipAreas.join() === 'Holz' && slipTasks.includes('Bretter prüfen'),
+      { boxes, inHolz, areasFirst, slipAreas, slipTasks });
 
     // a subtask: on the project page a task dropped on another becomes part of it; then it waits on someone; then shared as PDF and picture
     await ipad.locator('.tab-projects').click();

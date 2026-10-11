@@ -589,7 +589,7 @@ export class Store {
     this.reorderAreas(r.projectId, ids);
   }
 
-  /** The area goes; its tasks stay in the project, above the boxes. */
+  /** The area goes; its tasks stay in the project, below the boxes. */
   deleteArea(id: string) {
     const r = this.records.get(id);
     if (r?.type !== 'area' || r.deleted) return;

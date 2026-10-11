@@ -270,6 +270,22 @@ export function ProjectView(props: { id: string }) {
   const areas = projectAreas(snap, p.id);
   const { done, total } = projectProgress(snap, p.id);
   const list = { project: p, next: nextStep(snap, p.id), today, index: entriesByTask(snap.entries), follow: followUps(snap), folds };
+  // the tasks in no area (dropped here, a task leaves its area)
+  const looseList = (
+    <div class="proj-loose" data-drop="area" data-area="" data-project={p.id}>
+      <ProjectTasks {...list} rows={loose} />
+      {p.doneAt == null && (
+        <AddLine
+          placeholder="Aufgabe eintragen …"
+          head="schon vorhanden – antippen, dann gehört sie zum Projekt:"
+          find={(text) => projectSuggestions(snap, p.id, text, Date.now())}
+          onTake={(t) => store.updateTask(t.id, { projectId: p.id })}
+          onAdd={(text) => store.addTask(text, null, { projectId: p.id })}
+        />
+      )}
+      {!loose.length && !areas.length && <p class="cat-hint">Schreib eine Aufgabe auf die Linie oder zieh eine aus der Masterliste hierher.</p>}
+    </div>
+  );
 
   return (
     <div class="projview" style={{ '--proj-ink': projectInk(p.color) }}>
@@ -294,21 +310,19 @@ export function ProjectView(props: { id: string }) {
       <div class="proj-page paper" data-paper={snap.settings.paperMain} data-drop="project" data-project={p.id} data-scroll>
         <ProjectNotes project={p} />
         <h2 class="proj-section">Aufgaben</h2>
-        {/* the tasks in no area, above the boxes (dropped here, a task leaves its area) */}
-        <div class="proj-loose" data-drop="area" data-area="" data-project={p.id}>
-          <ProjectTasks {...list} rows={loose} />
-          {p.doneAt == null && (
-            <AddLine
-              placeholder="Aufgabe eintragen …"
-              head="schon vorhanden – antippen, dann gehört sie zum Projekt:"
-              find={(text) => projectSuggestions(snap, p.id, text, Date.now())}
-              onTake={(t) => store.updateTask(t.id, { projectId: p.id })}
-              onAdd={(text) => store.addTask(text, null, { projectId: p.id })}
-            />
-          )}
-          {!loose.length && !areas.length && <p class="cat-hint">Schreib eine Aufgabe auf die Linie oder zieh eine aus der Masterliste hierher.</p>}
-        </div>
-        <AreaGrid list={list} areas={areas} now={at} />
+        {areas.length > 0 ? (
+          <>
+            {/* the areas come first; below them what belongs to none */}
+            <AreaGrid list={list} areas={areas} now={at} />
+            {(loose.length > 0 || p.doneAt == null) && <h3 class="proj-section proj-loose-head">Ohne Bereich</h3>}
+            {looseList}
+          </>
+        ) : (
+          <>
+            {looseList}
+            <AreaGrid list={list} areas={areas} now={at} />
+          </>
+        )}
         <div class="proj-foot">
           <button type="button" class="note-btn" onClick={() => store.finishProject(p.id, p.doneAt == null)}>
             {p.doneAt == null ? 'Projekt abschließen' : 'wieder öffnen'}
@@ -330,8 +344,9 @@ interface ListProps {
 
 /**
  * Tasks of a project on its page: the arrow for the next step, follow-ups
- * folded under their mother, subtasks indented under their task. A task held
- * and dropped on another one becomes a part of it.
+ * folded under their mother, subtasks indented under their task (under a task
+ * done with all of them, folded away behind the triangle). A task held and
+ * dropped on another one becomes a part of it.
  */
 function ProjectTasks(props: ListProps & { rows: ListRow[] }) {
   const snap = useStore();
@@ -345,6 +360,10 @@ function ProjectTasks(props: ListProps & { rows: ListRow[] }) {
     const waiting = follow(t.id);
     // an open task on top takes others dropped on it
     const takes = !sub && p.doneAt == null && t.doneAt == null;
+    const subs = sub ? [] : subtaskRows(snap, t.id, Math.max(now, Date.now())).map((r) => r.task);
+    // done, and all its parts too: they need no room until asked for
+    const foldable = t.doneAt != null && subs.length > 0 && subs.every((x) => x.doneAt != null);
+    const subsShown = !foldable || folds.isOpen(`sub|${t.id}`);
     return (
       <Fragment key={t.id}>
         <li
@@ -363,10 +382,21 @@ function ProjectTasks(props: ListProps & { rows: ListRow[] }) {
           {t.pending && t.doneAt == null && <PendingWho who={t.pending.who} />}
           {t.note && <NoteMark />}
           {hasClip(t) && <ClipMark />}
+          {foldable && (
+            <FollowToggle
+              mark="triangle"
+              showCount
+              count={subs.length}
+              open={subsShown}
+              seed={`psub${t.id}`}
+              what="Unteraufgaben"
+              onToggle={() => folds.toggle(`sub|${t.id}`)}
+            />
+          )}
           {waiting.length > 0 && <FollowToggle count={waiting.length} open={folds.isOpen(t.id)} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
         </li>
         {folds.isOpen(t.id) && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode="text" />}
-        {!sub && subtaskRows(snap, t.id, Math.max(now, Date.now())).map((r) => row(r.task, true))}
+        {subsShown && subs.map((x) => row(x, true))}
       </Fragment>
     );
   };
@@ -526,7 +556,7 @@ function AreaGrid(props: { list: ListProps; areas: Area[]; now: number }) {
   );
 }
 
-/** Name and place of an area; deleting it keeps its tasks (they stand above the boxes). */
+/** Name and place of an area; deleting it keeps its tasks (they stand below the boxes). */
 export function AreaNote(props: { id: string; close: () => void }) {
   const snap = useStore();
   const area = snap.areas.find((a) => a.id === props.id && !a.deleted);
@@ -566,7 +596,7 @@ export function AreaNote(props: { id: string; close: () => void }) {
           }}
         >{sure ? 'Bereich wirklich löschen?' : 'löschen'}</button>
       </div>
-      {sure && <p class="note-hint">Die Aufgaben bleiben im Projekt, über den Boxen.</p>}
+      {sure && <p class="note-hint">Die Aufgaben bleiben im Projekt, unter den Boxen.</p>}
     </div>
   );
 }

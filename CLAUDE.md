@@ -65,17 +65,20 @@ Bedienung und Einrichtung: `README.md`.
 - Bereiche (`area`, `task.areaId`): Ein Projekt lässt sich in Bereiche teilen. Auf der
   Projektseite ist jeder Bereich eine Box, mit Marker in der Projektfarbe gezeichnet,
   Name in Kapitälchen oben im Rahmen (daneben klein die Zahl der offenen). Die Boxen
-  füllen die Seite zeilenweise (iPad zwei bis drei Spalten, Handy eine). Aufgaben ohne
-  Bereich stehen als Liste über den Boxen (ohne Bereiche sieht die Seite aus wie vorher).
+  füllen die Seite zeilenweise (iPad zwei bis drei Spalten, Handy eine). Die Boxen kommen
+  zuerst; Aufgaben ohne Bereich stehen darunter als Liste „Ohne Bereich“ (ohne Bereiche
+  sieht die Seite aus wie vorher).
   Reihenfolge wählbar (`area.order`): Namen gedrückt halten und die Box an einen
   anderen Platz ziehen (rastet ein), oder Namen antippen → Zettel mit „ganz nach vorn“,
-  ‹ ›, umbenennen, löschen (Aufgaben bleiben, dann über den Boxen). Aufgaben zwischen
+  ‹ ›, umbenennen, löschen (Aufgaben bleiben, dann unter den Boxen). Aufgaben zwischen
   Boxen ziehen oder im Post-it „Bereich“ wählen; Folgeaufgaben bleiben im Bereich der
   Mutter. Auf dem Projekt-Zettel: Bereiche als kleine Zwischenüberschriften.
 - Unteraufgaben (`task.parentId`, eine Ebene, nur innerhalb eines Projekts): auf der
   Projektseite eine Aufgabe auf eine andere ziehen (nur dort, damit sich das Ziehen sonst
-  nicht verheddert); eingerückt darunter, auch auf dem Projekt-Zettel. In eine Box oder
-  über die Boxen gezogen bzw. „Teil von: … ×“ im Post-it → wieder eigenständig. Sie
+  nicht verheddert); eingerückt darunter, auch auf dem Projekt-Zettel. Ist die Aufgabe
+  mit allen ihren Unteraufgaben erledigt, liegen diese auf der Projektseite hinter dem
+  Dreieck mit Zahl (anfangs zu). In eine Box oder
+  in „Ohne Bereich“ gezogen bzw. „Teil von: … ×“ im Post-it → wieder eigenständig. Sie
   gehören zum Bereich ihrer Aufgabe und wandern mit. Überall sichtbar: im Tag stehen
   unter der Aufgabe ihre offenen (und dort erledigten) Unteraufgaben mit eigenem
   Kästchen; steht eine schon allein im Tag und die Aufgabe kommt dazu, rutscht sie

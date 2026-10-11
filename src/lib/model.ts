@@ -52,7 +52,7 @@ export interface Task extends Base {
    * project (one open at a time; done ones keep the mark and stay struck there).
    */
   next?: boolean;
-  /** The area of its project it belongs to (none: it stands above the boxes). */
+  /** The area of its project it belongs to (none: it stands below the boxes). */
   areaId?: string | null;
   /** The task it is part of (a subtask; one level only, within a project). */
   parentId?: string | null;

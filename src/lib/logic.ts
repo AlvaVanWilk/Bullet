@@ -92,7 +92,7 @@ export function projectAreas(s: Snapshot, projectId: string): Area[] {
 
 /**
  * The tasks of one area of a project; with null those in none (also those
- * whose area is gone): they stand above the boxes.
+ * whose area is gone): they stand below the boxes.
  */
 export function areaRows(s: Snapshot, projectId: string, areaId: string | null, now: number): ListRow[] {
   const areas = new Set(projectAreas(s, projectId).map((a) => a.id));

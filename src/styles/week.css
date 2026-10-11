@@ -597,3 +597,5 @@
 /* subtasks of a task in a day, folded out again by its triangle: they come out from under it */
 .dtask.sub.unfold { animation: fold-out 0.18s ease-out both; }
 .dtask .follow-toggle { margin-left: 4px; }
+/* with areas, what belongs to none comes after the boxes */
+.proj-loose-head { margin-top: calc(var(--grid) * 1.5); }

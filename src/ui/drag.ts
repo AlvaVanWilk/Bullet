@@ -18,7 +18,7 @@ export interface DropTarget {
   day?: DayKey;
   categoryId?: string;
   projectId?: string;
-  /** an area of the project; none: above the boxes */
+  /** an area of the project; none: the list below the boxes */
   areaId?: string | null;
   /** the task it is dropped on, to become a part of it (on the project page) */
   taskId?: string;
