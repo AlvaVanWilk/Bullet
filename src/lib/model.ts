@@ -90,6 +90,8 @@ export interface Category extends Base {
   type: 'category';
   name: string;
   color: string;
+  /** A small symbol drawn finely in black on its blot (a key of the things among the project icons). */
+  icon?: string | null;
   createdAt: number;
 }
 

@@ -65,6 +65,7 @@ function WaitingList(props: { tasks: Task[]; today: string }) {
           <li
             key={t.id}
             class="row"
+            data-note={t.note ? t.id : undefined}
             onClick={(e) => ui.set({ postIt: { kind: 'task', id: t.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
           >
             <Lead dot={false} bang={t.important} pending project={store.project(t.projectId)} />

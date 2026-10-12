@@ -22,6 +22,7 @@ import { PostItLayer } from './PostIt';
 import { ProjectView } from './Projects';
 import { SettingsSheet } from './Settings';
 import { ShareSheet } from './Share';
+import { NoteHover } from './NoteHover';
 import { Sidebar } from './Sidebar';
 import { SubtaskQuestion } from './SubtaskQuestion';
 import { currentDay, useStore, useUi } from './state';
@@ -106,6 +107,7 @@ export function App() {
       <AwardNote />
       <SubtaskQuestion />
       <ShareSheet />
+      <NoteHover />
       {STAGE === 'test' && <div class="test-badge" aria-hidden="true">Test</div>}
     </div>
   );

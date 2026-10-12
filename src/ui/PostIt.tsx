@@ -18,6 +18,7 @@ import { ui, useStore, useToday, useUi, type PostItTarget } from './state';
 import { sinceLabel } from './Waiting';
 import { forgetPhotosOf } from '../photos';
 import { Hourglass } from './ink';
+import { CategorySymbol, SYMBOLS } from './ProjectIcon';
 import { FollowSection } from './Follow';
 import { SubtaskSection } from './Subtasks';
 import { PaySection } from './Pay';
@@ -556,6 +557,32 @@ function CategoryNote(props: { id: string; close: () => void }) {
             onClick={() => store.updateCategory(cat.id, { color: c.key })}
           />
         ))}
+      </div>
+      <div class="note-label">Symbol</div>
+      <div class="icon-picker cat-symbols" role="radiogroup" aria-label="Symbol">
+        <div class="icon-grid">
+          <button
+            type="button"
+            class={`icon-opt no-symbol ${!cat.icon ? 'on' : ''}`}
+            role="radio"
+            aria-checked={!cat.icon}
+            onClick={() => store.updateCategory(cat.id, { icon: null })}
+          >ohne</button>
+          {SYMBOLS.map((sym) => (
+            <button
+              key={sym.key}
+              type="button"
+              class={`icon-opt ${cat.icon === sym.key ? 'on' : ''}`}
+              role="radio"
+              aria-checked={cat.icon === sym.key}
+              aria-label={sym.label}
+              title={sym.label}
+              onClick={() => store.updateCategory(cat.id, { icon: sym.key })}
+            >
+              <CategorySymbol icon={sym.key} seed={cat.id} size={22} />
+            </button>
+          ))}
+        </div>
       </div>
       <div class="note-actions">
         <button

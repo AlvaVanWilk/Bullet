@@ -177,13 +177,24 @@ async function device(browser, name) {
     await ipad.waitForTimeout(800);
     await ipad.locator('.sheet.front .new-line input').fill('Gartenhaus');
     await ipad.locator('.sheet.front .new-line input').press('Enter');
+    // nothing in it yet: no line in the master list, but "abschließen" in the tab of the projects
+    const finishOffered = await ipad.locator('.proj-row', { hasText: 'Gartenhaus' }).locator('.proj-finish').count();
+    await ipad.locator('.tab-master').click();
+    await ipad.waitForTimeout(900);
+    const emptyInList = await ipad.locator('.sheet.front .project-line', { hasText: 'Gartenhaus' }).count();
+    // its first task from its page (the line on top)
+    await ipad.locator('.tab-projects').click();
+    await ipad.waitForTimeout(800);
+    await ipad.locator('.sheet.front .proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
+    await ipad.locator('.proj-add input').fill('Holz bestellen');
+    await ipad.locator('.proj-add input').press('Enter');
+    await ipad.waitForTimeout(300);
+    await ipad.locator('.projview .close-x').click();
     await ipad.locator('.tab-master').click();
     await ipad.waitForTimeout(800);
     await ipad.locator('.sheet.front .project-line', { hasText: 'Gartenhaus' }).click();
     await ipad.waitForSelector('.postit.pslip.shown');
-    await ipad.locator('.pslip .new-line input').fill('Holz bestellen');
-    await ipad.locator('.pslip .new-line input').press('Enter');
-    await ipad.waitForTimeout(300);
+    await ipad.waitForTimeout(500);
     const onCard = await ipad.$$eval('.pslip-row .tt-text', (els) => els.map((e) => e.textContent));
     const card = await ipad.locator('.pslip-row', { hasText: 'Holz bestellen' }).boundingBox();
     const todayBox = await ipad.locator('.day.today').boundingBox();
@@ -198,9 +209,9 @@ async function device(browser, name) {
     await ipad.waitForTimeout(300);
     const masterNow = await ipad.$$eval('.sheet.front .task-list > li.row .tt-text', (els) => els.map((e) => e.textContent));
     const inToday = await ipad.locator('.day.today .dtask', { hasText: 'Holz bestellen' }).locator('.margin-icon').count();
-    check('a project is one line with its icon; its tasks on its slip, from there into today (icon before the box)',
-      onCard.join() === 'Holz bestellen' && masterNow.includes('Gartenhaus') && !masterNow.includes('Holz bestellen') && inToday === 1,
-      { onCard, masterNow, inToday });
+    check('a project is one line with its icon (not while empty: "abschließen" in its tab); its tasks on its slip, from there into today (icon before the box)',
+      finishOffered === 1 && emptyInList === 0 && onCard.join() === 'Holz bestellen' && masterNow.includes('Gartenhaus') && !masterNow.includes('Holz bestellen') && inToday === 1,
+      { finishOffered, emptyInList, onCard, masterNow, inToday });
     await ipad.waitForTimeout(1500);
     await phone.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await phone.waitForTimeout(2500);
@@ -246,8 +257,19 @@ async function device(browser, name) {
     await ipad.locator('.proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
     await ipad.locator('.area-new input').fill('Holz');
     await ipad.locator('.area-new input').press('Enter');
-    await ipad.locator('.area-box .new-line input').first().fill('Bretter prüfen');
-    await ipad.locator('.area-box .new-line input').first().press('Enter');
+    // new tasks come from the one line on top; carried into a box they belong to its area
+    await ipad.locator('.proj-add input').fill('Bretter prüfen');
+    await ipad.locator('.proj-add input').press('Enter');
+    await ipad.waitForTimeout(300);
+    const plank = await ipad.locator('.proj-tasks .row', { hasText: 'Bretter prüfen' }).boundingBox();
+    const holzBox = await ipad.locator('.area-box', { hasText: 'Holz' }).boundingBox();
+    await ipad.mouse.move(plank.x + 90, plank.y + 12);
+    await ipad.mouse.down();
+    await ipad.waitForTimeout(450);
+    await ipad.mouse.move(plank.x + 110, plank.y + 30, { steps: 4 });
+    await ipad.mouse.move(holzBox.x + holzBox.width / 2, holzBox.y + holzBox.height / 2, { steps: 10 });
+    await ipad.mouse.up();
+    await ipad.waitForTimeout(500);
     await ipad.locator('.area-new input').fill('Farbe');
     await ipad.locator('.area-new input').press('Enter');
     await ipad.waitForTimeout(300);
@@ -280,8 +302,8 @@ async function device(browser, name) {
     await ipad.locator('.tab-projects').click();
     await ipad.waitForTimeout(800);
     await ipad.locator('.proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
-    await ipad.locator('.proj-loose input').first().fill('Leiter leihen');
-    await ipad.locator('.proj-loose input').first().press('Enter');
+    await ipad.locator('.proj-add input').fill('Leiter leihen');
+    await ipad.locator('.proj-add input').press('Enter');
     await ipad.waitForTimeout(400);
     const from = await ipad.locator('.proj-tasks .row', { hasText: 'Leiter leihen' }).boundingBox();
     const onto = await ipad.locator('.proj-tasks .row', { hasText: 'Holz bestellen' }).boundingBox();

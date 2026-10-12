@@ -11,6 +11,7 @@ import { useRef } from 'preact/hooks';
 import { FollowRows, FollowToggle, useFolds } from './Follow';
 import { useGridRows } from './gridRows';
 import { ClipMark, hasClip, NoteMark, TaskText } from './ink';
+import { CategorySymbol } from './ProjectIcon';
 import { Lead } from './Projects';
 import { ui, useNow, useStore, useToday } from './state';
 import { AddLine } from './Suggest';
@@ -36,6 +37,11 @@ export function CategoryView(props: { id: string }) {
   return (
     <div class="catview" style={{ '--cat-ink': color.ink, '--cat-marker': color.marker }}>
       <header class="cat-head">
+        {cat.icon && (
+          <span class="cat-badge" style={{ '--blob': color.marker }} aria-hidden="true">
+            <CategorySymbol icon={cat.icon} seed={cat.id} size={30} />
+          </span>
+        )}
         <h1 class="cat-title"><span>{cat.name}</span></h1>
         <button type="button" class="ghost-btn close-x" aria-label="Zur Woche" onClick={() => ui.set({ view: { kind: 'week' } })}>✕</button>
       </header>
@@ -47,13 +53,14 @@ export function CategoryView(props: { id: string }) {
               <Fragment key={t.id}>
                 <li
                   class="row"
+                  data-note={t.note ? t.id : undefined}
                   onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'category', color: color.ink })}
                   onClick={(e) => {
                     if (clickSuppressed()) return;
                     ui.set({ postIt: { kind: 'task', id: t.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } });
                   }}
                 >
-                  <Lead dot={isOpenToday(t, today, index)} bang={t.important} project={store.project(t.projectId)} />
+                  <Lead dot={isOpenToday(t, today, index)} bang={t.important} struck={t.doneAt != null} project={store.project(t.projectId)} />
                   <TaskText text={t.text} color={color.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
                   {t.note && <NoteMark />}
                   {hasClip(t) && <ClipMark />}

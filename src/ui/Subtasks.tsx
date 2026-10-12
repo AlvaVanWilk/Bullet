@@ -63,7 +63,7 @@ export function SubtaskDayRows(props: {
         if (item) return props.render(item, !!props.unfold);
         const state = t.doneDay === props.day ? 'done' : t.pending ? 'pending' : 'open';
         return (
-          <li key={t.id} class={`dtask sub st-${state} ${props.unfold ? 'unfold' : ''}`} data-item={t.id}>
+          <li key={t.id} class={`dtask sub st-${state} ${props.unfold ? 'unfold' : ''}`} data-item={t.id} data-note={t.note ? t.id : undefined}>
             <Checkbox
               state={state}
               important={t.important}
@@ -97,6 +97,7 @@ export function SubtaskListRows(props: { parentId: string; colorMode: 'text' | '
           <li
             key={t.id}
             class={`row sub ${t.pending ? 'pending' : ''}`}
+            data-note={t.note ? t.id : undefined}
             onPointerDown={(e) => startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'master', color: color?.ink })}
             onClick={(e) => { if (!clickSuppressed()) openNote(t.id, e.currentTarget as HTMLElement); }}
           >

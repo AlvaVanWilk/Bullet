@@ -213,6 +213,9 @@
 }
 .lead.with-icon .picon { position: absolute; left: 0; top: 0; }
 .lead.with-icon .sched-dot,
+/* struck through, a task is no longer important: its "!" fades with the stroke */
+.bang { transition: opacity 0.45s ease 0.15s; }
+.bang.gone { opacity: 0; }
 .lead.with-icon .bang { position: relative; z-index: 1; }
 .lead.with-icon .sched-dot { margin: 0 2px; box-shadow: 0 0 0 1.5px var(--paper); }
 .lead.with-icon .bang { text-shadow: 0 0 2px var(--paper), 0 0 2px var(--paper); }

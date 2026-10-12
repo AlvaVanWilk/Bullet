@@ -59,3 +59,30 @@ export function ProjectIcon(props: {
     </svg>
   );
 }
+
+/** The things among the icons: what a category can wear on its blot. */
+export const SYMBOLS: IconShape[] = ICON_SHAPES.filter((s) => s.group === 'dinge');
+const fineCache = new Map<string, string[]>();
+
+/**
+ * The symbol of a category: one of the things, drawn finely in black (outlines
+ * only, a hand not quite steady), the same everywhere for a category.
+ */
+export function CategorySymbol(props: { icon: string; seed: string; size?: number; class?: string }) {
+  const key = `${props.icon}|${props.seed}`;
+  let d = fineCache.get(key);
+  if (!d) {
+    const shape = SHAPES.get(props.icon);
+    const s = seedOf(props.seed);
+    d = (shape?.paths ?? []).flatMap((p, i) => gen.toPaths(gen.path(p, {
+      roughness: 0.55, bowing: 0.6, maxRandomnessOffset: 0.5, seed: ((s + i * 7919) % 2147483646) + 1,
+    })).filter((x) => x.stroke && x.stroke !== 'none').map((x) => x.d));
+    fineCache.set(key, d);
+  }
+  const size = props.size ?? 18;
+  return (
+    <svg class={`csym ${props.class ?? ''}`} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      {d.map((p, i) => <path key={i} d={p} />)}
+    </svg>
+  );
+}

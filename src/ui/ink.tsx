@@ -183,8 +183,8 @@ export function BoxIcon() {
   );
 }
 
-export function Bang() {
-  return <span class="bang" aria-label="wichtig">!</span>;
+export function Bang(props: { gone?: boolean } = {}) {
+  return <span class={`bang ${props.gone ? 'gone' : ''}`} aria-label={props.gone ? undefined : 'wichtig'}>!</span>;
 }
 
 /** Two little pencil lines after a task that has a note. */

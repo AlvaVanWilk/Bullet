@@ -218,14 +218,15 @@ export function masterTasks(s: Snapshot, now: number): Task[] {
  */
 export type MasterEntry =
   | { kind: 'task'; row: ListRow }
-  | { kind: 'project'; project: Project; rows: ListRow[]; next: Task | null }
+  | { kind: 'project'; project: Project; rows: ListRow[]; next: Task | null; empty: boolean }
   | { kind: 'step'; row: ListRow; project: Project };
 
 /**
  * The master list: the projects on top, in the order they were made, each with
  * its next step; below them the steps done that were seen struck through before
  * `seenAt` (in the order done); then the tasks, in their place by when they were
- * written. Nothing changes its place otherwise.
+ * written. Nothing changes its place otherwise. A project with nothing open has
+ * no line (once its last step done is seen struck); finished, it stands struck.
  */
 export function masterEntries(s: Snapshot, now: number, seenAt = 0): MasterEntry[] {
   const byId = new Map(s.tasks.filter((t) => !t.deleted).map((t) => [t.id, t]));
@@ -235,16 +236,23 @@ export function masterEntries(s: Snapshot, now: number, seenAt = 0): MasterEntry
     .map((p) => {
       const rows = p.doneAt == null ? nextStepRows(s, p.id, now, byId) : [];
       const open = rows.find((r) => r.task.doneAt == null);
-      return { project: p, rows, next: open?.task ?? null };
+      return { project: p, rows, next: open?.task ?? null, empty: p.doneAt == null && isEmptyProject(s, p.id) };
     });
   const steps: MasterEntry[] = projects
     .flatMap(({ project, rows }) => rows.filter(settled).map((row) => ({ kind: 'step' as const, row, project })))
     .sort((a, b) => a.row.task.doneAt! - b.row.task.doneAt!);
   return [
-    ...projects.map(({ project, rows, next }) => ({ kind: 'project' as const, project, rows: rows.filter((r) => !settled(r)), next })),
+    ...projects
+      .map(({ project, rows, next, empty }) => ({ kind: 'project' as const, project, rows: rows.filter((r) => !settled(r)), next, empty }))
+      .filter((e) => !e.empty || e.rows.length > 0),
     ...steps,
     ...masterRows(s, now).map((row) => ({ kind: 'task' as const, row })),
   ];
+}
+
+/** A project still open with nothing left to do in it (or nothing written in yet). */
+export function isEmptyProject(s: Snapshot, projectId: string): boolean {
+  return !s.tasks.some((t) => !t.deleted && t.projectId === projectId && t.doneAt == null);
 }
 
 /** The next step of a project: its open task marked as such (not one still waiting). */

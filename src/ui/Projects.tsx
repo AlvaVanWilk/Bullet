@@ -9,7 +9,7 @@ import { Fragment } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor, projectInk } from '../lib/colors';
 import {
-  areaRows, entriesByTask, followUps, isOpenToday, liveProjects, nextStep, projectAreas, projectMarks, projectProgress, projectRows,
+  areaRows, entriesByTask, followUps, isEmptyProject, isOpenToday, liveProjects, nextStep, projectAreas, projectMarks, projectProgress, projectRows,
   projectSuggestions, subtaskRows, type ListRow,
 } from '../lib/logic';
 import type { Area, Entry, Project, Task } from '../lib/model';
@@ -34,6 +34,8 @@ const rectOf = (el: EventTarget | null) => (el as HTMLElement).getBoundingClient
  */
 export function Lead(props: {
   dot: boolean; bang: boolean; project?: Project | null; onIcon?: (el: HTMLElement) => void; pending?: boolean;
+  /** struck through: its "!" fades away */
+  struck?: boolean;
 }) {
   const p = props.project;
   const marks = (
@@ -41,7 +43,7 @@ export function Lead(props: {
       {p && <ProjectIcon project={p} />}
       {/* lying with someone else: an hourglass instead of the dot */}
       {props.pending ? <Hourglass /> : props.dot && <ScheduledDot />}
-      {props.bang && <Bang />}
+      {props.bang && <Bang gone={props.struck} />}
     </>
   );
   if (p && props.onIcon) {
@@ -127,6 +129,7 @@ export function ProjectCard(props: { id: string; close: () => void }) {
       <li
         key={t.id}
         class={`row pslip-row ${t.id === next?.id ? 'is-next' : ''} ${sub ? 'sub' : ''} ${t.pending ? 'pending' : ''}`}
+        data-note={t.note ? t.id : undefined}
         onPointerDown={(e) => startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'project', color: color?.ink })}
         onClick={(e) => {
           if (clickSuppressed()) return;
@@ -243,6 +246,10 @@ export function ProjectList() {
                 {p.name}
               </button>
               {p.doneAt == null && total > done && <span class="cat-count">{total - done}</span>}
+              {/* nothing left to do in it: it can be finished right here */}
+              {p.doneAt == null && isEmptyProject(snap, p.id) && (
+                <button type="button" class="proj-finish" onClick={() => store.finishProject(p.id, true)}>abschließen</button>
+              )}
             </li>
           );
         })}
@@ -272,20 +279,12 @@ export function ProjectView(props: { id: string }) {
   const areas = projectAreas(snap, p.id);
   const { done, total } = projectProgress(snap, p.id);
   const list = { project: p, next: nextStep(snap, p.id), today, index: entriesByTask(snap.entries), follow: followUps(snap), folds };
-  // the tasks in no area (dropped here, a task leaves its area)
+  // the tasks in no area (dropped here, a task leaves its area); with areas and
+  // none of these, it shows only while a task is carried
   const looseList = (
-    <div class="proj-loose" data-drop="area" data-area="" data-project={p.id}>
+    <div class={`proj-loose ${loose.length || !areas.length ? '' : 'empty'}`} data-drop="area" data-area="" data-project={p.id}>
       <ProjectTasks {...list} rows={loose} />
-      {p.doneAt == null && (
-        <AddLine
-          placeholder="Aufgabe eintragen …"
-          head="schon vorhanden – antippen, dann gehört sie zum Projekt:"
-          find={(text) => projectSuggestions(snap, p.id, text, Date.now())}
-          onTake={(t) => store.updateTask(t.id, { projectId: p.id })}
-          onAdd={(text) => store.addTask(text, null, { projectId: p.id })}
-        />
-      )}
-      {!loose.length && !areas.length && <p class="cat-hint">Schreib eine Aufgabe auf die Linie oder zieh eine aus der Masterliste hierher.</p>}
+      {!loose.length && areas.length > 0 && <p class="area-empty">hierher: ohne Bereich</p>}
     </div>
   );
 
@@ -312,11 +311,24 @@ export function ProjectView(props: { id: string }) {
       <div class="proj-page paper" data-paper={snap.settings.paperMain} data-drop="project" data-project={p.id} data-scroll>
         <ProjectNotes project={p} />
         <h2 class="proj-section">Aufgaben</h2>
+        {/* one line for new tasks, on top (they go into no area; from there into a box) */}
+        {p.doneAt == null && (
+          <div class="proj-add">
+            <AddLine
+              placeholder="Aufgabe …"
+              head="schon vorhanden – antippen, dann gehört sie zum Projekt:"
+              find={(text) => projectSuggestions(snap, p.id, text, Date.now())}
+              onTake={(t) => store.updateTask(t.id, { projectId: p.id })}
+              onAdd={(text) => store.addTask(text, null, { projectId: p.id })}
+            />
+          </div>
+        )}
+        {!loose.length && !areas.length && <p class="cat-hint">Schreib eine Aufgabe auf die Linie oder zieh eine aus der Masterliste hierher.</p>}
         {areas.length > 0 ? (
           <>
             {/* the areas come first; below them what belongs to none */}
             <AreaGrid list={list} areas={areas} now={at} />
-            {(loose.length > 0 || p.doneAt == null) && <h3 class="proj-section proj-loose-head">Ohne Bereich</h3>}
+            <h3 class={`proj-section proj-loose-head ${loose.length ? '' : 'empty'}`}>Ohne Bereich</h3>
             {looseList}
           </>
         ) : (
@@ -370,6 +382,7 @@ function ProjectTasks(props: ListProps & { rows: ListRow[] }) {
       <Fragment key={t.id}>
         <li
           class={`row ${sub ? 'sub' : ''} ${t.pending && t.doneAt == null ? 'pending' : ''}`}
+          data-note={t.note ? t.id : undefined}
           data-drop={takes ? 'subtask' : undefined}
           data-task={takes ? t.id : undefined}
           onPointerDown={(e) => t.doneAt == null && startDrag(e, e.currentTarget as HTMLElement, { taskId: t.id, text: t.text, from: 'project', color: color?.ink })}
@@ -379,7 +392,7 @@ function ProjectTasks(props: ListProps & { rows: ListRow[] }) {
           }}
         >
           {p.doneAt == null && (t.doneAt == null ? <NextMark task={t} on={t.id === next?.id} /> : <span class="next-mark" />)}
-          <Lead dot={isOpenToday(t, today, index)} bang={t.important} pending={!!t.pending && t.doneAt == null} />
+          <Lead dot={isOpenToday(t, today, index)} bang={t.important} struck={t.doneAt != null} pending={!!t.pending && t.doneAt == null} />
           <TaskText text={t.text} color={color?.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
           {t.pending && t.doneAt == null && <PendingWho who={t.pending.who} />}
           {t.note && <NoteMark />}
@@ -541,10 +554,8 @@ function AreaGrid(props: { list: ListProps; areas: Area[]; now: number }) {
               )}
             >
               <ProjectTasks {...props.list} rows={rows} />
-              {!rows.length && <p class="area-empty">noch leer</p>}
-              {p.doneAt == null && (
-                <NewLine placeholder="Aufgabe …" onEnter={(text) => store.addTask(text, null, { projectId: p.id, areaId: a.id })} />
-              )}
+              {/* no line of its own: tasks come in from the line on top, carried here */}
+              {!rows.length && <p class="area-empty">noch leer · Aufgaben hierher ziehen</p>}
             </HandBox>
           </div>
         );

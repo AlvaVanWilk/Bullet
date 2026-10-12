@@ -9,7 +9,8 @@ Bedienung und Einrichtung: `README.md`.
 ## Feste Regeln (von der Nutzerin so gewünscht)
 
 - Masterliste ist unstrukturiert, ohne Kästchen. Farbe der Kategorie als Schriftfarbe
-  oder als Textmarker (Einstellung). Rotes, handgeschriebenes „!“ vor wichtigen Aufgaben.
+  oder als Textmarker (Einstellung). Rotes, handgeschriebenes „!“ vor wichtigen Aufgaben
+  (durchgestrichen verblasst es: erledigt ist nichts mehr wichtig).
 - Ein kleiner schwarzer Punkt vor einer Aufgabe der Masterliste heißt: Sie steht heute
   offen im Tag. Der Punkt verschwindet, wenn der Tag vorbei ist und sie nicht erledigt wurde.
 - Ziehen schreibt immer nur hinüber. Das Original bleibt, auch im alten Tag.
@@ -52,7 +53,8 @@ Bedienung und Einrichtung: `README.md`.
 - Projekte (`project`, `task.projectId`): dritte Lasche „Projekte“ in der Seitenleiste.
   In der Masterliste steht nur eine Zeile pro Projekt, alle ganz oben (untereinander nach
   Anlegezeit, ohne Abstand zur Überschrift oder zu den Aufgaben darunter: oben ja, aber
-  kein Thron), mit seinem Bild davor; „!“ und „•“ liegen darüber. Antippen → ein Zettel, ganz
+  kein Thron), mit seinem Bild davor; ein offenes Projekt ohne offene Aufgaben hat keine
+  Zeile (in der Lasche „Projekte“ dann ein leises „abschließen“); „!“ und „•“ liegen darüber. Antippen → ein Zettel, ganz
   leicht in der Projektfarbe getönt, mit einer Falz längs und quer (Kreuz in der
   Mitte, kein Knittern), klappt sich lang und schmal über der Seitenleiste direkt
   unter der Projektzeile auf (offene Aufgaben, daraus in heute ziehen; daneben tippen
@@ -63,14 +65,17 @@ Bedienung und Einrichtung: `README.md`.
   Farbe frei aus dem Farbkreis (Ton, Grauanteil) mit Helligkeitsregler (`#rrggbb`).
   Projektseite: Titel in Kapitälchen; Bild groß und schräg auf einem Klecks (Klecksform
   mit Spritzern, ohne Umrandung) in seiner Farbe, Fortschritt,
-  Notizen, Aufgaben, „Projekt abschließen“. Gelöscht → Aufgaben zurück in die
+  Notizen, Aufgaben (eine Schreibzeile „+ Aufgabe …“ oben, in der Projektfarbe getönt),
+  „Projekt abschließen“. Gelöscht → Aufgaben zurück in die
   Masterliste. Kategorien, Vorschläge und Archiv zeigen Projektaufgaben einzeln.
 - Bereiche (`area`, `task.areaId`): Ein Projekt lässt sich in Bereiche teilen. Auf der
   Projektseite ist jeder Bereich eine Box, mit Marker in der Projektfarbe gezeichnet,
   Name in Kapitälchen oben im Rahmen (daneben klein die Zahl der offenen). Die Boxen
   füllen die Seite zeilenweise (iPad zwei bis drei Spalten, Handy eine). Die Boxen kommen
-  zuerst; Aufgaben ohne Bereich stehen darunter als Liste „Ohne Bereich“ (ohne Bereiche
-  sieht die Seite aus wie vorher).
+  zuerst; Aufgaben ohne Bereich stehen darunter als Liste „Ohne Bereich“ (nur wenn dort
+  etwas steht, beim Ziehen als Ablage; ohne Bereiche sieht die Seite aus wie vorher). Die
+  Boxen haben keine eigene Schreibzeile: Neues kommt aus der Zeile oben und wird
+  hineingezogen.
   Reihenfolge wählbar (`area.order`): Namen gedrückt halten und die Box an einen
   anderen Platz ziehen (rastet ein), oder Namen antippen → Zettel mit „ganz nach vorn“,
   ‹ ›, umbenennen, löschen (Aufgaben bleiben, dann unter den Boxen). Aufgaben zwischen
@@ -183,6 +188,11 @@ Bedienung und Einrichtung: `README.md`.
   Felder per Texterkennung im Gerät (tesseract.js, Dateien in `ocr/` auf dem eigenen
   Webspace, nie von fremden Servern). Bullet überweist nie selbst.
 - Esc verlässt jede Schreibzeile (der angefangene Text verfällt).
+- Mit Maus oder Trackpad: Ruht der Zeiger kurz auf einer Aufgabe mit Notiz, steht die Notiz
+  auf einem kleinen Zettel daneben (`NoteHover.tsx`, Zeilen mit `data-note`).
+- Kategorien: Farbklecks und ein selbst gewähltes Symbol (`category.icon`, die Dinge der
+  Projektbilder, fein und schwarz auf dem Klecks), nur in der Lasche „Kategorien“ und auf
+  der Kategorienseite; der Name steht in der Lasche schwarz.
 - Siri: „Hey Siri, Bullet“ ist ein Kurzbefehl auf dem iPhone, der den diktierten Text an
   `briefkasten.php` schickt (POST, `schluessel` + `text`); jede Zeile wird eine Aufgabe
   am Ende der Masterliste, „wichtig“ vorne → „!“. Jede Person hat einen eigenen Schlüssel

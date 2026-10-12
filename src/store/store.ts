@@ -504,7 +504,7 @@ export class Store {
     return cat;
   }
 
-  updateCategory(id: string, patch: Partial<Pick<Category, 'name' | 'color'>>) {
+  updateCategory(id: string, patch: Partial<Pick<Category, 'name' | 'color' | 'icon'>>) {
     const cat = this.category(id);
     if (!cat) return;
     this.put({ ...cat, ...patch });

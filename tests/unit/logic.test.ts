@@ -210,8 +210,8 @@ describe('projects', () => {
       task('c', { createdAt: 30, projectId: 'gone' }),
     ], [project('garten', { createdAt: 8 }), project('gone', { createdAt: 2, deleted: true }), project('later', { createdAt: 40 })]);
     const line = masterEntries(s, NOW).map((e) => (e.kind === 'project' ? `[${e.project.id}]` : e.row.task.id));
-    // the task of a deleted project stands in the list again
-    expect(line).toEqual(['[garten]', '[later]', 'a', 'b', 'c']);
+    // the task of a deleted project stands in the list again; "later" has nothing in it yet
+    expect(line).toEqual(['[garten]', 'a', 'b', 'c']);
     expect(projectRows(s, 'garten', NOW).map((r) => r.task.id)).toEqual(['p1']);
   });
 
@@ -228,9 +228,9 @@ describe('projects', () => {
       ? e.row.task.id
       : e.kind === 'step' ? `step:${e.row.task.id}` : `[${e.project.id}:${e.rows.map((r) => r.task.id).join('+')}:${e.next?.id ?? '?'}]`));
     // not seen struck yet: it stands with its project, to be struck there
-    expect(line()).toEqual(['[p:s1+s2:s2]', '[q::?]', 'a', 'b']);
+    expect(line()).toEqual(['[p:s1+s2:s2]', 'a', 'b']);
     // seen struck: one down, first among the tasks
-    expect(line(NOW)).toEqual(['[p:s2:s2]', '[q::?]', 'step:s1', 'a', 'b']);
+    expect(line(NOW)).toEqual(['[p:s2:s2]', 'step:s1', 'a', 'b']);
     const p = masterEntries(s, NOW)[0];
     // the new step hangs under the one done before it (written in once that is struck)
     expect(p.kind === 'project' && p.rows[1].anchor).toBe('s1');
@@ -238,6 +238,21 @@ describe('projects', () => {
     // long done, the old step is gone; without an open one the project stands there
     const later = withProjects([{ ...tasks[1], doneAt: NOW - 30 * DAY }, { ...tasks[2], next: false }], [project('p')]);
     expect(masterEntries(later, NOW).map((e) => e.kind === 'project' && `${e.rows.length}:${e.next?.id ?? '?'}`)).toEqual(['0:?']);
+  });
+
+  it('have no line in the master list while nothing is open in them', () => {
+    const s = withProjects([
+      task('a', { createdAt: 1 }),
+      task('x', { projectId: 'voll' }),
+      task('y', { projectId: 'erledigt', doneAt: NOW - DAY, doneDay: TODAY }),
+    ], [project('voll', { createdAt: 1 }), project('leer', { createdAt: 2 }), project('erledigt', { createdAt: 3 }), project('fertig', { createdAt: 4, doneAt: NOW - DAY })]);
+    const line = masterEntries(s, NOW).map((e) => (e.kind === 'project' ? `[${e.project.id}]` : e.row.task.id));
+    // a finished project still stands there, struck, for some days
+    expect(line).toEqual(['[voll]', '[fertig]', 'a']);
+    // its last step done: struck in its place first, then it goes
+    const step = withProjects([task('s', { projectId: 'p', next: true, doneAt: NOW - 1000, doneDay: TODAY })], [project('p')]);
+    expect(masterEntries(step, NOW).map((e) => e.kind)).toEqual(['project']);
+    expect(masterEntries(step, NOW, NOW).map((e) => e.kind)).toEqual(['step']);
   });
 
   it('leave the list some days after they are finished, like tasks', () => {

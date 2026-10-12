@@ -460,6 +460,7 @@ function DayTaskRow(props: {
     <li
       class={`dtask ${item.kind} st-${item.state} ${faded ? 'faded' : ''} ${props.sub ? 'sub' : ''} ${props.unfold ? 'unfold' : ''}`}
       data-item={task.id}
+      data-note={task.note ? task.id : undefined}
       // right of the writing the row is free paper (for decoration), not the task
       onPointerDown={(e) => draggable && !beyondContent(e.currentTarget as HTMLElement, e.clientX) && startDrag(e, e.currentTarget as HTMLElement, {
         taskId: task.id, text: task.text, from: 'day', day: props.day, color: item.kind === 'deadline' ? 'var(--red)' : undefined,

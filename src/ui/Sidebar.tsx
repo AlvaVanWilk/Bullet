@@ -14,6 +14,7 @@ import { useGridRows } from './gridRows';
 import { ClipMark, hasClip, NoteMark, PendingWho, TaskText } from './ink';
 import { NewLine } from './NewLine';
 import { Lead, ProjectLine, ProjectList } from './Projects';
+import { CategorySymbol } from './ProjectIcon';
 import { playPaperSlide, playStrike } from './sound';
 import { SubtaskListRows } from './Subtasks';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
@@ -284,6 +285,7 @@ function MasterList(props: { active: boolean }) {
       <Fragment key={t.id}>
         <li
           class={`row ${editing ? 'editing' : ''} ${sweeping && isStruck ? 'swept' : ''} ${t.pending && t.doneAt == null ? 'pending' : ''}`}
+          data-note={t.note ? t.id : undefined}
           // a task dragged onto a next step goes into its project
           data-drop={project ? 'project' : undefined}
           data-project={project?.id}
@@ -297,6 +299,7 @@ function MasterList(props: { active: boolean }) {
           <Lead
             dot={isOpenToday(t, today, index)}
             bang={t.important}
+            struck={isStruck}
             project={project}
             onIcon={project ? (el) => openSlip(project, el) : undefined}
             pending={!!t.pending && t.doneAt == null}
@@ -344,7 +347,8 @@ function MasterList(props: { active: boolean }) {
             // A project shows its next step (with its icon); without one, the project
             // itself, once the step done last is struck through.
             const last = entry.rows[entry.rows.length - 1]?.task.id;
-            const bare = !entry.next && !(last && unstruck.has(last));
+            // (a project with nothing open has no line of its own)
+            const bare = !entry.next && !entry.empty && !(last && unstruck.has(last));
             return (
               <Fragment key={entry.project.id}>
                 {entry.rows.map((r) => (shown.has(r.task.id) ? taskRow(shown.get(r.task.id)!, entry.project, 'block') : null))}
@@ -431,13 +435,15 @@ function CategoryList() {
                 type="button"
                 class="cat-blob"
                 style={{ '--blob': color.marker }}
-                aria-label={`Farbe von ${c.name}`}
+                aria-label={`Farbe und Symbol von ${c.name}`}
                 onClick={(e) => ui.set({ postIt: { kind: 'category', id: c.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
-              />
+              >
+                {c.icon && <CategorySymbol icon={c.icon} seed={c.id} />}
+              </button>
+              {/* the name in ink; the colour is the blot's */}
               <button
                 type="button"
                 class="cat-name"
-                style={{ color: color.ink }}
                 onClick={() => ui.set({ view: current ? { kind: 'week' } : { kind: 'category', id: c.id } })}
               >
                 {c.name}
