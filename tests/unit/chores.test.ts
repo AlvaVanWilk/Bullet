@@ -77,4 +77,44 @@ describe('chores', () => {
     expect(s.choreDay(DAY)!.items.every((i) => i.done)).toBe(true);
     expect(s.task(CHORE_TASK_ID)!.doneAt).toBeNull();
   });
+
+  it('keep each tick as a record of its own, so two devices ticking at once both count', () => {
+    let t = 1000;
+    const make = () => { const s = new Store(() => (t += 10)); s.persist = false; s.today = () => DAY; return s; };
+    const a = make();
+    const one = a.addChore('Bad')!;
+    const two = a.addChore('Boden')!;
+    a.addEntry(CHORE_TASK_ID, DAY);
+    const b = make();
+    b.applyRemote([...a.records.values()]);
+    // ticked on each device at the same time
+    a.tickChore(DAY, one.id, true);
+    b.tickChore(DAY, two.id, true);
+    const changed = (s: Store) => [...s.records.values()].filter((r) => r.type === 'choretick');
+    a.applyRemote(changed(b));
+    b.applyRemote(changed(a));
+    for (const s of [a, b]) expect(s.choreDay(DAY)!.items.every((i) => i.done)).toBe(true);
+    // the stored plan says nothing about done
+    const plan = a.records.get(`choreday-${DAY}`) as { items: { done: boolean }[] };
+    expect(plan.items.every((i) => !i.done)).toBe(true);
+  });
+
+  it('can be told when they were last done; nothing due when planned is as good as done; a chore longer than any day is said', () => {
+    let t = 1000;
+    const s = new Store(() => (t += 10));
+    s.persist = false;
+    s.today = () => DAY;
+    const c = s.addChore('Fenster')!;
+    s.setChoreLastDone(c.id, '2026-10-12');
+    expect(s.chore(c.id)).toMatchObject({ lastDone: '2026-10-12', lastShare: 1 });
+    s.setChoreLastDone(c.id, null);
+    expect(s.chore(c.id)!.lastDone).toBeNull();
+    // "heute" ticks it today
+    s.setChoreLastDone(c.id, DAY);
+    expect(s.choreDay(DAY)!.extra.map((i) => i.choreId)).toEqual([c.id]);
+    // nothing due any more: the smart task's day is done at once
+    s.addEntry(CHORE_TASK_ID, DAY);
+    expect(s.choreDay(DAY)!.items).toEqual([]);
+    expect(dayItems(s.snapshot(), DAY, DAY).find((i) => i.task.id === CHORE_TASK_ID)!.state).toBe('done');
+  });
 });

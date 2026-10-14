@@ -6,7 +6,7 @@
 // rhythm runs short by as much: done half, it is due again after half the time.
 
 import { addDays, parseDay, weekdayIndex, type DayKey } from './dates';
-import type { Chore, ChoreDay, ChoreItem, ChoreUnit, Settings } from './model';
+import type { Chore, ChoreDay, ChoreItem, ChoreTick, ChoreUnit, Settings } from './model';
 
 const DAY_MS = 86400000;
 
@@ -117,8 +117,36 @@ export function planMinutes(items: ChoreItem[]): { total: number; done: number }
 
 export const choreDayId = (day: DayKey) => `choreday-${day}`;
 
-/** Whether a day's plan is all done (and there was something in it). */
+export const choreTickId = (day: DayKey, choreId: string) => `choretick-${day}-${choreId}`;
+
+/**
+ * A day as it is seen: its plan with what of it is ticked, and what was ticked
+ * besides (done outside the plan). Undefined while the smart task has not
+ * planned the day and nothing was ticked.
+ */
+export function choreDayView(s: { choreDays: ChoreDay[]; choreTicks: ChoreTick[] }, day: DayKey): ChoreDay | undefined {
+  const cd = s.choreDays.find((c) => !c.deleted && c.day === day);
+  const ticks = new Map(s.choreTicks.filter((t) => !t.deleted && t.day === day).map((t) => [t.choreId, t]));
+  if (!cd && !ticks.size) return undefined;
+  const isDone = (i: ChoreItem) => { const t = ticks.get(i.choreId); return t ? t.done : !!i.done; };
+  const items = (cd?.items ?? []).map((i) => ({ ...i, done: isDone(i), before: ticks.get(i.choreId)?.before ?? i.before ?? null }));
+  const planned = new Set(items.map((i) => i.choreId));
+  const extra: ChoreItem[] = [];
+  for (const i of cd?.extra ?? []) if (!planned.has(i.choreId) && !ticks.has(i.choreId) && i.done) extra.push(i);
+  for (const t of ticks.values()) {
+    if (!planned.has(t.choreId) && t.done) extra.push({ choreId: t.choreId, minutes: t.minutes, done: true, before: t.before ?? null });
+  }
+  return { ...(cd ?? { id: choreDayId(day), type: 'choreday', updatedAt: 0, day, items: [], extra: [], skipped: [] }), items, extra, planned: !!cd };
+}
+
+/** Whether the smart task planned the day (written into it). */
+export const isPlanned = (cd: ChoreDay | undefined | null) => !!cd && cd.planned !== false;
+
+/**
+ * Whether the household of a day is done: everything in its plan ticked, or
+ * nothing was due when it was planned (that is as good as done).
+ */
 export function planDone(cd: ChoreDay | undefined | null): boolean {
-  return !!cd && cd.items.length > 0 && cd.items.every((i) => i.done);
+  return isPlanned(cd) && cd!.items.every((i) => i.done);
 }
 

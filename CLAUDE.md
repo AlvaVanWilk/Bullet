@@ -237,7 +237,13 @@ Bedienung und Einrichtung: `README.md`.
   Unerledigtes bleibt fällig und wird dringender. Auf der Seite spontan abgehakt → steht
   erledigt im Tag (`extra`), zählt nicht von selbst mit; auf „Haushaltsaufgaben“ gezogen (oder
   „dazuzählen“) zählt es mit und der Rest wird neu geplant. Nichts fällig → kein Unterpunkt,
-  ein grünes Glitzern daneben, Tipp/Zeiger: „alles sauber!“. Keine Räume, keine Familie (vorerst).
+  ein grünes Glitzern daneben, Tipp/Zeiger: „alles sauber!“, und der Eimer ist gleich grün (wie
+  erledigt). Im Zettel einer Haushaltsaufgabe „zuletzt gemacht“ (heute = abhaken, gestern, vor 3
+  Tagen … noch nie, Datum). Länger als die Zeit jedes Wochentags → leise „passt an keinem Tag“
+  (Tabelle und Zettel). Jeder Haken ist ein eigener Datensatz (`choretick`, id aus Tag und
+  Aufgabe), damit zwei Geräte sich nicht überschreiben; der Tagesplan (`choreday`) hält nur, was
+  geplant ist. Wird nie von selbst in den Tag geschrieben (keine Deadline, kein Druck). Deko-
+  Überraschungen auch aus dem Haushalt (`reachedOnChore`). Keine Räume, keine Familie (vorerst).
 - Vorplanen künftiger Tage ist (vorerst) nicht vorgesehen. Vorausblättern in kommende
   Wochen geht, aber dort steht nur der Kopf (Wochenübersicht mit Terminen, Deadlines,
   Besonderem), keine Tage – Tage gibt es immer nur bis heute.

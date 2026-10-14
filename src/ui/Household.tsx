@@ -6,9 +6,9 @@
 
 import { useState } from 'preact/hooks';
 import {
-  dayBudget, dueLabel, isDue, lengthLabel, planMinutes, rhythmLabel, sortChores, urgency,
+  choreDayView, dayBudget, dueLabel, isPlanned, isDue, lengthLabel, planMinutes, rhythmLabel, sortChores, urgency,
 } from '../lib/chores';
-import { compareDays, weekdayName, type DayKey } from '../lib/dates';
+import { addDays, compareDays, weekdayName, type DayKey } from '../lib/dates';
 import type { Chore, ChoreItem, ChoreUnit } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
@@ -124,7 +124,10 @@ export function HouseholdView() {
                       </td>
                       <td class="hh-small">{rhythmLabel(c)}</td>
                       <td class="hh-small">{lengthLabel(c)}</td>
-                      <td class={`hh-small ${overdue ? 'overdue' : ''}`}>{dueLabel(c, today)}</td>
+                      <td class={`hh-small ${overdue ? 'overdue' : ''}`}>
+                        {dueLabel(c, today)}
+                        {!fitsSomeDay(c, minutes) && <span class="hh-nofit">passt an keinem Tag</span>}
+                      </td>
                       <td class="hh-check">
                         <Checkbox
                           state={doneToday ? 'done' : 'open'}
@@ -174,9 +177,23 @@ const RHYTHMS: { every: number; unit: ChoreUnit; label: string }[] = [
   { every: 3, unit: 'monate', label: 'alle 3 Monate' },
 ];
 
+const LAST_DONE: { ago: number | null; label: string }[] = [
+  { ago: 0, label: 'heute' },
+  { ago: 1, label: 'gestern' },
+  { ago: 3, label: 'vor 3 Tagen' },
+  { ago: 7, label: 'vor einer Woche' },
+  { ago: 14, label: 'vor 2 Wochen' },
+  { ago: 30, label: 'vor einem Monat' },
+  { ago: null, label: 'noch nie' },
+];
+
+/** Whether a chore fits into the time of some weekday at all (done as short as it may be). */
+export const fitsSomeDay = (c: Chore, minutes: number[]) => c.min <= Math.max(0, ...minutes);
+
 /** A chore: its name, how often, how long (fixed, or from–to: then it may be done shorter). */
 export function ChoreNote(props: { id: string; close: () => void }) {
-  useStore();
+  const snap = useStore();
+  const today = useToday();
   const c = store.chore(props.id);
   const [name, setName] = useState(c?.name ?? '');
   const [sure, setSure] = useState(false);
@@ -232,6 +249,31 @@ export function ChoreNote(props: { id: string; close: () => void }) {
         )}
       </div>
       {range && <p class="note-hint">Fehlt die Zeit, wird sie kürzer gemacht und ist dann entsprechend früher wieder dran.</p>}
+      {!fitsSomeDay(c, snap.settings.choreMinutes) && (
+        <p class="note-hint">Passt an keinem Tag (höchstens {Math.max(...snap.settings.choreMinutes)} Minuten am Tag).</p>
+      )}
+      <div class="note-label">Zuletzt gemacht</div>
+      <div class="chips">
+        {LAST_DONE.map((l) => {
+          const day = l.ago == null ? null : addDays(today, -l.ago);
+          const on = (c.lastDone ?? null) === day;
+          return (
+            <button key={l.label} type="button" class={`chip ${on ? 'on' : ''}`} onClick={() => store.setChoreLastDone(c.id, day)}>{l.label}</button>
+          );
+        })}
+      </div>
+      <label class="note-when-older">
+        <span>am:</span>
+        <input
+          type="date"
+          max={today}
+          value={c.lastDone && !LAST_DONE.some((l) => l.ago != null && addDays(today, -l.ago) === c.lastDone) ? c.lastDone : ''}
+          onChange={(e) => {
+            const v = (e.target as HTMLInputElement).value;
+            if (v && compareDays(v, today) <= 0) store.setChoreLastDone(c.id, v);
+          }}
+        />
+      </label>
       <div class="note-actions">
         <button type="button" class="note-btn save" onClick={() => { save(); props.close(); }}>fertig</button>
         <button
@@ -309,9 +351,9 @@ export function ChoresTodayNote(props: { day: DayKey; close: () => void }) {
           })}
         </ul>
       ) : (
-        <p class="note-hint">{cd ? 'Nichts fällig – alles sauber!' : 'Zieh „Haushaltsaufgaben“ in den Tag, dann wird geplant.'}</p>
+        <p class="note-hint">{isPlanned(cd) ? 'Nichts fällig – alles sauber!' : 'Zieh „Haushaltsaufgaben“ in den Tag, dann wird geplant.'}</p>
       )}
-      {cd && <p class="note-small">{total} von {budget} Minuten verplant</p>}
+      {isPlanned(cd) && <p class="note-small">{total} von {budget} Minuten verplant</p>}
       {cd && cd.extra.length > 0 && (
         <div class="chores-extra">
           <div class="note-label">außerdem gemacht</div>
@@ -336,7 +378,7 @@ export function ChoresTodayNote(props: { day: DayKey; close: () => void }) {
 /** Under the smart task in a day: the chores chosen for it, each with a box of its own. */
 export function ChoreDayRows(props: { day: DayKey; today: DayKey }) {
   const snap = useStore();
-  const cd = snap.choreDays.find((c) => !c.deleted && c.day === props.day);
+  const cd = choreDayView(snap, props.day);
   if (!cd) return null;
   const past = compareDays(props.day, props.today) < 0;
   return (
@@ -349,7 +391,7 @@ export function ChoreDayRows(props: { day: DayKey; today: DayKey }) {
 /** Chores done on a day besides the smart task: each a done line of its own; carried onto the smart task, it counts in. */
 export function ChoreExtraRows(props: { day: DayKey; today: DayKey }) {
   const snap = useStore();
-  const cd = snap.choreDays.find((c) => !c.deleted && c.day === props.day);
+  const cd = choreDayView(snap, props.day);
   if (!cd || !cd.extra.length) return null;
   return <>{cd.extra.map((i) => <ChoreRow key={i.choreId} item={i} day={props.day} past={false} />)}</>;
 }

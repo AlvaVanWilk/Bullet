@@ -151,6 +151,19 @@ function bird({ uid }: { uid: string }) {
   );
 }
 
+function picobello() {
+  const c = '#4d6f8a';
+  const star = (x: number, y: number, r: number) => `M ${x} ${y - r} Q ${x + r * 0.15} ${y - r * 0.15} ${x + r} ${y} Q ${x + r * 0.15} ${y + r * 0.15} ${x} ${y + r} Q ${x - r * 0.15} ${y + r * 0.15} ${x - r} ${y} Q ${x - r * 0.15} ${y - r * 0.15} ${x} ${y - r} Z`;
+  return (
+    <Ink piece="picobello" color={c}>
+      <path d="M 14 14 L 186 10 L 190 74 L 10 78 Z" stroke-width={3} stroke-linejoin="round" />
+      <text x={100} y={56} text-anchor="middle" fill={c} stroke="none" font-family={HAND} font-size={32} font-variant="small-caps" letter-spacing={2.5} transform="rotate(-2 100 46)">Picobello</text>
+      <path d={star(178, 22, 9)} fill={c} stroke="none" />
+      <path d={star(24, 66, 6)} fill={c} stroke="none" />
+    </Ink>
+  );
+}
+
 // --- stickers ----------------------------------------------------------------------------
 
 function Cut(props: { children: ComponentChildren }) {
@@ -310,6 +323,25 @@ function snail() {
   );
 }
 
+function bubbles() {
+  const bubble = (x: number, y: number, r: number, tint: string) => (
+    <g key={`${x}${y}`}>
+      <circle cx={x} cy={y} r={r} fill={tint} stroke={LINE} stroke-width={2.2} />
+      <path d={`M ${x - r * 0.62} ${y - r * 0.12} A ${r * 0.64} ${r * 0.64} 0 0 1 ${x - r * 0.1} ${y - r * 0.62}`} stroke="#fffaf2" stroke-width={Math.max(2.4, r * 0.14)} fill="none" />
+      <circle cx={x + r * 0.42} cy={y + r * 0.38} r={Math.max(1.6, r * 0.08)} fill="#fffaf2" />
+    </g>
+  );
+  return (
+    <Cut>
+      {bubble(62, 84, 40, '#cfe0e6')}
+      {bubble(118, 50, 24, '#e6d3e0')}
+      {bubble(116, 112, 15, '#dfe6cc')}
+      {bubble(30, 30, 12, '#e8dfc6')}
+      {bubble(140, 88, 8, '#cfe0e6')}
+    </Cut>
+  );
+}
+
 // --- doodles ---------------------------------------------------------------------------------
 
 const gen = rough.generator();
@@ -438,6 +470,32 @@ function bunting() {
   );
 }
 
+function clothesline() {
+  return (
+    <Doodle piece="waescheleine" make={() => {
+      const P = (t: number): [number, number] => [10 + 200 * t, 22 + 4 * 22 * t * (1 - t)];
+      const out: Drawable[] = [gen.linearPath(Array.from({ length: 31 }, (_, i) => P(i / 30)), roughOpts(90))];
+      const peg = (t: number, seed: number) => { const [x, y] = P(t); out.push(gen.rectangle(x - 2, y - 7, 4, 12, roughOpts(seed, { fill: '#c49a45', fillStyle: 'solid', roughness: 0.5 }))); };
+      // a shirt
+      { const [x, y] = P(0.2);
+        out.push(gen.path(`M ${x - 16} ${y + 2} L ${x - 26} ${y + 14} L ${x - 18} ${y + 20} L ${x - 14} ${y + 14} L ${x - 14} ${y + 46} L ${x + 14} ${y + 46} L ${x + 14} ${y + 14} L ${x + 18} ${y + 20} L ${x + 26} ${y + 14} L ${x + 16} ${y + 2} Q ${x} ${y + 10} ${x - 16} ${y + 2} Z`,
+          roughOpts(91, { fill: '#8aa2b8', fillStyle: 'hachure', hachureGap: 3.6, fillWeight: 1.3, roughness: 0.8 })));
+        peg(0.2 - 0.07, 92); peg(0.2 + 0.07, 93); }
+      // a sock
+      { const [x, y] = P(0.48);
+        out.push(gen.path(`M ${x - 7} ${y + 1} L ${x - 7} ${y + 30} Q ${x - 7} ${y + 42} ${x + 5} ${y + 42} L ${x + 15} ${y + 42} Q ${x + 21} ${y + 36} ${x + 15} ${y + 31} L ${x + 7} ${y + 29} L ${x + 7} ${y + 1} Z`,
+          roughOpts(94, { fill: '#c98f8a', fillStyle: 'hachure', hachureGap: 3.2, fillWeight: 1.2, hachureAngle: 30, roughness: 0.8 })));
+        peg(0.48, 95); }
+      // a towel
+      { const [x, y] = P(0.76);
+        out.push(gen.rectangle(x - 22, y + 1, 44, 44, roughOpts(96, { fill: '#9db193', fillStyle: 'hachure', hachureGap: 3.8, fillWeight: 1.3, hachureAngle: -50, roughness: 0.8 })));
+        out.push(gen.line(x - 22, y + 36, x + 22, y + 36, roughOpts(97)));
+        peg(0.76 - 0.08, 98); peg(0.76 + 0.08, 99); }
+      return out;
+    }} />
+  );
+}
+
 // --- washi tape --------------------------------------------------------------------------------
 
 function washi(color: string, pattern: 'dots' | 'stripes' | 'grid', seed: number) {
@@ -486,6 +544,7 @@ export const DECO_PIECES: DecoPiece[] = [
   { key: 'gutgemacht', kind: 'stempel', w: 130, h: 130, draw: wellDone },
   { key: 'farn', kind: 'stempel', w: 110, h: 150, draw: fern },
   { key: 'feierabend', kind: 'stempel', w: 200, h: 80, draw: feierabend },
+  { key: 'picobello', kind: 'stempel', w: 200, h: 88, draw: picobello },
   { key: 'vogel', kind: 'stempel', w: 150, h: 130, draw: bird },
   { key: 'kaffee', kind: 'sticker', w: 150, h: 150, draw: coffee },
   { key: 'pflanze', kind: 'sticker', w: 140, h: 160, draw: plant },
@@ -494,10 +553,12 @@ export const DECO_PIECES: DecoPiece[] = [
   { key: 'faultier', kind: 'sticker', w: 160, h: 160, draw: sloth },
   { key: 'wecker', kind: 'sticker', w: 150, h: 150, draw: alarm },
   { key: 'schnecke', kind: 'sticker', w: 170, h: 120, draw: snail },
+  { key: 'seifenblasen', kind: 'sticker', w: 160, h: 140, draw: bubbles },
   { key: 'lorbeer', kind: 'kritzelei', w: 150, h: 140, draw: laurel },
   { key: 'funkeln', kind: 'kritzelei', w: 130, h: 120, draw: sparkles },
   { key: 'zweig', kind: 'kritzelei', w: 120, h: 150, draw: sprig },
   { key: 'wimpel', kind: 'kritzelei', w: 230, h: 100, draw: bunting },
+  { key: 'waescheleine', kind: 'kritzelei', w: 220, h: 90, draw: clothesline },
   { key: 'washi-rosa', kind: 'washi', w: 250, h: 84, draw: washi('#c99690', 'dots', 7) },
   { key: 'washi-salbei', kind: 'washi', w: 250, h: 84, draw: washi('#9db193', 'stripes', 13) },
   { key: 'washi-senf', kind: 'washi', w: 250, h: 84, draw: washi('#d8bd7a', 'grid', 29) },

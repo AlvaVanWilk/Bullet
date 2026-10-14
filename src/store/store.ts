@@ -6,13 +6,13 @@ import { compareDays, dayKey, type DayKey } from '../lib/dates';
 import { newId, stableId } from '../lib/ids';
 import { nextFreeColor, PROJECT_COLORS, projectInk } from '../lib/colors';
 import { canBeSubtask, deadlineFor, isWaiting, wouldLoop, type Snapshot } from '../lib/logic';
-import { milestone, reachedOnDone, reachedOnNewDay, reachedOnProject, type Reached } from '../lib/milestones';
+import { milestone, reachedOnChore, reachedOnDone, reachedOnNewDay, reachedOnProject, type Reached } from '../lib/milestones';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
-  type AnyRecord, type Area, type Award, type Category, type Chore, type ChoreDay, type ChoreItem, type Deco, type Entry, type Hide,
+  type AnyRecord, type Area, type Award, type Category, type Chore, type ChoreDay, type ChoreItem, type ChoreTick, type Deco, type Entry, type Hide,
   type Project, type Settings, type Special, type Task, type TaskLink,
 } from '../lib/model';
-import { choreDayId, dayBudget, planChores, shareOf } from '../lib/chores';
+import { choreDayId, choreDayView, choreTickId, dayBudget, planChores, shareOf, urgency } from '../lib/chores';
 import { STORAGE_PREFIX } from '../stage';
 import { isNewer } from './merge';
 
@@ -71,7 +71,7 @@ export class Store {
 
   snapshot(): Snapshot {
     if (this.snapshotCache?.version === this.version) return this.snapshotCache.snap;
-    const snap: Snapshot = { tasks: [], categories: [], projects: [], areas: [], entries: [], specials: [], hides: [], decos: [], awards: [], chores: [], choreDays: [], settings: DEFAULT_SETTINGS };
+    const snap: Snapshot = { tasks: [], categories: [], projects: [], areas: [], entries: [], specials: [], hides: [], decos: [], awards: [], chores: [], choreDays: [], choreTicks: [], settings: DEFAULT_SETTINGS };
     for (const r of this.records.values()) {
       switch (r.type) {
         case 'task': snap.tasks.push(r); break;
@@ -85,6 +85,7 @@ export class Store {
         case 'award': snap.awards.push(r); break;
         case 'chore': snap.chores.push(r); break;
         case 'choreday': snap.choreDays.push(r); break;
+        case 'choretick': snap.choreTicks.push(r); break;
         case 'settings': {
           const calendars = r.calendars && !Array.isArray(r.calendars) ? r.calendars : {};
           snap.settings = { ...DEFAULT_SETTINGS, ...r, calendars };
@@ -593,7 +594,13 @@ export class Store {
     return r?.type === 'chore' && !r.deleted ? r : undefined;
   }
 
+  /** A day of the household as it is seen: its plan, what of it is ticked, what was done besides. */
   choreDay(day: DayKey): ChoreDay | undefined {
+    return choreDayView(this.snapshot(), day);
+  }
+
+  /** The plan of a day as it is stored (the ticks are apart). */
+  private choreDayRecord(day: DayKey): ChoreDay | undefined {
     const r = this.records.get(choreDayId(day));
     return r?.type === 'choreday' && !r.deleted ? r : undefined;
   }
@@ -621,6 +628,18 @@ export class Store {
     this.changed(true);
   }
 
+  /** When it was last done, said afterwards (null: never); done today, it is ticked today. */
+  setChoreLastDone(id: string, day: DayKey | null) {
+    const c = this.chore(id);
+    if (!c) return;
+    if (day === this.today()) {
+      this.tickChore(day, id, true);
+      return;
+    }
+    this.put({ ...c, lastDone: day, lastShare: 1 });
+    this.changed(true);
+  }
+
   deleteChore(id: string) {
     const c = this.chore(id);
     if (!c) return;
@@ -642,23 +661,28 @@ export class Store {
     return { id: choreDayId(day), type: 'choreday', updatedAt: 0, day, items: [], extra: [], skipped: [] };
   }
 
+  /** The plan stored back: only what is planned and for how long (whether done is in the ticks). */
+  private putPlan(cd: ChoreDay, items: ChoreItem[], patch: Partial<ChoreDay> = {}) {
+    const { planned: _view, ...stored } = cd;
+    this.put({ ...stored, ...patch, items: items.map((i) => ({ choreId: i.choreId, minutes: i.minutes, done: false })), extra: [] });
+  }
+
   /**
    * Plans the chores of a day anew: what is done stays, the rest is chosen
    * again (most due first, as fits the time of the day).
    */
-  planChoreDay(day: DayKey) {
-    const cd = this.choreDay(day) ?? this.emptyChoreDay(day);
+  planChoreDay(day: DayKey, patch: Partial<ChoreDay> = {}) {
+    const view = this.choreDay(day);
+    const cd = { ...(this.choreDayRecord(day) ?? this.emptyChoreDay(day)), ...patch };
     const snap = this.snapshot();
-    const keep = cd.items.filter((i) => i.done);
+    const keep = (view?.items ?? []).filter((i) => i.done);
     const items = planChores(snap.chores, day, dayBudget(snap.settings, day, cd), keep, cd.skipped ?? []);
-    this.put({ ...cd, items });
+    this.putPlan(cd, items, patch);
   }
 
   /** The time for the household on this day alone (null: as on its weekday); planned anew. */
   setChoreBudget(day: DayKey, minutes: number | null) {
-    const cd = this.choreDay(day) ?? this.emptyChoreDay(day);
-    this.put({ ...cd, budget: minutes == null ? null : Math.max(0, Math.min(240, Math.round(minutes))) });
-    this.planChoreDay(day);
+    this.planChoreDay(day, { budget: minutes == null ? null : Math.max(0, Math.min(240, Math.round(minutes))) });
     this.changed(true);
   }
 
@@ -669,51 +693,54 @@ export class Store {
     this.updateSettings({ choreMinutes: all });
   }
 
+  /** Taken out of the day's plan (what is done stays); swapped, another that is due takes its place. */
+  private leaveOut(day: DayKey, choreId: string, replan: boolean) {
+    const cd = this.choreDayRecord(day);
+    const view = this.choreDay(day);
+    if (!cd || !view) return;
+    const skipped = [...(cd.skipped ?? []), choreId];
+    if (replan) this.planChoreDay(day, { skipped });
+    else this.putPlan(cd, view.items.filter((i) => i.choreId !== choreId || i.done), { skipped });
+    this.changed(true);
+  }
+
   /** Swapped out this day: another one that is due takes its place. */
   swapChore(day: DayKey, choreId: string) {
-    const cd = this.choreDay(day);
-    if (!cd) return;
-    this.put({ ...cd, items: cd.items.filter((i) => i.choreId !== choreId || i.done), skipped: [...(cd.skipped ?? []), choreId] });
-    this.planChoreDay(day);
-    this.changed(true);
+    this.leaveOut(day, choreId, true);
   }
 
   /** Taken out this day, and nothing in its place. */
   dropChore(day: DayKey, choreId: string) {
-    const cd = this.choreDay(day);
-    if (!cd) return;
-    this.put({ ...cd, items: cd.items.filter((i) => i.choreId !== choreId || i.done), skipped: [...(cd.skipped ?? []), choreId] });
-    this.changed(true);
+    this.leaveOut(day, choreId, false);
   }
 
-  /** A chore ticked (or unticked) on a day: in its plan, or done besides. */
+  /** A chore ticked (or unticked) on a day: in its plan, or done besides. Each tick is a record of its own. */
   tickChore(day: DayKey, choreId: string, done: boolean) {
-    const cd = this.choreDay(day) ?? this.emptyChoreDay(day);
-    const inPlan = cd.items.some((i) => i.choreId === choreId);
-    const list = inPlan ? cd.items : cd.extra;
-    const item = list.find((i) => i.choreId === choreId);
+    const view = this.choreDay(day);
+    const item = view?.items.find((i) => i.choreId === choreId) ?? view?.extra.find((i) => i.choreId === choreId);
     const chore = this.chore(choreId);
     if (!chore) return;
+    const id = choreTickId(day, choreId);
     if (done) {
       if (item?.done) return;
       const minutes = item?.minutes ?? Math.max(chore.min, chore.max);
       const before = { lastDone: chore.lastDone ?? null, lastShare: chore.lastShare ?? 1 };
-      const ticked: ChoreItem = { choreId, minutes, done: true, before };
-      const next = item ? list.map((i) => (i.choreId === choreId ? ticked : i)) : [...list, ticked];
-      this.put(inPlan ? { ...cd, items: next } : { ...cd, extra: next });
+      const tick: ChoreTick = { id, type: 'choretick', updatedAt: 0, day, choreId, done: true, minutes, before };
+      this.put(tick);
       // a day before the one it was last done on does not set it back
+      const waited = chore.lastDone && chore.lastDone < day ? urgency(chore, day) : 0;
       if (!chore.lastDone || chore.lastDone <= day) this.put({ ...chore, lastDone: day, lastShare: shareOf(chore, minutes) });
+      this.grant(reachedOnChore(this.snapshot(), day, waited));
     } else {
       if (!item?.done) return;
       if (item.before && chore.lastDone === day) this.put({ ...chore, lastDone: item.before.lastDone, lastShare: item.before.lastShare });
-      this.put(inPlan
-        ? { ...cd, items: cd.items.map((i) => (i.choreId === choreId ? { ...i, done: false, before: null } : i)) }
-        : { ...cd, extra: cd.extra.filter((i) => i.choreId !== choreId) });
+      const tick: ChoreTick = { id, type: 'choretick', updatedAt: 0, day, choreId, done: false, minutes: item.minutes, before: null };
+      this.put(tick);
     }
     this.changed(true);
   }
 
-  /** All chores of the day's plan ticked (or unticked): the box of the smart task. */
+  /** All chores of the day's plan ticked (or unticked). */
   tickAllChores(day: DayKey, done: boolean) {
     for (const i of this.choreDay(day)?.items ?? []) if (i.done !== done) this.tickChore(day, i.choreId, done);
   }
@@ -723,10 +750,11 @@ export class Store {
    * time there, and the rest is planned anew.
    */
   countChoreIn(day: DayKey, choreId: string) {
-    const cd = this.choreDay(day);
-    const item = cd?.extra.find((i) => i.choreId === choreId);
-    if (!cd || !item) return;
-    this.put({ ...cd, extra: cd.extra.filter((i) => i.choreId !== choreId), items: [item, ...cd.items.filter((i) => i.choreId !== choreId)] });
+    const view = this.choreDay(day);
+    const item = view?.extra.find((i) => i.choreId === choreId);
+    if (!view || !item) return;
+    const cd = this.choreDayRecord(day) ?? this.emptyChoreDay(day);
+    this.putPlan(cd, [item, ...view.items.filter((i) => i.choreId !== choreId)]);
     this.planChoreDay(day);
     this.changed(true);
   }

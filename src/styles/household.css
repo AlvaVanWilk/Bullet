@@ -150,3 +150,7 @@
 .smart-sparkle > :nth-child(2) { animation-delay: 0.15s; }
 .smart-sparkle > :nth-child(3) { animation-delay: 0.3s; }
 @keyframes hh-twinkle { 0% { opacity: 0; transform: scale(0.2) rotate(-30deg); } 60% { opacity: 1; transform: scale(1.25); } 100% { opacity: 1; transform: scale(1); } }
+
+/* a chore longer than the time of any day: said quietly */
+.hh-nofit { display: block; font-size: 14px; line-height: var(--grid); margin: 0; color: var(--ink-faint, #9a9aa0); font-style: italic; }
+.chore-note .note-when-older { display: flex; align-items: center; gap: 8px; font-size: 17px; color: var(--ink-soft); }

@@ -22,6 +22,7 @@ import { clickSuppressed, startDrag } from './drag';
 import { FollowToggle } from './Follow';
 import { Checkbox, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, TaskText } from './ink';
 import { ProjectIcon } from './ProjectIcon';
+import { isPlanned } from '../lib/chores';
 import { ChoreDayRows, ChoreExtraRows, CleanDoodle, SmartMark } from './Household';
 import { StatusNote } from './StatusNote';
 import { daySet, setDayFold, SubtaskDayRows, useDayFolds } from './Subtasks';
@@ -463,7 +464,7 @@ function DayTaskRow(props: {
   // nothing was due when the smart task planned the day: a little sparkle instead
   const clean = smart && (() => {
     const cd = store.choreDay(props.day);
-    return !!cd && cd.items.length === 0;
+    return isPlanned(cd) && cd!.items.length === 0;
   })();
 
   return (

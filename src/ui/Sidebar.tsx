@@ -18,7 +18,7 @@ import { CategorySymbol } from './ProjectIcon';
 import { playPaperSlide, playStrike } from './sound';
 import { SubtaskListRows } from './Subtasks';
 import { BucketIcon, CleanDoodle } from './Household';
-import { dueChores, planDone } from '../lib/chores';
+import { dueChores, isPlanned, planDone } from '../lib/chores';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
 
 const SWAP_MS = 640;
@@ -466,6 +466,6 @@ function CategoryList() {
 /** Nothing of the household to do today: planned with nothing in it, or nothing due at all. */
 function choresClean(today: string): boolean {
   const cd = store.choreDay(today);
-  if (cd) return cd.items.length === 0;
+  if (isPlanned(cd)) return cd!.items.length === 0;
   return dueChores(store.snapshot().chores, today).length === 0;
 }

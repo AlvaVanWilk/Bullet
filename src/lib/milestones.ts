@@ -3,6 +3,7 @@
 // no list of them in the app, each one comes once and as a surprise.
 
 import { addDays, compareDays, weekdayIndex, type DayKey } from './dates';
+import { choreDayView, planDone } from './chores';
 import { dayItems, linkedTasks, type Snapshot } from './logic';
 import type { Task } from './model';
 
@@ -31,6 +32,9 @@ export const MILESTONES: Milestone[] = [
   { key: 'nacht', piece: 'mond', why: 'Nach zehn Uhr abends noch etwas erledigt.', saying: 'Jetzt aber ab ins Bett.' },
   { key: 'morgen', piece: 'kaffee', why: 'Vor sieben Uhr morgens schon etwas erledigt.', saying: 'Erst mal Kaffee.' },
   { key: 'weile', piece: 'zweig', why: 'Eine Aufgabe erledigt, die über einen Monat gewartet hat.', saying: 'Gut Ding will Weile haben.' },
+  { key: 'haushalt', piece: 'seifenblasen', why: 'Alles geschafft, was der Haushalt sich für einen Tag vorgenommen hatte.', saying: 'Blitzblank.' },
+  { key: 'haushaltwoche', piece: 'picobello', why: 'Eine ganze Woche lang jeden Tag den Haushalt geschafft.', saying: 'Da kann Besuch kommen.' },
+  { key: 'liegengeblieben', piece: 'waescheleine', why: 'Etwas im Haushalt erledigt, das schon lange liegen geblieben war.', saying: 'Weg damit – und frische Luft.' },
   { key: 'n50', piece: 'laeuft', why: '50 Aufgaben erledigt.', saying: 'Läuft bei dir.' },
   { key: 'n100', piece: 'farn', why: '100 Aufgaben erledigt.', saying: 'Es wächst und wächst.' },
   { key: 'n250', piece: 'washi-rosa', why: '250 Aufgaben erledigt.', saying: 'Ein Streifen Washi-Tape für dein Journal.' },
@@ -117,4 +121,19 @@ export function reachedOnNewDay(s: Snapshot, today: DayKey, now: number): Reache
   const hadTasks = live.some((t) => t.createdAt < now - DAY_MS);
   if (!hadTasks || live.some((t) => t.doneDay === yesterday)) return [];
   return [{ key: 'faul', day: yesterday }];
+}
+
+/**
+ * A chore ticked on a day: the household's plan of the day all done, a week
+ * of such days, or a chore done that had waited long (twice its rhythm and more).
+ */
+export function reachedOnChore(s: Snapshot, day: DayKey, urgencyBefore: number): Reached[] {
+  const out: string[] = [];
+  const view = choreDayView(s, day);
+  if (planDone(view) && view!.items.length > 0) {
+    out.push('haushalt');
+    if (Array.from({ length: 6 }, (_, i) => addDays(day, -1 - i)).every((d) => planDone(choreDayView(s, d)))) out.push('haushaltwoche');
+  }
+  if (urgencyBefore >= 2) out.push('liegengeblieben');
+  return out.map((key) => ({ key, day }));
 }

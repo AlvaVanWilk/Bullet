@@ -245,7 +245,11 @@ export interface ChoreItem {
   before?: { lastDone: DayKey | null; lastShare: number } | null;
 }
 
-/** The chores of one day (id from the day): the plan of the smart task, and what was done besides. */
+/**
+ * The chores of one day (id from the day): the plan of the smart task. Whether
+ * one is done comes from its tick (see ChoreTick; `done` and `extra` here only
+ * from before ticks were kept apart, and in the view of a day put together).
+ */
 export interface ChoreDay extends Base {
   type: 'choreday';
   day: DayKey;
@@ -257,11 +261,28 @@ export interface ChoreDay extends Base {
   extra: ChoreItem[];
   /** swapped out this day: not planned again */
   skipped?: string[];
+  /** (only in the view of a day, never stored) whether the smart task planned it */
+  planned?: boolean;
 }
 
-export type AnyRecord = Task | Category | Project | Area | Entry | Special | Settings | Hide | Deco | Award | Chore | ChoreDay;
+/**
+ * A chore ticked (or unticked again) on a day: a record of its own (id from day
+ * and chore), so that ticks on two devices at once never overwrite each other.
+ */
+export interface ChoreTick extends Base {
+  type: 'choretick';
+  day: DayKey;
+  choreId: string;
+  done: boolean;
+  /** how long it was done */
+  minutes: number;
+  /** what the chore said before it was ticked (unticked, it is put back) */
+  before?: { lastDone: DayKey | null; lastShare: number } | null;
+}
+
+export type AnyRecord = Task | Category | Project | Area | Entry | Special | Settings | Hide | Deco | Award | Chore | ChoreDay | ChoreTick;
 export type RecordType = AnyRecord['type'];
-export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'area', 'entry', 'special', 'settings', 'hide', 'deco', 'award', 'chore', 'choreday'];
+export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'area', 'entry', 'special', 'settings', 'hide', 'deco', 'award', 'chore', 'choreday', 'choretick'];
 
 export const SETTINGS_ID = 'settings';
 
