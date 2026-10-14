@@ -2,7 +2,7 @@
 
 import { useEffect } from 'preact/hooks';
 import { handFont } from '../lib/fonts';
-import { entriesByTask, isOpenToday } from '../lib/logic';
+import { canBeSubtask, entriesByTask, isOpenToday } from '../lib/logic';
 import { STAGE } from '../stage';
 import { store } from '../store/store';
 import { ArchiveView } from './Archive';
@@ -45,19 +45,20 @@ configureDrops(
         && (task.projectId !== target.projectId || (task.areaId ?? null) !== (target.areaId ?? null) || !!task.parentId);
     }
     if (target.kind === 'subtask') {
-      // onto another task of the project: a part of it (one level only)
+      // onto another task (of the project, or of the category): a part of it (one level only)
       const parent = target.taskId ? store.task(target.taskId) : undefined;
-      const hasOwn = store.snapshot().tasks.some((t) => !t.deleted && t.parentId === task.id);
-      return !!parent && parent.id !== task.id && !parent.parentId && !hasOwn
-        && !!task.projectId && parent.projectId === task.projectId && task.parentId !== parent.id;
+      return !!parent && canBeSubtask(task, parent, store.snapshot().tasks);
     }
-    return source.from !== 'category' && task.categoryId !== target.categoryId;
+    // on its own category's page, a part let go of its task stands on its own again
+    if (source.from === 'category') return !!task.parentId && task.categoryId === target.categoryId;
+    return task.categoryId !== target.categoryId;
   },
   (source, target) => {
     if (target.kind === 'day') store.addEntry(source.taskId, target.day!);
     else if (target.kind === 'project') store.updateTask(source.taskId, { projectId: target.projectId });
     else if (target.kind === 'area') store.updateTask(source.taskId, { projectId: target.projectId, areaId: target.areaId ?? null, parentId: null });
     else if (target.kind === 'subtask') store.setParent(source.taskId, target.taskId!);
+    else if (store.task(source.taskId)?.categoryId === target.categoryId) store.setParent(source.taskId, null);
     else store.updateTask(source.taskId, { categoryId: target.categoryId ?? null });
   },
 );

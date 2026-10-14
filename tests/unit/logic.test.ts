@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ALL_DONE, archiveList, areaRows, dayItems, daySubtasks, deadlineFor, nestDayItems, pageSubtasks, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
+  ALL_DONE, archiveList, areaRows, categoryProjects, categoryRows, dayItems, daySubtasks, deadlineFor, nestDayItems, pageSubtasks, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
   openLinkCounts, prepRows, prepSuggestions, wouldLoop, masterEntries, nextStep, projectMarks, projectProgress, projectRows, projectSuggestions, categoryTasks,
   specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type ArchiveQuery, type Snapshot,
 } from '../../src/lib/logic';
@@ -273,6 +273,18 @@ describe('projects', () => {
     // a little later only what is open
     expect(areaRows(s, 'p', null, NOW + 5000).map((r) => r.task.id)).toEqual(['a', 'e', 'f']);
     expect(pageSubtasks(s, 'f', NOW + 5000)).toEqual([]);
+  });
+
+  it('stand on the page of their category; their tasks stand there in them, a part under its task', () => {
+    const s = withProjects([
+      task('a', { categoryId: 'k', createdAt: 1 }),
+      task('b', { categoryId: 'k', createdAt: 2, parentId: 'a' }),
+      task('c', { categoryId: 'k', createdAt: 3, projectId: 'mine' }),
+      task('d', { categoryId: 'k', createdAt: 4, projectId: 'other' }),
+    ], [project('mine', { categoryId: 'k' }), project('other'), project('elsewhere', { categoryId: 'x' })]);
+    expect(categoryProjects(s, 'k', NOW).map((p) => p.id)).toEqual(['mine']);
+    // c is in its project's line; b under a; d of a project elsewhere on its own (with its icon)
+    expect(categoryRows(s, 'k', NOW).map((t) => t.id)).toEqual(['a', 'd']);
   });
 
   it('leave the list some days after they are finished, like tasks', () => {

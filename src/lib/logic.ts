@@ -72,7 +72,15 @@ function inProject(liveProjectIds: Set<string>) {
  */
 export function masterRows(s: Snapshot, now: number): ListRow[] {
   const ofProject = inProject(new Set(liveProjects(s).map((p) => p.id)));
-  return listRows(s, now, (t) => !ofProject(t));
+  const under = underOpenParent(s);
+  return listRows(s, now, (t) => !ofProject(t) && !under(t));
+}
+
+/** A subtask whose task is still open stands under it (folded in the lists), not on a line of its own. */
+function underOpenParent(s: Snapshot): (t: Task) => boolean {
+  const byId = new Map(s.tasks.filter((t) => !t.deleted).map((t) => [t.id, t]));
+  const sub = isSubtask(s);
+  return (t) => sub(t) && byId.get(t.parentId!)!.doneAt == null;
 }
 
 /** All tasks in the order of the master list, those of projects too (for categories and suggestions). */
@@ -125,13 +133,26 @@ export function pageSubtasks(s: Snapshot, parentId: string, now: number): Task[]
 
 // --- subtasks: parts of a task, within a project --------------------------------------
 
-/** Whether a task stands under another one (whose own line is still there, in the same project). */
+/**
+ * Whether a task stands under another one: a part of it, in the same project
+ * (or, outside projects, both in none), its task still there.
+ */
 export function isSubtask(s: Snapshot): (t: Task) => boolean {
   const byId = new Map(s.tasks.filter((t) => !t.deleted).map((t) => [t.id, t]));
   return (t) => {
     const parent = t.parentId ? byId.get(t.parentId) : undefined;
-    return !!parent && !!t.projectId && parent.projectId === t.projectId;
+    return !!parent && parent.id !== t.id && (parent.projectId ?? null) === (t.projectId ?? null);
   };
+}
+
+/**
+ * Whether a task can become a part of another: in the same project (or both in
+ * none), one level only (the other is no part itself, and this one has no parts).
+ */
+export function canBeSubtask(task: Task, parent: Task, tasks: Task[]): boolean {
+  if (parent.id === task.id || parent.parentId || task.parentId === parent.id) return false;
+  if ((parent.projectId ?? null) !== (task.projectId ?? null)) return false;
+  return !tasks.some((t) => !t.deleted && t.parentId === task.id);
 }
 
 /** The subtasks of a task in the order of the lists. */
@@ -297,6 +318,23 @@ function nextStepRows(s: Snapshot, projectId: string, now: number, byId: Map<str
 /** A category page shows its tasks, those of projects too. */
 export function categoryTasks(s: Snapshot, categoryId: string, now: number): Task[] {
   return allRows(s, now).map((r) => r.task).filter((t) => t.categoryId === categoryId);
+}
+
+/** The projects that belong to a category, in the order they were made (finished ones for a while, struck). */
+export function categoryProjects(s: Snapshot, categoryId: string, now: number): Project[] {
+  return liveProjects(s).filter((p) => p.categoryId === categoryId && isVisibleInLists(p, s.settings, now));
+}
+
+/**
+ * The tasks on the page of a category, each on a line of its own: not those of
+ * its projects (the project stands there instead), and a subtask under its task.
+ */
+export function categoryRows(s: Snapshot, categoryId: string, now: number): Task[] {
+  const own = new Set(liveProjects(s).filter((p) => p.categoryId === categoryId).map((p) => p.id));
+  const byId = new Map(s.tasks.filter((t) => !t.deleted).map((t) => [t.id, t]));
+  const sub = isSubtask(s);
+  const under = (t: Task) => sub(t) && isVisibleInLists(byId.get(t.parentId!)!, s.settings, now) && byId.get(t.parentId!)!.categoryId === categoryId;
+  return categoryTasks(s, categoryId, now).filter((t) => !(t.projectId && own.has(t.projectId)) && !under(t));
 }
 
 /** What the line of a project in the master list shows: "!" for an important open task, the dot for one open today. */

@@ -113,6 +113,8 @@ export interface Project extends Base {
   note?: string;
   /** Finished: struck through in the master list like a done task. */
   doneAt?: number | null;
+  /** The category it belongs to: it stands on that category's page, its new tasks take it on. */
+  categoryId?: string | null;
 }
 
 /** A part of a project (e.g. one area of an app): a box of its own on the project page. */

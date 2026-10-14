@@ -5,7 +5,7 @@ import { createStore, get, set } from 'idb-keyval';
 import { compareDays, dayKey, type DayKey } from '../lib/dates';
 import { newId, stableId } from '../lib/ids';
 import { nextFreeColor, PROJECT_COLORS, projectInk } from '../lib/colors';
-import { deadlineFor, isWaiting, wouldLoop, type Snapshot } from '../lib/logic';
+import { canBeSubtask, deadlineFor, isWaiting, wouldLoop, type Snapshot } from '../lib/logic';
 import { milestone, reachedOnDone, reachedOnNewDay, reachedOnProject, type Reached } from '../lib/milestones';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
@@ -161,8 +161,10 @@ export class Store {
   addTask(text: string, categoryId: string | null = null, extra: Partial<Pick<Task, 'deadline' | 'link' | 'after' | 'projectId' | 'areaId' | 'parentId'>> = {}): Task | null {
     const clean = text.trim();
     if (!clean) return null;
+    // written into a project without a category of its own: it takes the project's
+    const category = categoryId ?? (extra.projectId ? this.project(extra.projectId)?.categoryId ?? null : null);
     const task: Task = {
-      id: newId(), type: 'task', updatedAt: 0, text: clean, categoryId, important: false,
+      id: newId(), type: 'task', updatedAt: 0, text: clean, categoryId: category, important: false,
       deadline: null, createdAt: this.now(), doneAt: null, doneDay: null, ...extra,
     };
     this.put(task);
@@ -176,13 +178,22 @@ export class Store {
     if (!task) return;
     // in another project (or none) it is no next step any more, and in an area or under a task only if said so
     const moved = patch.projectId !== undefined && (patch.projectId ?? null) !== (task.projectId ?? null);
-    const next: Task = { ...task, ...patch, ...(moved ? { next: false, areaId: patch.areaId ?? null, parentId: patch.parentId ?? null } : {}) };
+    // into a project without a category of its own, it takes the project's
+    const takes = moved && patch.categoryId === undefined && !task.categoryId && patch.projectId
+      ? { categoryId: this.project(patch.projectId)?.categoryId ?? null } : {};
+    const next: Task = {
+      ...task, ...patch, ...takes, ...(moved ? { next: false, areaId: patch.areaId ?? null, parentId: patch.parentId ?? null } : {}),
+    };
     this.put(next);
-    // its subtasks go along, into the other project or area
-    if ((next.projectId ?? null) !== (task.projectId ?? null) || (next.areaId ?? null) !== (task.areaId ?? null)) {
+    // its subtasks go along, into the other project, area or category
+    if ((next.projectId ?? null) !== (task.projectId ?? null) || (next.areaId ?? null) !== (task.areaId ?? null)
+      || (next.categoryId ?? null) !== (task.categoryId ?? null)) {
       for (const r of this.records.values()) {
         if (r.type === 'task' && !r.deleted && r.parentId === id) {
-          this.put({ ...r, projectId: next.projectId ?? null, areaId: next.areaId ?? null, ...(moved ? { next: false } : {}) });
+          this.put({
+            ...r, projectId: next.projectId ?? null, areaId: next.areaId ?? null, categoryId: next.categoryId ?? null,
+            ...(moved ? { next: false } : {}),
+          });
         }
       }
     }
@@ -190,8 +201,10 @@ export class Store {
   }
 
   /**
-   * A subtask of another task of the same project (one level only: a task with
-   * subtasks of its own stays on top), or none any more. False if not possible.
+   * A subtask of another task: of the same project, or (outside projects) of
+   * any other; one level only (a task with subtasks of its own stays on top).
+   * It takes on the area and category of its task. Null: none any more.
+   * False if not possible.
    */
   setParent(taskId: string, parentId: string | null): boolean {
     const task = this.task(taskId);
@@ -201,9 +214,8 @@ export class Store {
       return true;
     }
     const parent = this.task(parentId);
-    const hasOwn = [...this.records.values()].some((r) => r.type === 'task' && !r.deleted && r.parentId === taskId);
-    if (!parent || parent.id === taskId || parent.parentId || hasOwn || !task.projectId || parent.projectId !== task.projectId) return false;
-    this.updateTask(taskId, { parentId, areaId: parent.areaId ?? null });
+    if (!parent || !canBeSubtask(task, parent, this.snapshot().tasks)) return false;
+    this.updateTask(taskId, { parentId, areaId: parent.areaId ?? null, categoryId: parent.categoryId ?? null });
     return true;
   }
 
@@ -516,19 +528,20 @@ export class Store {
     if (!cat) return;
     this.put({ ...cat, deleted: true });
     for (const r of this.records.values()) {
-      if (r.type === 'task' && r.categoryId === id && !r.deleted) this.put({ ...r, categoryId: null });
+      if ((r.type === 'task' || r.type === 'project') && r.categoryId === id && !r.deleted) this.put({ ...r, categoryId: null });
     }
     this.changed(true);
   }
 
-  /** A new project, in a colour not taken yet by another one. */
-  addProject(name: string): Project | null {
+  /** A new project, in a colour not taken yet by another one (and in a category, if given). */
+  addProject(name: string, categoryId: string | null = null): Project | null {
     const clean = name.trim();
     if (!clean) return null;
     const used = this.snapshot().projects.filter((p) => !p.deleted).map((p) => projectInk(p.color));
     const color = (PROJECT_COLORS.find((c) => !used.includes(c.ink)) ?? PROJECT_COLORS[0]).ink;
     const project: Project = {
       id: newId(), type: 'project', updatedAt: 0, name: clean, icon: 'stern', color, createdAt: this.now(),
+      ...(categoryId ? { categoryId } : {}),
     };
     this.put(project);
     this.markFresh(project.id);
@@ -536,10 +549,17 @@ export class Store {
     return project;
   }
 
-  updateProject(id: string, patch: Partial<Pick<Project, 'name' | 'icon' | 'color' | 'note' | 'drawing'>>) {
+  updateProject(id: string, patch: Partial<Pick<Project, 'name' | 'icon' | 'color' | 'note' | 'drawing' | 'categoryId'>>) {
     const project = this.project(id);
     if (!project) return;
     this.put({ ...project, ...patch });
+    // into another category: its tasks that were in the old one (or in none) go along
+    if (patch.categoryId !== undefined && (patch.categoryId ?? null) !== (project.categoryId ?? null)) {
+      for (const r of this.records.values()) {
+        if (r.type !== 'task' || r.deleted || r.projectId !== id) continue;
+        if (!r.categoryId || r.categoryId === project.categoryId) this.put({ ...r, categoryId: patch.categoryId ?? null });
+      }
+    }
     this.changed(true);
   }
 

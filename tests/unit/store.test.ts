@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaRows, dayItems, openSubtasks, pendingGroups, pendingNames, projectAreas, subtaskRows } from '../../src/lib/logic';
+import { areaRows, dayItems, masterRows, openSubtasks, pendingGroups, pendingNames, projectAreas, subtaskRows } from '../../src/lib/logic';
 import { Store } from '../../src/store/store';
 
 function makeStore() {
@@ -356,6 +356,51 @@ describe('hiding appointments', () => {
     s.setParent(idea.id, null);
     expect(subtaskRows(snap(), send.id, Date.now()).map((r) => r.task.text)).toEqual(['Knopf springt']);
     expect(openSubtasks(snap(), send.id).map((t) => t.text)).toEqual(['Knopf springt']);
+  });
+
+  it('makes subtasks outside projects too: in the list under their open task, in its category', () => {
+    const s = makeStore();
+    const home = s.addCategory('Haushalt')!;
+    const family = s.addCategory('Familie')!;
+    const party = s.addTask('Geburtstag vorbereiten', home.id)!;
+    const cake = s.addTask('Kuchen backen', family.id)!;
+    const inProject = s.addTask('Holz bestellen', null, { projectId: s.addProject('Gartenhaus')!.id })!;
+    // a part of it, in its category; not across a project
+    expect(s.setParent(cake.id, party.id)).toBe(true);
+    expect(s.task(cake.id)).toMatchObject({ parentId: party.id, categoryId: home.id });
+    expect(s.setParent(inProject.id, party.id)).toBe(false);
+    // in the master list under its task (folded there), not on a line of its own
+    const master = () => masterRows(s.snapshot(), Date.now()).map((r) => r.task.text);
+    expect(master()).toEqual(['Geburtstag vorbereiten']);
+    expect(openSubtasks(s.snapshot(), party.id).map((t) => t.text)).toEqual(['Kuchen backen']);
+    // the task into another category: its parts go along
+    s.updateTask(party.id, { categoryId: family.id });
+    expect(s.task(cake.id)!.categoryId).toBe(family.id);
+    // the task done, the part left open stands on its own
+    s.settleSubtasks(party.id, [{ id: cake.id, choice: 'open' }], '');
+    s.setDone(party.id, true, '2026-10-14');
+    expect(master()).toContain('Kuchen backen');
+  });
+
+  it('puts projects into categories: their new tasks take it on, and go along when it changes', () => {
+    const s = makeStore();
+    const home = s.addCategory('Haushalt')!;
+    const work = s.addCategory('Arbeit')!;
+    const p = s.addProject('Gartenhaus', home.id)!;
+    expect(s.project(p.id)!.categoryId).toBe(home.id);
+    const wood = s.addTask('Holz bestellen', null, { projectId: p.id })!;
+    const own = s.addTask('Rechnung prüfen', work.id, { projectId: p.id })!;
+    expect(s.task(wood.id)!.categoryId).toBe(home.id);
+    // into a project without a category of its own, a task takes the project's
+    const loose = s.addTask('Farbe kaufen')!;
+    s.updateTask(loose.id, { projectId: p.id });
+    expect(s.task(loose.id)!.categoryId).toBe(home.id);
+    // the project into another category: what was in the old one goes along, the rest stays
+    s.updateProject(p.id, { categoryId: work.id });
+    expect([s.task(wood.id)!.categoryId, s.task(loose.id)!.categoryId, s.task(own.id)!.categoryId]).toEqual([work.id, work.id, work.id]);
+    // the category deleted: the project is in none
+    s.deleteCategory(work.id);
+    expect(s.project(p.id)!.categoryId).toBeNull();
   });
 
   it('lets tasks wait on someone, grouped by whom; done, they wait no more', () => {

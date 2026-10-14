@@ -391,6 +391,46 @@ async function device(browser, name) {
     check('a task done on its project page is struck a moment, then leaves the page',
       leavingNow === 1 && goneLater === 0 && holzSays === 'nichts mehr offen', { leavingNow, goneLater, holzSays });
 
+    // a category: a task dropped on another becomes a part of it (in the master list under it); projects belong to it too
+    await ipad.locator('.tab-categories').click();
+    await ipad.waitForTimeout(800);
+    await ipad.locator('.sheet.front .new-line input').fill('Haushalt');
+    await ipad.locator('.sheet.front .new-line input').press('Enter');
+    await ipad.locator('.sheet.front .cat-row .cat-name', { hasText: 'Haushalt' }).click();
+    await ipad.waitForTimeout(500);
+    for (const text of ['Fest planen', 'Kuchen backen']) {
+      await ipad.locator('.catview .suggest input').fill(text);
+      await ipad.locator('.catview .suggest input').press('Enter');
+    }
+    await ipad.waitForTimeout(400);
+    const cake = await ipad.locator('.cat-tasks .row', { hasText: 'Kuchen backen' }).boundingBox();
+    const fest = await ipad.locator('.cat-tasks .row', { hasText: 'Fest planen' }).boundingBox();
+    await ipad.mouse.move(cake.x + 90, cake.y + 12);
+    await ipad.mouse.down();
+    await ipad.waitForTimeout(450);
+    await ipad.mouse.move(cake.x + 110, cake.y + 30, { steps: 4 });
+    await ipad.mouse.move(fest.x + 120, fest.y + 14, { steps: 10 });
+    await ipad.mouse.up();
+    await ipad.waitForTimeout(500);
+    const catSubs = await ipad.$$eval('.cat-tasks .row.sub .tt-text', (els) => els.map((e) => e.textContent));
+    await ipad.locator('.cat-add-project-btn').click();
+    await ipad.locator('.cat-add-project input').fill('Umzug');
+    await ipad.locator('.cat-add-project input').press('Enter');
+    await ipad.waitForTimeout(300);
+    const catProjects = await ipad.$$eval('.cat-projects .tt-text', (els) => els.map((e) => e.textContent));
+    await ipad.locator('.cat-projects .row', { hasText: 'Umzug' }).click();
+    await ipad.waitForTimeout(400);
+    const opened = await ipad.locator('.projview .proj-title').innerText().catch(() => '');
+    await ipad.locator('.projview .close-x').click();
+    await ipad.locator('.tab-master').click();
+    await ipad.waitForTimeout(900);
+    const masterHas = await ipad.$$eval('.sheet.front .task-list > li.row .tt-text', (els) => els.map((e) => e.textContent));
+    const festFold = await ipad.locator('.sheet.front .task-list > li.row', { hasText: 'Fest planen' }).locator('.follow-toggle').count();
+    check('in a category a task dropped on another becomes its part (folded under it in the list); a project made there opens from there',
+      catSubs.join() === 'Kuchen backen' && catProjects.join() === 'Umzug' && /umzug/i.test(opened)
+        && masterHas.includes('Fest planen') && !masterHas.includes('Kuchen backen') && festFold === 1,
+      { catSubs, catProjects, opened, festFold });
+
     // a milestone: a finished project gives a doodle (announced once); held on free paper in today, it sticks there, on both devices
     await ipad.locator('.tab-projects').click();
     await ipad.waitForTimeout(800);

@@ -119,7 +119,7 @@ export function SubtaskListRows(props: { parentId: string; colorMode: 'text' | '
 }
 
 /**
- * On the post-it of a task of a project: its subtasks, each with a small box
+ * On the post-it of a task: its subtasks, each with a small box
  * (ticked, it is done today) and its name (opens its own post-it); below a
  * line for a new one.
  */
@@ -131,13 +131,13 @@ export function SubtaskSection(props: { task: Task; today: DayKey }) {
   const latest = useRef(text);
   latest.current = text;
   const add = (value: string) => {
-    if (!value.trim() || !task.projectId) return;
-    store.addTask(value, task.categoryId, { projectId: task.projectId, areaId: task.areaId ?? null, parentId: task.id });
+    if (!value.trim()) return;
+    store.addTask(value, task.categoryId, { projectId: task.projectId ?? null, areaId: task.areaId ?? null, parentId: task.id });
     setText('');
   };
   // as everywhere on the post-its, what was written counts when the note goes away
   useEffect(() => () => add(latest.current), []);
-  if (!task.projectId || task.parentId) return null;
+  if (task.parentId) return null;
   const subs = snap.tasks
     .filter((t) => !t.deleted && t.parentId === task.id)
     .sort((a, b) => Number(a.doneAt != null) - Number(b.doneAt != null) || a.createdAt - b.createdAt);

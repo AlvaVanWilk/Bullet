@@ -75,6 +75,12 @@ Bedienung und Einrichtung: `README.md`.
   Marker unter dem Namen, eine Wimpelkette, am Seitenende Tape und eine Sonne; die
   Bereichsboxen nehmen die Töne abwechselnd an. Gedeckt, keine Zahlen, nichts zu sammeln. Gelöscht → Aufgaben zurück in die
   Masterliste. Kategorien, Vorschläge und Archiv zeigen Projektaufgaben einzeln.
+  Ein Projekt kann zu einer Kategorie gehören (`project.categoryId`, im Projekt-Zettel
+  wählbar, oder „+ Projekt“ auf der Kategorienseite): Es steht dort oben mit seinem Bild
+  (antippen → Projektseite), seine Aufgaben stehen dort nicht einzeln. Neue Aufgaben im
+  Projekt (und solche ohne Kategorie, die hineinkommen) übernehmen die Kategorie; wechselt
+  sie, gehen die mit, die die alte hatten. Die Projektzeile der Masterliste steht in der
+  Farbe der Kategorie.
 - Bereiche (`area`, `task.areaId`): Ein Projekt lässt sich in Bereiche teilen. Auf der
   Projektseite ist jeder Bereich eine Box, mit Marker in der Projektfarbe gezeichnet,
   Name in Kapitälchen oben im Rahmen (daneben klein die Zahl der offenen). Die Boxen
@@ -88,9 +94,12 @@ Bedienung und Einrichtung: `README.md`.
   ‹ ›, umbenennen, löschen (Aufgaben bleiben, dann unter den Boxen). Aufgaben zwischen
   Boxen ziehen oder im Post-it „Bereich“ wählen; Folgeaufgaben bleiben im Bereich der
   Mutter. Auf dem Projekt-Zettel: Bereiche als kleine Zwischenüberschriften.
-- Unteraufgaben (`task.parentId`, eine Ebene, nur innerhalb eines Projekts): auf der
-  Projektseite eine Aufgabe auf eine andere ziehen (nur dort, damit sich das Ziehen sonst
-  nicht verheddert); eingerückt darunter, auch auf dem Projekt-Zettel (ist die Aufgabe
+- Unteraufgaben (`task.parentId`, eine Ebene; im selben Projekt oder beide in keinem): auf
+  der Projektseite oder der Kategorienseite eine Aufgabe auf eine andere ziehen (nur dort,
+  damit sich das Ziehen sonst nicht verheddert; auf der Kategorienseite auf die freie Seite
+  gezogen → wieder eigenständig), oder im Post-it unter „Unteraufgaben“ schreiben. Sie
+  übernehmen Bereich und Kategorie ihrer Aufgabe. In der Masterliste stehen sie nicht auf
+  eigener Zeile, solange ihre Aufgabe offen ist (das Dreieck mit Zahl klappt sie aus); eingerückt darunter, auch auf dem Projekt-Zettel (ist die Aufgabe
   erledigt, steht eine noch offene Unteraufgabe auf der Projektseite für sich). In eine Box oder
   in „Ohne Bereich“ gezogen bzw. „Teil von: … ×“ im Post-it → wieder eigenständig. Sie
   gehören zum Bereich ihrer Aufgabe und wandern mit. Überall sichtbar: im Tag stehen

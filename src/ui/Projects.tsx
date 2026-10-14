@@ -9,7 +9,7 @@ import { Fragment } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor, projectInk } from '../lib/colors';
 import {
-  areaRows, entriesByTask, followUps, isEmptyProject, isOpenToday, liveProjects, nextStep, projectAreas, projectMarks, projectProgress, projectRows,
+  areaRows, entriesByTask, followUps, isEmptyProject, isOpenToday, liveCategories, liveProjects, nextStep, projectAreas, projectMarks, projectProgress, projectRows,
   PAGE_LEAVE_MS, pageSubtasks, projectSuggestions, type ListRow,
 } from '../lib/logic';
 import type { Area, Entry, Project, Task } from '../lib/model';
@@ -72,6 +72,9 @@ export function ProjectLine(props: { project: Project; today: string; index: Map
   const state = useUi();
   const p = props.project;
   const marks = projectMarks(snap, p.id, props.today, props.index);
+  // in its category's colour, like a task
+  const cat = store.category(p.categoryId);
+  const color = cat ? categoryColor(cat.color) : null;
   const open = projectProgress(snap, p.id);
   const showing = state.postIt?.kind === 'project' && state.postIt.id === p.id;
   return (
@@ -88,7 +91,12 @@ export function ProjectLine(props: { project: Project; today: string; index: Map
       }}
     >
       <Lead dot={marks.today} bang={marks.important} project={p} />
-      <TaskText text={p.name} struck={p.doneAt != null} />
+      <TaskText
+        text={p.name}
+        struck={p.doneAt != null}
+        color={color && snap.settings.colorMode === 'text' ? color.ink : undefined}
+        marker={color && snap.settings.colorMode === 'marker' ? color.marker : null}
+      />
       {p.doneAt == null && <span class="project-next" title="noch kein nächster Schritt">→ ?</span>}
       {p.doneAt == null && open.total > open.done && <span class="project-open">{open.total - open.done}</span>}
     </li>
@@ -758,6 +766,7 @@ export function ProjectEditNote(props: { id: string; close: () => void }) {
       </div>
       <div class="note-label">Farbe</div>
       <ColorWheel value={ink} others={others} onChange={(hex) => store.updateProject(p.id, { color: hex })} />
+      <ProjectCategorySelect project={p} />
       <div class="note-actions">
         <button type="button" class="note-btn" onClick={() => ui.set({ view: { kind: 'project', id: p.id }, postIt: null })}>öffnen</button>
         <button
@@ -777,6 +786,30 @@ export function ProjectEditNote(props: { id: string; close: () => void }) {
 }
 
 /** In the note of a task: which project it belongs to. */
+/** The category a project belongs to: it stands on that category's page, and its new tasks take it on. */
+function ProjectCategorySelect(props: { project: Project }) {
+  const snap = useStore();
+  const cats = liveCategories(snap);
+  if (!cats.length) return null;
+  const cat = store.category(props.project.categoryId);
+  return (
+    <div class="note-selects">
+      <label class="note-select">
+        <span class="note-label">Kategorie</span>
+        <span class="select-mark cat-mark" style={{ '--dot': cat ? categoryColor(cat.color).marker : 'transparent' }} aria-hidden="true" />
+        <select
+          value={cat?.id ?? ''}
+          style={{ color: cat ? categoryColor(cat.color).ink : undefined }}
+          onChange={(e) => store.updateProject(props.project.id, { categoryId: (e.target as HTMLSelectElement).value || null })}
+        >
+          <option value="">ohne</option>
+          {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </label>
+    </div>
+  );
+}
+
 export function ProjectSelect(props: { task: Task }) {
   const snap = useStore();
   const t = props.task;

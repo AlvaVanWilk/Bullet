@@ -3,7 +3,14 @@
 
 import { useState } from 'preact/hooks';
 
-export function NewLine(props: { placeholder: string; onEnter: (text: string) => void }) {
+export function NewLine(props: {
+  placeholder: string;
+  onEnter: (text: string) => void;
+  /** opened on purpose: the keyboard comes right away */
+  autoFocus?: boolean;
+  /** left with Esc or by tapping elsewhere while empty */
+  onLeave?: () => void;
+}) {
   const [value, setValue] = useState('');
   return (
     <form
@@ -20,8 +27,10 @@ export function NewLine(props: { placeholder: string; onEnter: (text: string) =>
         value={value}
         onInput={(e) => setValue((e.target as HTMLInputElement).value)}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') { setValue(''); (e.currentTarget as HTMLInputElement).blur(); }
+          if (e.key === 'Escape') { setValue(''); (e.currentTarget as HTMLInputElement).blur(); props.onLeave?.(); }
         }}
+        onBlur={(e) => { if (!(e.currentTarget as HTMLInputElement).value.trim()) props.onLeave?.(); }}
+        autoFocus={props.autoFocus}
         placeholder={props.placeholder}
         enterKeyHint="enter"
         autoComplete="off"
