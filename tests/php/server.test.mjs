@@ -28,9 +28,12 @@ function writeConfig(extra = '') {
 }
 writeConfig("'allowed_emails' => 'alva@example.com, test@example.com',");
 
+// no code cache: the tests rewrite the config while the server runs, and a cache
+// that only looks at file times every few seconds would keep serving the old one
+const NO_CACHE = ['-d', 'opcache.enable=0', '-d', 'opcache.enable_cli=0'];
 const servers = [
-  spawn('php', ['-S', `127.0.0.1:${APP_PORT}`, '-t', run], { stdio: 'ignore' }),
-  spawn('php', ['-S', `127.0.0.1:${G_PORT}`, '-t', join(run, 'google')], { stdio: 'ignore' }),
+  spawn('php', [...NO_CACHE, '-S', `127.0.0.1:${APP_PORT}`, '-t', run], { stdio: 'ignore' }),
+  spawn('php', [...NO_CACHE, '-S', `127.0.0.1:${G_PORT}`, '-t', join(run, 'google')], { stdio: 'ignore' }),
 ];
 const stop = () => servers.forEach((s) => s.kill());
 process.on('exit', stop);
