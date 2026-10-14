@@ -71,9 +71,13 @@ Bedienung und Einrichtung: `README.md`.
   die Seite bunter, je mehr erledigt ist (`ProjectDecor.tsx`, eine Überraschung: die
   Nutzerin will die Stufen nicht vorher kennen): Der Klecks wächst nach links und
   unten (nie unter den Namen), mit mehr Spritzern und ab 8 bzw. 20 zwei Nachbartönen der
-  Projektfarbe; nach und nach Washi-Tape oben, Funkelsterne hinter dem Namen, ein Zweig,
-  Marker unter dem Namen, eine Wimpelkette, am Seitenende Tape und eine Sonne; die
-  Bereichsboxen nehmen die Töne abwechselnd an. Gedeckt, keine Zahlen, nichts zu sammeln. Gelöscht → Aufgaben zurück in die
+  Projektfarbe; die Bereichsboxen nehmen die Töne abwechselnd an. Dazu füllen sich nach
+  und nach (bei 5, 10, 15, 25, 35, 45, 60 erledigten) sieben Plätze: oberer Rand, rechts im
+  Kopf, klein daneben, hinter dem Namen, unter dem Namen, Seitenende links und rechts. Welcher
+  Platz wann kommt und welches Motiv er bekommt (Tape in drei Mustern, Wimpel, Zweig, Sonne,
+  Mond, Blüte, Spirale, Herz, Sterne, Punkte, Wolke; Unterstrich als Marker, Welle oder
+  doppelt), ist pro Projekt anders (aus seiner id, fest), damit nicht alle Seiten gleich
+  wachsen. Gedeckt, keine Zahlen, nichts zu sammeln. Gelöscht → Aufgaben zurück in die
   Masterliste. Kategorien, Vorschläge und Archiv zeigen Projektaufgaben einzeln.
   Ein Projekt kann zu einer Kategorie gehören (`project.categoryId`, im Projekt-Zettel
   wählbar, oder „+ Projekt“ auf der Kategorienseite): Es steht dort oben mit seinem Bild

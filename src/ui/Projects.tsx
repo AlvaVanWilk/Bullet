@@ -21,7 +21,7 @@ import { Bang, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, Sche
 import { NewLine } from './NewLine';
 import { ColorWheel } from './ColorWheel';
 import { DrawPad } from './DrawPad';
-import { blotLayers, boxInk, DECOR_AT, ProjectDecor, ProjectDecorEnd, shades, Sparkles } from './ProjectDecor';
+import { blotLayers, boxInk, nameMark, NameDecor, ProjectDecor, ProjectDecorEnd, shades } from './ProjectDecor';
 import { ICONS, OWN, ProjectIcon } from './ProjectIcon';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { AddLine } from './Suggest';
@@ -332,9 +332,9 @@ export function ProjectView(props: { id: string }) {
           <ProjectIcon project={p} size={76} class="big tilted" />
         </button>
         <div class="proj-head-text">
-          <h1 class={`proj-title ${p.doneAt != null ? 'finished' : ''} ${shownDone >= DECOR_AT.marker ? 'marked' : ''}`}>
+          <h1 class={`proj-title ${p.doneAt != null ? 'finished' : ''} ${nameMark(p.id, shownDone)}`}>
             <span>{p.name}</span>
-            {shownDone >= DECOR_AT.sparkles && <Sparkles color={shades(projectInk(p.color))[1]} seed={`${p.id}|spark`} />}
+            <NameDecor seed={p.id} ink={projectInk(p.color)} done={shownDone} />
           </h1>
           {total > 0 && <span class="proj-progress">{done} von {total} erledigt</span>}
         </div>

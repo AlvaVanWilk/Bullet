@@ -632,16 +632,13 @@ body.is-dragging .proj-loose.empty { display: block; border: 1.5px dashed color-
 .projview { position: relative; }
 .proj-decor { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
 .pd-piece { position: absolute; line-height: 0; }
-.pd-piece path, .pd-sparkles path { mix-blend-mode: multiply; }
-.pd-washi-top { top: 0; right: 170px; transform: rotate(-4deg); }
-.pd-sprig { top: 10px; right: 70px; transform: rotate(16deg); }
-.pd-bunting { top: -3px; left: 210px; }
+.pd-piece path, .pd-name path { mix-blend-mode: multiply; }
 /* at the end of the page, below everything written on it */
 .proj-decor-end { position: relative; height: 150px; margin: 8px -40px 0 -38px; overflow: hidden; pointer-events: none; }
-.pd-washi-corner { top: 40px; left: -14px; transform: rotate(-24deg); }
-.pd-sun { top: 30px; right: 48px; transform: scale(1.3); }
-.proj-title .pd-sparkles { display: inline-block; vertical-align: top; margin: -6px 0 0 6px; }
-.proj-title.marked span {
+.proj-title .pd-name { display: inline-block; vertical-align: top; margin: -6px 0 0 8px; line-height: 0; }
+.proj-title.mark-wavy span { text-decoration: underline wavy color-mix(in srgb, var(--proj-mark) 70%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 2px; }
+.proj-title.mark-double span { text-decoration: underline double color-mix(in srgb, var(--proj-mark) 70%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 1px; }
+.proj-title.mark-marker span {
   background-image: linear-gradient(178deg, transparent 56%, color-mix(in srgb, var(--proj-mark) 42%, transparent) 57%, color-mix(in srgb, var(--proj-mark) 34%, transparent) 88%, transparent 90%);
   padding: 0 0.12em;
   border-radius: 0.2em;
