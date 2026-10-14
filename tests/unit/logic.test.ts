@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ALL_DONE, archiveList, dayItems, daySubtasks, deadlineFor, nestDayItems, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
+  ALL_DONE, archiveList, areaRows, dayItems, daySubtasks, deadlineFor, nestDayItems, pageSubtasks, entriesByTask, followSuggestions, followUps, hiddenKeys, isOpenToday, linkedTasks, masterRows, masterTasks,
   openLinkCounts, prepRows, prepSuggestions, wouldLoop, masterEntries, nextStep, projectMarks, projectProgress, projectRows, projectSuggestions, categoryTasks,
   specialLinkKey, specialsOn, suggestions, todaySuggestions, visibleEvents, weekDeadlines, type ArchiveQuery, type Snapshot,
 } from '../../src/lib/logic';
@@ -253,6 +253,26 @@ describe('projects', () => {
     const step = withProjects([task('s', { projectId: 'p', next: true, doneAt: NOW - 1000, doneDay: TODAY })], [project('p')]);
     expect(masterEntries(step, NOW).map((e) => e.kind)).toEqual(['project']);
     expect(masterEntries(step, NOW, NOW).map((e) => e.kind)).toEqual(['step']);
+  });
+
+  it('keep only what is open on their page; a task done goes after a moment, its open parts stand on their own', () => {
+    const P = { projectId: 'p' };
+    const s = withProjects([
+      task('a', { ...P, createdAt: 1 }),
+      task('b', { ...P, createdAt: 2, doneAt: NOW - 1000, doneDay: TODAY }),
+      task('c', { ...P, createdAt: 3, doneAt: NOW - 10_000, doneDay: TODAY }),
+      task('d', { ...P, createdAt: 4, doneAt: NOW - DAY, doneDay: TODAY }),
+      task('e', { ...P, createdAt: 5, parentId: 'd' }),
+      task('f', { ...P, createdAt: 6 }),
+      task('g', { ...P, createdAt: 7, parentId: 'f', doneAt: NOW - DAY, doneDay: TODAY }),
+      task('h', { ...P, createdAt: 8, parentId: 'f', doneAt: NOW - 500, doneDay: TODAY }),
+    ], [project('p')]);
+    // b was done a moment ago: still there (struck, on its way out); c and d are gone
+    expect(areaRows(s, 'p', null, NOW).map((r) => r.task.id)).toEqual(['a', 'b', 'e', 'f']);
+    expect(pageSubtasks(s, 'f', NOW).map((t) => t.id)).toEqual(['h']);
+    // a little later only what is open
+    expect(areaRows(s, 'p', null, NOW + 5000).map((r) => r.task.id)).toEqual(['a', 'e', 'f']);
+    expect(pageSubtasks(s, 'f', NOW + 5000)).toEqual([]);
   });
 
   it('leave the list some days after they are finished, like tasks', () => {

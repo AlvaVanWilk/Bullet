@@ -90,22 +90,37 @@ export function projectAreas(s: Snapshot, projectId: string): Area[] {
   return s.areas.filter((a) => !a.deleted && a.projectId === projectId).sort((a, b) => a.order - b.order || byCreated(a, b));
 }
 
+/** How long a task done stays on the page of its project: struck through, then it goes. */
+export const PAGE_LEAVE_MS = 1800;
+
+/** Whether a task is on the page of its project: open, or done a moment ago (on its way out). */
+export function onProjectPage(t: Task, now: number): boolean {
+  return !t.deleted && (t.doneAt == null || now - t.doneAt < PAGE_LEAVE_MS);
+}
+
 /**
- * The tasks of one area of a project; with null those in none (also those
- * whose area is gone): they stand below the boxes.
+ * The tasks of one area on the page of a project; with null those in none
+ * (also those whose area is gone): they stand below the boxes. What is done
+ * leaves the page (the archive keeps it).
  */
 export function areaRows(s: Snapshot, projectId: string, areaId: string | null, now: number): ListRow[] {
   const areas = new Set(projectAreas(s, projectId).map((a) => a.id));
   const areaOf = (t: Task) => (t.areaId && areas.has(t.areaId) ? t.areaId : null);
   const under = shownUnderParent(s, now);
-  return listRows(s, now, (t) => t.projectId === projectId && areaOf(t) === areaId && !under(t));
+  return listRows(s, now, (t) => t.projectId === projectId && areaOf(t) === areaId && !under(t))
+    .filter((r) => onProjectPage(r.task, now));
 }
 
-/** A subtask stands under its task while that is shown in the lists; after that on its own. */
+/** On the page, a subtask stands under its task while that is there; after that on its own. */
 function shownUnderParent(s: Snapshot, now: number): (t: Task) => boolean {
   const byId = new Map(s.tasks.filter((t) => !t.deleted).map((t) => [t.id, t]));
   const sub = isSubtask(s);
-  return (t) => sub(t) && isVisibleInLists(byId.get(t.parentId!)!, s.settings, now);
+  return (t) => sub(t) && onProjectPage(byId.get(t.parentId!)!, now);
+}
+
+/** The subtasks of a task on the page of its project (those open, and those done a moment ago). */
+export function pageSubtasks(s: Snapshot, parentId: string, now: number): Task[] {
+  return subtaskRows(s, parentId, now).map((r) => r.task).filter((t) => onProjectPage(t, now));
 }
 
 // --- subtasks: parts of a task, within a project --------------------------------------

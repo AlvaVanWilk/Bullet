@@ -36,7 +36,7 @@ Bedienung und Einrichtung: `README.md`.
   sortieren (neueste/älteste zuerst, A–Z) und filtern (Kategorie, Deadline, wichtig, Foto
   oder Überweisung); Eintrag antippen → Post-it. Der
   Besen neben „Masterliste“ räumt Durchgestrichenes sofort weg (`settings.listClearedAt`),
-  aus den Listen (Masterliste, Projektseite, Kategorien); die Tage und das Archiv behalten
+  aus den Listen (Masterliste, Kategorien); die Tage und das Archiv behalten
   alles, auch die Unteraufgaben unter ihrer Aufgabe im Tag.
 - Rechts an der Hauptseite stecken Laschen wie Klebe-Fähnchen, mit gezeichneten Symbolen
   statt Schrift: Kästchen = Planer (Woche; schon offen → aktuelle Woche), Kiste = Archiv
@@ -66,7 +66,14 @@ Bedienung und Einrichtung: `README.md`.
   Projektseite: Titel in Kapitälchen; Bild groß und schräg auf einem Klecks (Klecksform
   mit Spritzern, ohne Umrandung) in seiner Farbe, Fortschritt,
   Notizen, Aufgaben (eine Schreibzeile „+ Aufgabe …“ oben, in der Projektfarbe getönt),
-  „Projekt abschließen“. Gelöscht → Aufgaben zurück in die
+  „Projekt abschließen“. Auf der Projektseite steht nur Offenes: Erledigtes wird kurz
+  durchgestrichen und gleitet hinaus (`PAGE_LEAVE_MS`; das Archiv behält es). Dafür wird
+  die Seite bunter, je mehr erledigt ist (`ProjectDecor.tsx`, eine Überraschung: die
+  Nutzerin will die Stufen nicht vorher kennen): Der Klecks wächst nach links und
+  unten (nie unter den Namen), mit mehr Spritzern und ab 8 bzw. 20 zwei Nachbartönen der
+  Projektfarbe; nach und nach Washi-Tape oben, Funkelsterne hinter dem Namen, ein Zweig,
+  Marker unter dem Namen, eine Wimpelkette, am Seitenende Tape und eine Sonne; die
+  Bereichsboxen nehmen die Töne abwechselnd an. Gedeckt, keine Zahlen, nichts zu sammeln. Gelöscht → Aufgaben zurück in die
   Masterliste. Kategorien, Vorschläge und Archiv zeigen Projektaufgaben einzeln.
 - Bereiche (`area`, `task.areaId`): Ein Projekt lässt sich in Bereiche teilen. Auf der
   Projektseite ist jeder Bereich eine Box, mit Marker in der Projektfarbe gezeichnet,
@@ -83,9 +90,8 @@ Bedienung und Einrichtung: `README.md`.
   Mutter. Auf dem Projekt-Zettel: Bereiche als kleine Zwischenüberschriften.
 - Unteraufgaben (`task.parentId`, eine Ebene, nur innerhalb eines Projekts): auf der
   Projektseite eine Aufgabe auf eine andere ziehen (nur dort, damit sich das Ziehen sonst
-  nicht verheddert); eingerückt darunter, auch auf dem Projekt-Zettel. Ist die Aufgabe
-  mit allen ihren Unteraufgaben erledigt, liegen diese auf der Projektseite hinter dem
-  Dreieck mit Zahl (anfangs zu). In eine Box oder
+  nicht verheddert); eingerückt darunter, auch auf dem Projekt-Zettel (ist die Aufgabe
+  erledigt, steht eine noch offene Unteraufgabe auf der Projektseite für sich). In eine Box oder
   in „Ohne Bereich“ gezogen bzw. „Teil von: … ×“ im Post-it → wieder eigenständig. Sie
   gehören zum Bereich ihrer Aufgabe und wandern mit. Überall sichtbar: im Tag stehen
   unter der Aufgabe ihre offenen (und dort erledigten) Unteraufgaben mit eigenem

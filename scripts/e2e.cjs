@@ -371,6 +371,26 @@ async function device(browser, name) {
       subs.includes('Leiter leihen') && subInDay === 1 && underIt && foldedAway === 0 && foldedOut === 1 && waits.some((w) => w.includes('Thomas') && w.includes('Leiter leihen')) && pdfHead === '%PDF-' && pngHead === 'PNG',
       { subs, subInDay, dayRows, foldedAway, foldedOut, waits, pdfHead, pngHead });
 
+    // done on its project's page: struck through a moment, then off the page (only what is open stays there)
+    await ipad.locator('.tab-projects').click();
+    await ipad.waitForTimeout(800);
+    await ipad.locator('.sheet.front .proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
+    await ipad.waitForTimeout(500);
+    await ipad.locator('.proj-tasks .row', { hasText: 'Bretter prüfen' }).locator('.tt-text').click();
+    await ipad.locator('.postit .note-btn', { hasText: 'erledigt' }).first().click();
+    await ipad.waitForTimeout(200);
+    if (await ipad.locator('.note-when-days .chip').count()) await ipad.locator('.note-when-days .chip', { hasText: 'heute' }).click();
+    await ipad.waitForTimeout(400);
+    const leavingNow = await ipad.locator('.proj-tasks .row.leaving', { hasText: 'Bretter prüfen' }).count();
+    await ipad.waitForTimeout(2200);
+    while (await ipad.locator('.award-note').count()) { await ipad.locator('.award-note').click(); await ipad.waitForTimeout(400); }
+    const goneLater = await ipad.locator('.proj-tasks .row', { hasText: 'Bretter prüfen' }).count();
+    const holzSays = await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.area-empty').textContent().catch(() => null);
+    await ipad.locator('.projview .close-x').click();
+    await ipad.waitForTimeout(400);
+    check('a task done on its project page is struck a moment, then leaves the page',
+      leavingNow === 1 && goneLater === 0 && holzSays === 'nichts mehr offen', { leavingNow, goneLater, holzSays });
+
     // a milestone: a finished project gives a doodle (announced once); held on free paper in today, it sticks there, on both devices
     await ipad.locator('.tab-projects').click();
     await ipad.waitForTimeout(800);

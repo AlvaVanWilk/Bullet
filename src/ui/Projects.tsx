@@ -10,17 +10,18 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { categoryColor, projectInk } from '../lib/colors';
 import {
   areaRows, entriesByTask, followUps, isEmptyProject, isOpenToday, liveProjects, nextStep, projectAreas, projectMarks, projectProgress, projectRows,
-  projectSuggestions, subtaskRows, type ListRow,
+  PAGE_LEAVE_MS, pageSubtasks, projectSuggestions, type ListRow,
 } from '../lib/logic';
 import type { Area, Entry, Project, Task } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
 import { FollowRows, FollowToggle, useFolds, type Folds } from './Follow';
 import { useGridRows } from './gridRows';
-import { Bang, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, ScheduledDot, seedOf, TaskText } from './ink';
+import { Bang, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, ScheduledDot, TaskText } from './ink';
 import { NewLine } from './NewLine';
 import { ColorWheel } from './ColorWheel';
 import { DrawPad } from './DrawPad';
+import { blotLayers, boxInk, DECOR_AT, ProjectDecor, ProjectDecorEnd, shades, Sparkles } from './ProjectDecor';
 import { ICONS, OWN, ProjectIcon } from './ProjectIcon';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { AddLine } from './Suggest';
@@ -262,12 +263,27 @@ export function ProjectList() {
   );
 }
 
+/** A task just done stays a moment on the page, struck; then the page is drawn again without it. */
+function useLeaving(snap: ReturnType<typeof store.snapshot>, projectId: string) {
+  const [, tick] = useState(0);
+  const until = snap.tasks
+    .filter((t) => !t.deleted && t.projectId === projectId && t.doneAt != null && Date.now() - t.doneAt < PAGE_LEAVE_MS)
+    .map((t) => t.doneAt! + PAGE_LEAVE_MS);
+  const last = until.length ? Math.max(...until) : 0;
+  useEffect(() => {
+    if (!last) return;
+    const timer = setTimeout(() => tick((n) => n + 1), Math.max(30, last - Date.now() + 30));
+    return () => clearTimeout(timer);
+  }, [last]);
+}
+
 /** A project opened in the main page. */
 export function ProjectView(props: { id: string }) {
   const snap = useStore();
   const now = useNow();
   const today = useToday();
   const folds = useFolds();
+  useLeaving(snap, props.id);
   const p = store.project(props.id);
   if (!p) {
     // deleted meanwhile (maybe on another device): back to the week
@@ -278,6 +294,10 @@ export function ProjectView(props: { id: string }) {
   const loose = areaRows(snap, p.id, null, at);
   const areas = projectAreas(snap, p.id);
   const { done, total } = projectProgress(snap, p.id);
+  // (?erledigt=N shows the page as with N done: to look at what grows, in the preview only)
+  const shownDone = import.meta.env.DEV || location.port === '4173'
+    ? Number(new URLSearchParams(location.search).get('erledigt') ?? done)
+    : done;
   const list = { project: p, next: nextStep(snap, p.id), today, index: entriesByTask(snap.entries), follow: followUps(snap), folds };
   // the tasks in no area (dropped here, a task leaves its area); with areas and
   // none of these, it shows only while a task is carried
@@ -289,7 +309,8 @@ export function ProjectView(props: { id: string }) {
   );
 
   return (
-    <div class="projview" style={{ '--proj-ink': projectInk(p.color) }}>
+    <div class="projview" style={{ '--proj-ink': projectInk(p.color), '--proj-mark': shades(projectInk(p.color))[1] }}>
+      <ProjectDecor seed={p.id} ink={projectInk(p.color)} done={shownDone} />
       <header class="proj-head">
         <button
           type="button"
@@ -297,13 +318,16 @@ export function ProjectView(props: { id: string }) {
           aria-label="Bild, Farbe und Name ändern"
           onClick={(e) => ui.set({ postIt: { kind: 'projectEdit', id: p.id, rect: rectOf(e.currentTarget) } })}
         >
-          <svg class="proj-blob" viewBox="0 0 120 100" aria-hidden="true" style={{ '--blob': projectInk(p.color) }}>
-            {blotPaths(p.id).map((d, i) => <path key={i} d={d} />)}
+          <svg class="proj-blob" viewBox="0 0 120 100" aria-hidden="true">
+            {blotLayers(p.id, projectInk(p.color), shownDone).map((l, i) => <path key={i} d={l.d} style={{ fill: l.color, fillOpacity: l.alpha }} />)}
           </svg>
           <ProjectIcon project={p} size={76} class="big tilted" />
         </button>
         <div class="proj-head-text">
-          <h1 class={`proj-title ${p.doneAt != null ? 'finished' : ''}`}>{p.name}</h1>
+          <h1 class={`proj-title ${p.doneAt != null ? 'finished' : ''} ${shownDone >= DECOR_AT.marker ? 'marked' : ''}`}>
+            <span>{p.name}</span>
+            {shownDone >= DECOR_AT.sparkles && <Sparkles color={shades(projectInk(p.color))[1]} seed={`${p.id}|spark`} />}
+          </h1>
           {total > 0 && <span class="proj-progress">{done} von {total} erledigt</span>}
         </div>
         <button type="button" class="ghost-btn close-x" aria-label="Zur Woche" onClick={() => ui.set({ view: { kind: 'week' } })}>✕</button>
@@ -327,14 +351,14 @@ export function ProjectView(props: { id: string }) {
         {areas.length > 0 ? (
           <>
             {/* the areas come first; below them what belongs to none */}
-            <AreaGrid list={list} areas={areas} now={at} />
+            <AreaGrid list={list} areas={areas} now={at} done={shownDone} />
             <h3 class={`proj-section proj-loose-head ${loose.length ? '' : 'empty'}`}>Ohne Bereich</h3>
             {looseList}
           </>
         ) : (
           <>
             {looseList}
-            <AreaGrid list={list} areas={areas} now={at} />
+            <AreaGrid list={list} areas={areas} now={at} done={shownDone} />
           </>
         )}
         <div class="proj-foot">
@@ -342,6 +366,7 @@ export function ProjectView(props: { id: string }) {
             {p.doneAt == null ? 'Projekt abschließen' : 'wieder öffnen'}
           </button>
         </div>
+        <ProjectDecorEnd seed={p.id} ink={projectInk(p.color)} done={shownDone} />
       </div>
     </div>
   );
@@ -374,14 +399,13 @@ function ProjectTasks(props: ListProps & { rows: ListRow[] }) {
     const waiting = follow(t.id);
     // an open task on top takes others dropped on it
     const takes = !sub && p.doneAt == null && t.doneAt == null;
-    const subs = sub ? [] : subtaskRows(snap, t.id, Math.max(now, Date.now())).map((r) => r.task);
-    // done, and all its parts too: they need no room until asked for
-    const foldable = t.doneAt != null && subs.length > 0 && subs.every((x) => x.doneAt != null);
-    const subsShown = !foldable || folds.isOpen(`sub|${t.id}`);
+    const subs = sub ? [] : pageSubtasks(snap, t.id, Math.max(now, Date.now()));
+    // done a moment ago: struck through, then it slides off the page
+    const leaving = t.doneAt != null;
     return (
       <Fragment key={t.id}>
         <li
-          class={`row ${sub ? 'sub' : ''} ${t.pending && t.doneAt == null ? 'pending' : ''}`}
+          class={`row ${sub ? 'sub' : ''} ${t.pending && t.doneAt == null ? 'pending' : ''} ${leaving ? 'leaving' : ''}`}
           data-note={t.note ? t.id : undefined}
           data-drop={takes ? 'subtask' : undefined}
           data-task={takes ? t.id : undefined}
@@ -393,25 +417,14 @@ function ProjectTasks(props: ListProps & { rows: ListRow[] }) {
         >
           {p.doneAt == null && (t.doneAt == null ? <NextMark task={t} on={t.id === next?.id} /> : <span class="next-mark" />)}
           <Lead dot={isOpenToday(t, today, index)} bang={t.important} struck={t.doneAt != null} pending={!!t.pending && t.doneAt == null} />
-          <TaskText text={t.text} color={color?.ink} struck={t.doneAt != null} fresh={store.isFresh(t.id)} />
+          <TaskText text={t.text} color={color?.ink} struck={leaving} animate={leaving} fresh={store.isFresh(t.id)} />
           {t.pending && t.doneAt == null && <PendingWho who={t.pending.who} />}
           {t.note && <NoteMark />}
           {hasClip(t) && <ClipMark />}
-          {foldable && (
-            <FollowToggle
-              mark="triangle"
-              showCount
-              count={subs.length}
-              open={subsShown}
-              seed={`psub${t.id}`}
-              what="Unteraufgaben"
-              onToggle={() => folds.toggle(`sub|${t.id}`)}
-            />
-          )}
           {waiting.length > 0 && <FollowToggle count={waiting.length} open={folds.isOpen(t.id)} seed={t.id} onToggle={() => folds.toggle(t.id)} />}
         </li>
         {folds.isOpen(t.id) && <FollowRows motherId={t.id} path={t.id} depth={1} follow={follow} folds={folds} colorMode="text" />}
-        {subsShown && subs.map((x) => row(x, true))}
+        {subs.map((x) => row(x, true))}
       </Fragment>
     );
   };
@@ -441,7 +454,7 @@ interface BoxDrag {
  * The areas of a project: one box each, in a grid that fills row by row. A box
  * is carried elsewhere by holding its name; it snaps into its new place.
  */
-function AreaGrid(props: { list: ListProps; areas: Area[]; now: number }) {
+function AreaGrid(props: { list: ListProps; areas: Area[]; now: number; done: number }) {
   const snap = useStore();
   const p = props.list.project;
   const gridRef = useRef<HTMLDivElement>(null);
@@ -538,6 +551,8 @@ function AreaGrid(props: { list: ListProps; areas: Area[]; now: number }) {
           <div
             key={a.id}
             class={`area-box ${drag?.id === a.id ? 'lifted' : ''} ${store.isFresh(a.id) ? 'ink-in' : ''}`}
+            // the bigger the project, the more of its shades its boxes take in turn
+            style={{ '--proj-ink': boxInk(projectInk(p.color), props.done, props.areas.indexOf(a)) }}
             data-area-id={a.id}
             data-drop="area"
             data-area={a.id}
@@ -555,7 +570,11 @@ function AreaGrid(props: { list: ListProps; areas: Area[]; now: number }) {
             >
               <ProjectTasks {...props.list} rows={rows} />
               {/* no line of its own: tasks come in from the line on top, carried here */}
-              {!rows.length && <p class="area-empty">noch leer · Aufgaben hierher ziehen</p>}
+              {!rows.length && (
+                <p class="area-empty">
+                  {snap.tasks.some((t) => !t.deleted && t.projectId === p.id && t.areaId === a.id) ? 'nichts mehr offen' : 'noch leer · Aufgaben hierher ziehen'}
+                </p>
+              )}
             </HandBox>
           </div>
         );
@@ -638,34 +657,6 @@ export function AreaSelect(props: { task: Task }) {
  * A big blot of ink under the icon on the project page, with a few drops
  * beside it; a little different for each project.
  */
-function blotPaths(seed: string): string[] {
-  let h = seedOf(seed);
-  const rnd = () => ((h = (h * 16807) % 2147483647) / 2147483647);
-  const n = 72;
-  const ph = [rnd(), rnd(), rnd(), rnd()].map((x) => x * Math.PI * 2);
-  const pts = Array.from({ length: n }, (_, i) => {
-    const a = (i / n) * Math.PI * 2;
-    // round, with a few bulges, and two little runs where the ink spread
-    const k = 1 + 0.12 * Math.sin(3 * a + ph[0]) + 0.07 * Math.sin(5 * a + ph[1]) + 0.025 * Math.sin(11 * a + ph[2])
-      + 0.3 * Math.max(0, Math.sin(2 * a + ph[3])) ** 14;
-    return [60 + Math.cos(a) * 40 * k, 50 + Math.sin(a) * 34 * k];
-  });
-  const mid = (a: number[], b: number[]) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  const f = (p: number[]) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
-  let d = `M${f(mid(pts[n - 1], pts[0]))}`;
-  for (let i = 0; i < n; i++) d += `Q${f(pts[i])} ${f(mid(pts[i], pts[(i + 1) % n]))}`;
-  const drops = Array.from({ length: 3 + Math.floor(rnd() * 3) }, () => {
-    const a = rnd() * Math.PI * 2;
-    const dist = 1.18 + rnd() * 0.3;
-    const r = 1.5 + rnd() * 3.2;
-    const x = 60 + Math.cos(a) * 40 * dist;
-    const y = 50 + Math.sin(a) * 34 * dist;
-    return `M${(x - r).toFixed(1)} ${y.toFixed(1)}a${r.toFixed(1)} ${(r * 0.9).toFixed(1)} 0 1 0 ${(2 * r).toFixed(1)} 0`
-      + `a${r.toFixed(1)} ${(r * 0.9).toFixed(1)} 0 1 0 ${(-2 * r).toFixed(1)} 0`;
-  });
-  return [`${d}Z`, ...drops];
-}
-
 /** The notes of a project, written on the page itself; kept while typing. */
 function ProjectNotes(props: { project: Project }) {
   const [text, setText] = useState(props.project.note ?? '');
