@@ -1,6 +1,6 @@
 // Tabs on the right edge of the page, like flags stuck into a notebook: the
-// planner (a checkbox), the archive (a box) and what waits (an hourglass),
-// and the household (a bucket).
+// planner (a checkbox), the household (a bucket), what waits (an hourglass)
+// and the archive (a box). The archive always stays the lowest.
 
 import { ArchiveIcon, BoxIcon, HourglassIcon } from './ink';
 import { ui, useUi } from './state';
@@ -24,13 +24,13 @@ export function PageTabs() {
       </button>
       <button
         type="button"
-        class={`page-tab tab-archive ${view === 'archive' ? 'on' : ''}`}
-        aria-current={view === 'archive' ? 'page' : undefined}
-        aria-label="Archiv: alle erledigten Aufgaben, mit Suche"
-        title="Archiv"
-        onClick={() => ui.set({ view: { kind: 'archive' } })}
+        class={`page-tab tab-household ${view === 'household' ? 'on' : ''}`}
+        aria-current={view === 'household' ? 'page' : undefined}
+        aria-label="Haushalt: was wie oft zu tun ist"
+        title="Haushalt"
+        onClick={() => ui.set({ view: { kind: 'household' } })}
       >
-        <ArchiveIcon />
+        <BucketIcon />
       </button>
       <button
         type="button"
@@ -44,13 +44,13 @@ export function PageTabs() {
       </button>
       <button
         type="button"
-        class={`page-tab tab-household ${view === 'household' ? 'on' : ''}`}
-        aria-current={view === 'household' ? 'page' : undefined}
-        aria-label="Haushalt: was wie oft zu tun ist"
-        title="Haushalt"
-        onClick={() => ui.set({ view: { kind: 'household' } })}
+        class={`page-tab tab-archive ${view === 'archive' ? 'on' : ''}`}
+        aria-current={view === 'archive' ? 'page' : undefined}
+        aria-label="Archiv: alle erledigten Aufgaben, mit Suche"
+        title="Archiv"
+        onClick={() => ui.set({ view: { kind: 'archive' } })}
       >
-        <BucketIcon />
+        <ArchiveIcon />
       </button>
     </nav>
   );

@@ -39,8 +39,9 @@ Bedienung und Einrichtung: `README.md`.
   aus den Listen (Masterliste, Kategorien); die Tage und das Archiv behalten
   alles, auch die Unteraufgaben unter ihrer Aufgabe im Tag.
 - Rechts an der Hauptseite stecken Laschen wie Klebe-Fähnchen, mit gezeichneten Symbolen
-  statt Schrift: Kästchen = Planer (Woche; schon offen → aktuelle Woche), Kiste = Archiv
-  (eine eigene Seite), Sanduhr = Wartet, Eimer = Haushalt. Die aktive liegt vorn auf dem Papier.
+  statt Schrift: von oben: Kästchen = Planer (Woche; schon offen → aktuelle Woche), Eimer = Haushalt,
+  Sanduhr = Wartet, Kiste = Archiv (eine eigene Seite). Das Archiv bleibt immer die unterste
+  Lasche, auch bei neuen (außer die Nutzerin sagt es ausdrücklich anders). Die aktive liegt vorn auf dem Papier.
 - Folgeaufgaben (`task.after`): Eine Aufgabe, die noch auf offene „Mütter“ wartet, steht
   nicht in der Masterliste. Ein kleiner, mit Fineliner gezeichneter abbiegender Pfeil
   (erst nach rechts, dann nach unten; ausgeklappt dunkler) neben der Mutter klappt nur
