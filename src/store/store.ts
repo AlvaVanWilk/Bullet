@@ -9,9 +9,10 @@ import { canBeSubtask, deadlineFor, isWaiting, wouldLoop, type Snapshot } from '
 import { milestone, reachedOnDone, reachedOnNewDay, reachedOnProject, type Reached } from '../lib/milestones';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
-  type AnyRecord, type Area, type Award, type Category, type Deco, type Entry, type Hide, type Project, type Settings, type Special,
-  type Task, type TaskLink,
+  type AnyRecord, type Area, type Award, type Category, type Chore, type ChoreDay, type ChoreItem, type Deco, type Entry, type Hide,
+  type Project, type Settings, type Special, type Task, type TaskLink,
 } from '../lib/model';
+import { choreDayId, dayBudget, planChores, shareOf } from '../lib/chores';
 import { STORAGE_PREFIX } from '../stage';
 import { isNewer } from './merge';
 
@@ -26,6 +27,9 @@ type Listener = () => void;
 const ARRIVING_MS = 15 * 60 * 1000;
 /** … if no more than these arrive at once. */
 const ARRIVING_MAX = 5;
+
+/** The one smart task of the household (the same id on every device). */
+export const CHORE_TASK_ID = 'haushalt';
 
 type Effect = { kind: 'done'; taskId: string } | { kind: 'written'; id: string };
 
@@ -67,7 +71,7 @@ export class Store {
 
   snapshot(): Snapshot {
     if (this.snapshotCache?.version === this.version) return this.snapshotCache.snap;
-    const snap: Snapshot = { tasks: [], categories: [], projects: [], areas: [], entries: [], specials: [], hides: [], decos: [], awards: [], settings: DEFAULT_SETTINGS };
+    const snap: Snapshot = { tasks: [], categories: [], projects: [], areas: [], entries: [], specials: [], hides: [], decos: [], awards: [], chores: [], choreDays: [], settings: DEFAULT_SETTINGS };
     for (const r of this.records.values()) {
       switch (r.type) {
         case 'task': snap.tasks.push(r); break;
@@ -79,6 +83,8 @@ export class Store {
         case 'hide': snap.hides.push(r); break;
         case 'deco': snap.decos.push(r); break;
         case 'award': snap.awards.push(r); break;
+        case 'chore': snap.chores.push(r); break;
+        case 'choreday': snap.choreDays.push(r); break;
         case 'settings': {
           const calendars = r.calendars && !Array.isArray(r.calendars) ? r.calendars : {};
           snap.settings = { ...DEFAULT_SETTINGS, ...r, calendars };
@@ -384,6 +390,12 @@ export class Store {
   toggleDone(taskId: string, day: DayKey) {
     const task = this.task(taskId);
     if (!task) return;
+    // the smart task of the household is never done itself: its box ticks its chores of the day
+    if (task.smart === 'haushalt') {
+      const cd = this.choreDay(day);
+      this.tickAllChores(day, !(cd && cd.items.length > 0 && cd.items.every((i) => i.done)));
+      return;
+    }
     if (task.doneDay === day) {
       this.reopen(task);
       return;
@@ -449,6 +461,8 @@ export class Store {
     const entry: Entry = { id: newId(), type: 'entry', updatedAt: 0, taskId, day, createdAt: this.now() };
     this.put(entry);
     this.markFresh(entry.id);
+    // the smart task of the household plans its chores for the day it is written into
+    if (task.smart === 'haushalt') this.planChoreDay(day);
     this.changed(true);
     return entry;
   }
@@ -569,6 +583,151 @@ export class Store {
     if (!project) return;
     this.put({ ...project, doneAt: done ? this.now() : null });
     if (done) this.grant(reachedOnProject(this.today()));
+    this.changed(true);
+  }
+
+  // --- the household ---------------------------------------------------------------------
+
+  chore(id: string | null | undefined): Chore | undefined {
+    const r = id ? this.records.get(id) : undefined;
+    return r?.type === 'chore' && !r.deleted ? r : undefined;
+  }
+
+  choreDay(day: DayKey): ChoreDay | undefined {
+    const r = this.records.get(choreDayId(day));
+    return r?.type === 'choreday' && !r.deleted ? r : undefined;
+  }
+
+  /** A new chore (weekly, 15 minutes, until said otherwise); the smart task comes with the first. */
+  addChore(name: string): Chore | null {
+    const clean = name.trim();
+    if (!clean) return null;
+    const chore: Chore = { id: newId(), type: 'chore', updatedAt: 0, name: clean, every: 1, unit: 'wochen', min: 15, max: 15, createdAt: this.now() };
+    this.put(chore);
+    this.ensureChoreTask();
+    this.markFresh(chore.id);
+    this.changed(true);
+    return chore;
+  }
+
+  updateChore(id: string, patch: Partial<Pick<Chore, 'name' | 'every' | 'unit' | 'min' | 'max' | 'lastDone'>>) {
+    const c = this.chore(id);
+    if (!c) return;
+    const next = { ...c, ...patch };
+    next.min = Math.max(5, Math.min(60, Math.round(next.min)));
+    next.max = Math.max(next.min, Math.min(60, Math.round(next.max)));
+    next.every = Math.max(1, Math.round(next.every));
+    this.put(next);
+    this.changed(true);
+  }
+
+  deleteChore(id: string) {
+    const c = this.chore(id);
+    if (!c) return;
+    this.put({ ...c, deleted: true });
+    this.changed(true);
+  }
+
+  /** The task "Haushaltsaufgaben" in the master list: one, the same on every device. */
+  private ensureChoreTask() {
+    if (this.records.has(CHORE_TASK_ID)) return;
+    const task: Task = {
+      id: CHORE_TASK_ID, type: 'task', updatedAt: 0, text: 'Haushaltsaufgaben', categoryId: null, important: false,
+      deadline: null, createdAt: this.now(), doneAt: null, doneDay: null, smart: 'haushalt',
+    };
+    this.put(task);
+  }
+
+  private emptyChoreDay(day: DayKey): ChoreDay {
+    return { id: choreDayId(day), type: 'choreday', updatedAt: 0, day, items: [], extra: [], skipped: [] };
+  }
+
+  /**
+   * Plans the chores of a day anew: what is done stays, the rest is chosen
+   * again (most due first, as fits the time of the day).
+   */
+  planChoreDay(day: DayKey) {
+    const cd = this.choreDay(day) ?? this.emptyChoreDay(day);
+    const snap = this.snapshot();
+    const keep = cd.items.filter((i) => i.done);
+    const items = planChores(snap.chores, day, dayBudget(snap.settings, day, cd), keep, cd.skipped ?? []);
+    this.put({ ...cd, items });
+  }
+
+  /** The time for the household on this day alone (null: as on its weekday); planned anew. */
+  setChoreBudget(day: DayKey, minutes: number | null) {
+    const cd = this.choreDay(day) ?? this.emptyChoreDay(day);
+    this.put({ ...cd, budget: minutes == null ? null : Math.max(0, Math.min(240, Math.round(minutes))) });
+    this.planChoreDay(day);
+    this.changed(true);
+  }
+
+  /** The minutes of the household on each weekday. */
+  setChoreMinutes(weekday: number, minutes: number) {
+    const all = [...(this.settings.choreMinutes ?? DEFAULT_SETTINGS.choreMinutes)];
+    all[weekday] = Math.max(0, Math.min(240, Math.round(minutes)));
+    this.updateSettings({ choreMinutes: all });
+  }
+
+  /** Swapped out this day: another one that is due takes its place. */
+  swapChore(day: DayKey, choreId: string) {
+    const cd = this.choreDay(day);
+    if (!cd) return;
+    this.put({ ...cd, items: cd.items.filter((i) => i.choreId !== choreId || i.done), skipped: [...(cd.skipped ?? []), choreId] });
+    this.planChoreDay(day);
+    this.changed(true);
+  }
+
+  /** Taken out this day, and nothing in its place. */
+  dropChore(day: DayKey, choreId: string) {
+    const cd = this.choreDay(day);
+    if (!cd) return;
+    this.put({ ...cd, items: cd.items.filter((i) => i.choreId !== choreId || i.done), skipped: [...(cd.skipped ?? []), choreId] });
+    this.changed(true);
+  }
+
+  /** A chore ticked (or unticked) on a day: in its plan, or done besides. */
+  tickChore(day: DayKey, choreId: string, done: boolean) {
+    const cd = this.choreDay(day) ?? this.emptyChoreDay(day);
+    const inPlan = cd.items.some((i) => i.choreId === choreId);
+    const list = inPlan ? cd.items : cd.extra;
+    const item = list.find((i) => i.choreId === choreId);
+    const chore = this.chore(choreId);
+    if (!chore) return;
+    if (done) {
+      if (item?.done) return;
+      const minutes = item?.minutes ?? Math.max(chore.min, chore.max);
+      const before = { lastDone: chore.lastDone ?? null, lastShare: chore.lastShare ?? 1 };
+      const ticked: ChoreItem = { choreId, minutes, done: true, before };
+      const next = item ? list.map((i) => (i.choreId === choreId ? ticked : i)) : [...list, ticked];
+      this.put(inPlan ? { ...cd, items: next } : { ...cd, extra: next });
+      // a day before the one it was last done on does not set it back
+      if (!chore.lastDone || chore.lastDone <= day) this.put({ ...chore, lastDone: day, lastShare: shareOf(chore, minutes) });
+    } else {
+      if (!item?.done) return;
+      if (item.before && chore.lastDone === day) this.put({ ...chore, lastDone: item.before.lastDone, lastShare: item.before.lastShare });
+      this.put(inPlan
+        ? { ...cd, items: cd.items.map((i) => (i.choreId === choreId ? { ...i, done: false, before: null } : i)) }
+        : { ...cd, extra: cd.extra.filter((i) => i.choreId !== choreId) });
+    }
+    this.changed(true);
+  }
+
+  /** All chores of the day's plan ticked (or unticked): the box of the smart task. */
+  tickAllChores(day: DayKey, done: boolean) {
+    for (const i of this.choreDay(day)?.items ?? []) if (i.done !== done) this.tickChore(day, i.choreId, done);
+  }
+
+  /**
+   * A chore done besides counted into the day's plan after all: it takes its
+   * time there, and the rest is planned anew.
+   */
+  countChoreIn(day: DayKey, choreId: string) {
+    const cd = this.choreDay(day);
+    const item = cd?.extra.find((i) => i.choreId === choreId);
+    if (!cd || !item) return;
+    this.put({ ...cd, extra: cd.extra.filter((i) => i.choreId !== choreId), items: [item, ...cd.items.filter((i) => i.choreId !== choreId)] });
+    this.planChoreDay(day);
     this.changed(true);
   }
 

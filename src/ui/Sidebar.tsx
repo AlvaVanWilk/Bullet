@@ -17,6 +17,8 @@ import { Lead, ProjectLine, ProjectList } from './Projects';
 import { CategorySymbol } from './ProjectIcon';
 import { playPaperSlide, playStrike } from './sound';
 import { SubtaskListRows } from './Subtasks';
+import { BucketIcon, CleanDoodle } from './Household';
+import { dueChores, planDone } from '../lib/chores';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
 
 const SWAP_MS = 640;
@@ -297,9 +299,10 @@ function MasterList(props: { active: boolean }) {
           onClick={(e) => openPostIt(t.id, e.currentTarget as HTMLElement)}
         >
           <Lead
-            dot={isOpenToday(t, today, index)}
+            dot={isOpenToday(t, today, index) && !(t.smart && planDone(store.choreDay(today)))}
             bang={t.important}
             struck={isStruck}
+            icon={t.smart === 'haushalt' ? <BucketIcon size={22} /> : undefined}
             project={project}
             onIcon={project ? (el) => openSlip(project, el) : undefined}
             pending={!!t.pending && t.doneAt == null}
@@ -315,6 +318,7 @@ function MasterList(props: { active: boolean }) {
           {t.pending && t.doneAt == null && <PendingWho who={t.pending.who} />}
           {t.note && <NoteMark />}
           {hasClip(t) && <ClipMark />}
+          {t.smart === 'haushalt' && choresClean(today) && <CleanDoodle />}
           {subs.length > 0 && (
             <FollowToggle count={subs.length} showCount mark="triangle" open={subsOpen} seed={`sub${t.id}`} what="Unteraufgaben" onToggle={() => folds.toggle(`sub|${t.id}`)} />
           )}
@@ -457,4 +461,11 @@ function CategoryList() {
       <NewLine placeholder="Neue Kategorie …" onEnter={(name) => store.addCategory(name)} />
     </div>
   );
+}
+
+/** Nothing of the household to do today: planned with nothing in it, or nothing due at all. */
+function choresClean(today: string): boolean {
+  const cd = store.choreDay(today);
+  if (cd) return cd.items.length === 0;
+  return dueChores(store.snapshot().chores, today).length === 0;
 }

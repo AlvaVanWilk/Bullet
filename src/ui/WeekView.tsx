@@ -22,6 +22,7 @@ import { clickSuppressed, startDrag } from './drag';
 import { FollowToggle } from './Follow';
 import { Checkbox, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, TaskText } from './ink';
 import { ProjectIcon } from './ProjectIcon';
+import { BucketIcon, ChoreDayRows, ChoreExtraRows, CleanDoodle } from './Household';
 import { StatusNote } from './StatusNote';
 import { daySet, setDayFold, SubtaskDayRows, useDayFolds } from './Subtasks';
 import { ui, useNow, useStore, useToday, useUi } from './state';
@@ -256,7 +257,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
   const folds = useDayFolds();
   const rows = nestDayItems(snap, props.items).map(({ item, subs }) => {
     const key = `${props.day}|${item.task.id}`;
-    const loose = daySubtasks(snap, item.task.id, props.day, props.today, inDay);
+    const loose = item.task.smart ? [] : daySubtasks(snap, item.task.id, props.day, props.today, inDay);
     return { item, placed: subs, loose, key, open: !folds.folded.has(key) };
   });
   // a subtask dragged in under a task folded away: folded out once, so it is seen arriving
@@ -305,7 +306,9 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
               fold={placed.length + loose.length ? { count: placed.length + loose.length, open, key } : undefined}
             />
             {/* its subtasks under it, each with a box of its own (one written into the day itself too); the triangle folds them away */}
-            {open && (
+            {/* the smart task: the chores planned for the day under it */}
+            {item.task.smart === 'haushalt' && <ChoreDayRows day={props.day} today={props.today} />}
+            {open && !item.task.smart && (
               <SubtaskDayRows
                 subs={loose}
                 day={props.day}
@@ -316,6 +319,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
             )}
           </Fragment>
         ))}
+        <ChoreExtraRows day={props.day} today={props.today} />
       </ul>
       {isToday && <TodayLine day={props.day} />}
       <DecoLayer anchor={`day|${props.day}`} />
@@ -455,12 +459,21 @@ function DayTaskRow(props: {
   const faded = item.state === 'migrated' || item.state === 'dropped' || item.state === 'doneBefore';
   // Undone tasks from an earlier day can be dragged into today (a copy).
   const draggable = past && task.doneAt == null;
+  const smart = task.smart === 'haushalt';
+  // nothing was due when the smart task planned the day: a little sparkle instead
+  const clean = smart && (() => {
+    const cd = store.choreDay(props.day);
+    return !!cd && cd.items.length === 0;
+  })();
 
   return (
     <li
       class={`dtask ${item.kind} st-${item.state} ${faded ? 'faded' : ''} ${props.sub ? 'sub' : ''} ${props.unfold ? 'unfold' : ''}`}
       data-item={task.id}
       data-note={task.note ? task.id : undefined}
+      // a chore done besides is carried onto the smart task to count in
+      data-drop={smart ? 'chores' : undefined}
+      data-day={smart ? props.day : undefined}
       // right of the writing the row is free paper (for decoration), not the task
       onPointerDown={(e) => draggable && !beyondContent(e.currentTarget as HTMLElement, e.clientX) && startDrag(e, e.currentTarget as HTMLElement, {
         taskId: task.id, text: task.text, from: 'day', day: props.day, color: item.kind === 'deadline' ? 'var(--red)' : undefined,
@@ -468,6 +481,7 @@ function DayTaskRow(props: {
     >
       {/* a task of a project: its icon in the margin before the box (under its task, that one has it) */}
       {project && !props.sub && <ProjectIcon project={project} class="margin-icon" />}
+      {smart && <BucketIcon size={22} class="margin-icon" />}
       <Checkbox
         state={item.state}
         important={task.important}
@@ -490,6 +504,7 @@ function DayTaskRow(props: {
         {task.note && <NoteMark />}
         {hasClip(task) && <ClipMark />}
       </span>
+      {clean && <CleanDoodle />}
       {color && !props.sub && <span class="cat-dot" style={{ '--dot': color.marker }} aria-label={cat!.name} />}
       {props.fold && (
         <FollowToggle

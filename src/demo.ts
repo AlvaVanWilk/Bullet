@@ -2,7 +2,7 @@
 // empty on first look. Only used when there is no server and nothing saved.
 
 import { addDays, compareDays, mondayOf, type DayKey } from './lib/dates';
-import { store } from './store/store';
+import { CHORE_TASK_ID, store } from './store/store';
 import { device } from './ui/state';
 
 export function seedDemo(today: DayKey) {
@@ -66,6 +66,18 @@ export function seedDemo(today: DayKey) {
   store.updateProject(umzug.id, { icon: 'koffer', color: 'orange' });
   store.addTask('Sperrmüll anmelden', null, { projectId: umzug.id, deadline: today });
 
+  // the household: a few chores, some due
+  const chore = (name: string, every: number, unit: 'tage' | 'wochen' | 'monate', min: number, max: number, ago: number | null) => {
+    const c = store.addChore(name)!;
+    store.updateChore(c.id, { every, unit, min, max, lastDone: ago == null ? null : addDays(today, -ago) });
+  };
+  chore('Bad putzen', 1, 'wochen', 20, 30, 9);
+  chore('Staubsaugen', 4, 'tage', 15, 25, 5);
+  chore('Bettwäsche wechseln', 2, 'wochen', 15, 15, 10);
+  chore('Kühlschrank auswischen', 1, 'monate', 20, 20, 40);
+  chore('Pflanzen gießen', 3, 'tage', 5, 5, 3);
+  chore('Fenster putzen', 3, 'monate', 45, 60, null);
+
   if (upToToday(0)) {
     store.addEntry(buecher.id, day(0));
     store.addEntry(fenster.id, day(0));
@@ -77,6 +89,7 @@ export function seedDemo(today: DayKey) {
     store.toggleDone(praesi.id, addDays(today, -1));
   }
   store.addEntry(kita.id, today);
+  store.addEntry(CHORE_TASK_ID, today);
   store.addSpecial('Namenstag Lisa', day(3), true);
 
   // what the example reached is already unlocked, without announcing it

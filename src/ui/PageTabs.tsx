@@ -1,8 +1,10 @@
 // Tabs on the right edge of the page, like flags stuck into a notebook: the
-// planner (a checkbox), the archive (a box) and what waits (an hourglass).
+// planner (a checkbox), the archive (a box) and what waits (an hourglass),
+// and the household (a bucket).
 
 import { ArchiveIcon, BoxIcon, HourglassIcon } from './ink';
 import { ui, useUi } from './state';
+import { BucketIcon } from './Household';
 
 export function PageTabs() {
   const state = useUi();
@@ -39,6 +41,16 @@ export function PageTabs() {
         onClick={() => ui.set({ view: { kind: 'waiting' } })}
       >
         <HourglassIcon />
+      </button>
+      <button
+        type="button"
+        class={`page-tab tab-household ${view === 'household' ? 'on' : ''}`}
+        aria-current={view === 'household' ? 'page' : undefined}
+        aria-label="Haushalt: was wie oft zu tun ist"
+        title="Haushalt"
+        onClick={() => ui.set({ view: { kind: 'household' } })}
+      >
+        <BucketIcon />
       </button>
     </nav>
   );

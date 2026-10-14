@@ -8,13 +8,13 @@ export interface DragSource {
   taskId: string;
   text: string;
   /** master list, category page, a day, the deadlines in the head of the week, or a project */
-  from: 'master' | 'category' | 'day' | 'week' | 'project';
+  from: 'master' | 'category' | 'day' | 'week' | 'project' | 'chore';
   day?: DayKey;
   color?: string;
 }
 
 export interface DropTarget {
-  kind: 'day' | 'category' | 'project' | 'area' | 'subtask';
+  kind: 'day' | 'category' | 'project' | 'area' | 'subtask' | 'chores';
   day?: DayKey;
   categoryId?: string;
   projectId?: string;
@@ -131,6 +131,7 @@ function targetOf(el: HTMLElement): DropTarget | null {
   if (kind === 'project') return { kind, projectId: el.dataset.project };
   if (kind === 'area') return { kind, projectId: el.dataset.project, areaId: el.dataset.area || null };
   if (kind === 'subtask') return { kind, taskId: el.dataset.task };
+  if (kind === 'chores') return { kind, day: el.dataset.day };
   return null;
 }
 

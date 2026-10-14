@@ -63,6 +63,8 @@ export interface Task extends Base {
    * done): opened again, the task takes it back. `at` is the task's doneAt.
    */
   byParent?: { at: number; was: 'done' | 'pending' } | null;
+  /** A task that does something by itself: "haushalt" plans the chores of the day it is written into. */
+  smart?: 'haushalt';
 }
 
 export interface Pending {
@@ -212,11 +214,54 @@ export interface Settings extends Base {
   followUpsAdopted: boolean;
   /** Decoration: milestones give stamps, stickers and doodles to stick on the page. */
   deco: boolean;
+  /** Minutes for the household on each weekday, Monday first. */
+  choreMinutes: number[];
 }
 
-export type AnyRecord = Task | Category | Project | Area | Entry | Special | Settings | Hide | Deco | Award;
+export type ChoreUnit = 'tage' | 'wochen' | 'monate';
+
+/** A chore of the household: what, how often, how long; and when it was last done. */
+export interface Chore extends Base {
+  type: 'chore';
+  name: string;
+  /** every so many days, weeks or months */
+  every: number;
+  unit: ChoreUnit;
+  /** minutes it takes; max above min: it may be done shorter on a day with little time */
+  min: number;
+  max: number;
+  /** the day it was last done, and how much of it (a share of max: done shorter, it is due sooner) */
+  lastDone?: DayKey | null;
+  lastShare?: number;
+  createdAt: number;
+}
+
+/** One chore on a day: planned (or counted in), for so many minutes, done or not. */
+export interface ChoreItem {
+  choreId: string;
+  minutes: number;
+  done: boolean;
+  /** what the chore said before it was ticked here (unticked, it is put back) */
+  before?: { lastDone: DayKey | null; lastShare: number } | null;
+}
+
+/** The chores of one day (id from the day): the plan of the smart task, and what was done besides. */
+export interface ChoreDay extends Base {
+  type: 'choreday';
+  day: DayKey;
+  /** the minutes of this day, if set for it alone */
+  budget?: number | null;
+  /** what the smart task holds this day */
+  items: ChoreItem[];
+  /** done this day outside it (ticked on the household page) */
+  extra: ChoreItem[];
+  /** swapped out this day: not planned again */
+  skipped?: string[];
+}
+
+export type AnyRecord = Task | Category | Project | Area | Entry | Special | Settings | Hide | Deco | Award | Chore | ChoreDay;
 export type RecordType = AnyRecord['type'];
-export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'area', 'entry', 'special', 'settings', 'hide', 'deco', 'award'];
+export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'area', 'entry', 'special', 'settings', 'hide', 'deco', 'award', 'chore', 'choreday'];
 
 export const SETTINGS_ID = 'settings';
 
@@ -239,6 +284,7 @@ export const DEFAULT_SETTINGS: Settings = {
   cover: 'nachtblau',
   followUpsAdopted: false,
   deco: true,
+  choreMinutes: [30, 30, 30, 30, 30, 30, 30],
 };
 
 /** An appointment read from Google (not synced, cached per week). */

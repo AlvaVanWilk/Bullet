@@ -475,6 +475,38 @@ async function device(browser, name) {
     const inked = await ipad.locator('.sheet.front .row', { hasText: 'Brief einwerfen' }).locator('.ink-in').count();
     check('a task from Siri arrives while the page stays open (no reload) and writes itself into the list',
       said === 'Steht in Bullet: Brief einwerfen' && fromSiri === 1 && inked === 1, { said, fromSiri, inked });
+
+    // the household: a chore written on its page; "Haushaltsaufgaben" dragged into today plans it under itself; ticked, it is done there and on the page
+    await ipad.locator('.tab-household').click();
+    await ipad.waitForTimeout(900);
+    const hhLine = ipad.locator('.hh-page .new-line input');
+    await hhLine.click();
+    await hhLine.fill('Bad putzen');
+    await hhLine.press('Enter');
+    await ipad.waitForTimeout(400);
+    const hhRows = await ipad.locator('.hh-table tbody tr').count();
+    await ipad.locator('.tab-planner').click();
+    await ipad.waitForTimeout(900);
+    await ipad.locator('.tab-master').click();
+    await ipad.waitForTimeout(500);
+    const smart = await ipad.locator('.sheet.front .row', { hasText: 'Haushaltsaufgaben' }).boundingBox();
+    const hhToday = await ipad.locator('.day.today').boundingBox();
+    await ipad.mouse.move(smart.x + 90, smart.y + 12);
+    await ipad.mouse.down();
+    await ipad.waitForTimeout(450);
+    await ipad.mouse.move(smart.x + 110, smart.y + 30, { steps: 4 });
+    await ipad.mouse.move(hhToday.x + 200, hhToday.y + hhToday.height - 20, { steps: 12 });
+    await ipad.mouse.up();
+    await ipad.waitForTimeout(700);
+    const planned = await ipad.$$eval('.day.today .chore-row .tt-text', (els) => els.map((e) => e.textContent));
+    await ipad.locator('.day.today .chore-row .cb').first().click();
+    await ipad.waitForTimeout(500);
+    const choreDone = await ipad.locator('.day.today .chore-row.st-done').count();
+    await ipad.locator('.tab-household').click();
+    await ipad.waitForTimeout(900);
+    const dueNow = await ipad.locator('.hh-table tbody tr', { hasText: 'Bad putzen' }).locator('td').nth(3).textContent();
+    check('household: a chore on its page; "Haushaltsaufgaben" into today plans it under itself, ticked it is done today',
+      hhRows === 1 && planned.join() === 'Bad putzen' && choreDone === 1 && dueNow === 'heute gemacht', { hhRows, planned, choreDone, dueNow });
   } catch (err) {
     failed = true;
     console.log('✗', err.message);

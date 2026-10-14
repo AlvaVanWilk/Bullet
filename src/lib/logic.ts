@@ -2,7 +2,8 @@
 // rules can be tested without any interface.
 
 import { addDays, compareDays, daySearchText, parseDay, weekDays, type DayKey } from './dates';
-import type { Area, Award, CalEvent, Category, Deco, Entry, Hide, Project, Settings, Special, Task, TaskLink } from './model';
+import { planDone } from './chores';
+import type { Area, Award, CalEvent, Category, Chore, ChoreDay, Deco, Entry, Hide, Project, Settings, Special, Task, TaskLink } from './model';
 
 export interface Snapshot {
   tasks: Task[];
@@ -14,6 +15,8 @@ export interface Snapshot {
   hides: Hide[];
   decos: Deco[];
   awards: Award[];
+  chores: Chore[];
+  choreDays: ChoreDay[];
   settings: Settings;
 }
 
@@ -409,7 +412,11 @@ export function dayItems(s: Snapshot, day: DayKey, today: DayKey, index = entrie
       const task = tasksById.get(entry.taskId);
       if (!task || task.deleted || shownAsDeadline.has(task.id)) return [];
       const later = (index.get(task.id) ?? []).some((e) => compareDays(e.day, day) > 0);
-      return [{ key: `e-${entry.id}`, task, kind: 'entry' as const, state: entryState(task, entry, today, later), entry }];
+      // the smart task of the household: done when its chores of the day are
+      const state: BoxState = task.smart === 'haushalt'
+        ? (planDone(s.choreDays.find((c) => !c.deleted && c.day === day)) ? 'done' : compareDays(day, today) < 0 ? 'dropped' : 'open')
+        : entryState(task, entry, today, later);
+      return [{ key: `e-${entry.id}`, task, kind: 'entry' as const, state, entry }];
     });
   return [...deadlines, ...entries];
 }

@@ -25,28 +25,34 @@ import { PaySection } from './Pay';
 import { PhotoStrip } from './Photos';
 import { AreaNote, AreaSelect, ProjectCard, ProjectEditNote, ProjectSelect } from './Projects';
 import { movePick, SuggestList } from './Suggest';
+import { ChoreMinutesNote, ChoreNote, ChoresTodayNote } from './Household';
 
 const WIDTH = 312;
 
 export function PostItLayer() {
   const state = useUi();
   const target = state.postIt;
+  const today = useToday();
   if (!target) return null;
   const close = () => ui.set({ postIt: null });
   return (
     <div class="postit-layer" onPointerDown={(e) => { if (e.target === e.currentTarget) close(); }}>
       <Placed
-        key={`${target.kind}-${target.kind === 'event' ? target.event.id : target.id}`}
+        key={`${target.kind}-${target.kind === 'event' ? target.event.id : target.kind === 'choreMinutes' ? target.weekday : target.id}`}
         target={target}
         variant={target.kind === 'project' ? 'pslip' : undefined}
       >
-        {target.kind === 'task' && <TaskNote target={target} close={close} />}
+        {target.kind === 'task' && (store.task(target.id)?.smart === 'haushalt'
+          ? <ChoresTodayNote day={target.day ?? today} close={close} />
+          : <TaskNote target={target} close={close} />)}
         {target.kind === 'category' && <CategoryNote id={target.id} close={close} />}
         {target.kind === 'special' && <SpecialNote id={target.id} date={target.date} close={close} />}
         {target.kind === 'event' && <EventNote event={target.event} close={close} />}
         {target.kind === 'project' && <ProjectCard id={target.id} close={close} />}
         {target.kind === 'projectEdit' && <ProjectEditNote id={target.id} close={close} />}
         {target.kind === 'area' && <AreaNote id={target.id} close={close} />}
+        {target.kind === 'chore' && <ChoreNote id={target.id} close={close} />}
+        {target.kind === 'choreMinutes' && <ChoreMinutesNote weekday={target.weekday} close={close} />}
       </Placed>
     </div>
   );

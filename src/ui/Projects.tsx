@@ -37,11 +37,14 @@ export function Lead(props: {
   dot: boolean; bang: boolean; project?: Project | null; onIcon?: (el: HTMLElement) => void; pending?: boolean;
   /** struck through: its "!" fades away */
   struck?: boolean;
+  /** drawn under the marks like a project's icon (the bucket of the household) */
+  icon?: preact.ComponentChildren;
 }) {
   const p = props.project;
   const marks = (
     <>
       {p && <ProjectIcon project={p} />}
+      {props.icon}
       {/* lying with someone else: an hourglass instead of the dot */}
       {props.pending ? <Hourglass /> : props.dot && <ScheduledDot />}
       {props.bang && <Bang gone={props.struck} />}
@@ -60,7 +63,7 @@ export function Lead(props: {
       </button>
     );
   }
-  return <span class={`lead ${p ? 'with-icon' : ''}`}>{marks}</span>;
+  return <span class={`lead ${p || props.icon ? 'with-icon' : ''}`}>{marks}</span>;
 }
 
 /**

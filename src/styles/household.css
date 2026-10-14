@@ -1,0 +1,138 @@
+/* --- the household: its page, its notes, its chores in a day --- */
+
+/* the bucket, drawn like the other tab symbols (thin pen); its bubbles a little lighter */
+.bucket path, .bucket circle { fill: none; stroke: var(--ink); stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; }
+.bucket circle { stroke-width: 1.1; }
+.lead.with-icon .bucket { position: absolute; left: 1px; top: 3px; }
+.lead.with-icon .bucket path, .lead.with-icon .bucket circle { stroke: #8a5f58; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.dtask .margin-icon.bucket { top: 3px; }
+.dtask .margin-icon.bucket path, .dtask .margin-icon.bucket circle { stroke: #8a5f58; vector-effect: non-scaling-stroke; }
+
+/* the page */
+.household .hh-badge { flex: none; display: grid; place-items: center; width: 56px; height: 52px; margin-right: 12px; }
+.household .hh-badge::before {
+  content: '';
+  grid-area: 1 / 1;
+  width: 50px;
+  height: 45px;
+  border-radius: 46% 54% 50% 48%;
+  background: #e6d3d1;
+  opacity: 0.85;
+}
+.household .hh-badge > .bucket { grid-area: 1 / 1; position: relative; }
+.household .hh-badge .bucket path, .household .hh-badge .bucket circle { stroke-width: 1.2; }
+.hh-page { max-width: 820px; }
+
+/* minutes per weekday: written along a line, a tap on a day changes it */
+.hh-days { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0; }
+.hh-day {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 58px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  line-height: var(--grid);
+  border-radius: 10px;
+}
+.hh-day-name { font-size: 16px; color: var(--ink-soft); font-variant-caps: small-caps; letter-spacing: 0.06em; }
+.hh-day-min { font-size: 22px; }
+@media (hover: hover) { .hh-day:hover { background: rgba(43, 43, 48, 0.05); } }
+.hh-note { margin: 0; line-height: var(--grid); font-size: 18px; color: var(--ink-soft); }
+
+/* the chores: a table drawn into a box */
+.hh-box { margin-top: 6px; }
+.hh-table { width: 100%; border-collapse: collapse; }
+.hh-table th {
+  text-align: left;
+  font-weight: normal;
+  font-size: 16px;
+  color: var(--ink-soft);
+  font-variant-caps: small-caps;
+  letter-spacing: 0.06em;
+  line-height: var(--grid);
+  padding: 0 10px 0 0;
+}
+.hh-table td { line-height: var(--grid); height: var(--grid); padding: 0 10px 0 0; vertical-align: middle; }
+.hh-table tbody tr + tr td { border-top: 1px dashed rgba(43, 43, 48, 0.12); }
+.hh-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hh-small { font-size: 17px; color: var(--ink-soft); white-space: nowrap; }
+.hh-small.overdue { color: var(--red); }
+.hh-check { width: 52px; text-align: center; padding-right: 0 !important; }
+.hh-check .checkbox { margin: 0 auto; }
+.hh-table tr.done .hh-name { color: var(--ink-soft); }
+.hh-page .new-line { margin-top: 6px; max-width: 520px; }
+
+/* the notes */
+.chore-note .chips, .chores-note .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.note-small { font-size: 16px; color: var(--ink-soft); margin: 0; }
+.stepper-value { min-width: 52px; text-align: center; font-size: 20px; }
+.stepper .ghost-btn:disabled { opacity: 0.3; }
+.chores-plan { list-style: none; margin: 0; padding: 0; }
+.chores-plan li { display: flex; align-items: center; gap: 6px; min-height: var(--grid); }
+.chores-plan li.done .chores-name { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--ink-soft); }
+.chores-name { flex: 1; min-width: 0; }
+.chores-min { font-size: 17px; color: var(--ink-soft); }
+.chores-act {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 19px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+@media (hover: hover) { .chores-act:hover { background: rgba(43, 43, 48, 0.07); color: var(--ink); } }
+.chores-extra .note-row { min-height: var(--grid); }
+
+/* in a day: how long, small behind the chore */
+.chore-min { margin-left: 6px; font-size: 16px; color: var(--ink-soft); }
+.chore-row.chore-extra { cursor: grab; }
+
+/* nothing due: a little green sparkle, "alles sauber!" on a tap */
+.clean-doodle { position: relative; display: inline-flex; align-items: center; margin-left: 6px; height: var(--grid); cursor: pointer; flex: none; }
+.clean-doodle svg { display: block; }
+.clean-doodle path { fill: #cfe3c6; stroke: #5f8a55; stroke-width: 1.2; stroke-linejoin: round; }
+.clean-doodle circle { fill: none; stroke: #5f8a55; stroke-width: 1.1; }
+.clean-said {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translate(4px, -50%) rotate(-2deg);
+  white-space: nowrap;
+  font-size: 18px;
+  color: #4f7a46;
+  background: var(--paper);
+  padding: 0 6px;
+  border-radius: 6px;
+  z-index: 3;
+  animation: hh-fade-in 0.2s ease-out both;
+}
+@keyframes hh-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.hh-page > .proj-section:first-child { margin-top: 0; }
+.chore-note .note-row, .chores-note .note-row { flex-wrap: wrap; gap: 4px 8px; }
+.chore-note .note-row > .chips { display: inline-flex; flex-wrap: nowrap; gap: 4px; }
+.chore-note .note-row .chip { font-size: 16px; padding: 0 8px; }
+.chore-note .stepper .ghost-btn, .chores-note .stepper .ghost-btn { min-width: 28px; width: 28px; min-height: 32px; height: 32px; padding: 0; font-size: 22px; }
+.chore-note .stepper, .chores-note .stepper { gap: 0; }
+.chore-note .stepper-value, .chores-note .stepper-value { min-width: 44px; font-size: 19px; }
+/* on a phone: what, when due, today (how often and how long are on its note) */
+@media (max-width: 600px) {
+  .hh-table th:nth-child(2), .hh-table td:nth-child(2),
+  .hh-table th:nth-child(3), .hh-table td:nth-child(3) { display: none; }
+  .hh-check { width: 40px; }
+}

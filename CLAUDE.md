@@ -40,7 +40,7 @@ Bedienung und Einrichtung: `README.md`.
   alles, auch die Unteraufgaben unter ihrer Aufgabe im Tag.
 - Rechts an der Hauptseite stecken Laschen wie Klebe-Fähnchen, mit gezeichneten Symbolen
   statt Schrift: Kästchen = Planer (Woche; schon offen → aktuelle Woche), Kiste = Archiv
-  (eine eigene Seite), Sanduhr = Wartet. Die aktive liegt vorn auf dem Papier.
+  (eine eigene Seite), Sanduhr = Wartet, Eimer = Haushalt. Die aktive liegt vorn auf dem Papier.
 - Folgeaufgaben (`task.after`): Eine Aufgabe, die noch auf offene „Mütter“ wartet, steht
   nicht in der Masterliste. Ein kleiner, mit Fineliner gezeichneter abbiegender Pfeil
   (erst nach rechts, dann nach unten; ausgeklappt dunkler) neben der Mutter klappt nur
@@ -221,6 +221,21 @@ Bedienung und Einrichtung: `README.md`.
   „Text“). Ohne Neustart: Solange Bullet vorn ist, gleicht es alle 20 s ab, außerdem
   beim ersten Tippen nach einer Pause; neue Aufgaben von woanders schreiben sich dann
   sichtbar in die Liste. Erinnerungen von Apple liest eine Web-App nicht.
+- Haushalt (`chore`, `choreday`, `src/lib/chores.ts`, `src/ui/Household.tsx`): vierte Lasche
+  (Eimer). Seite mit „Zeit pro Tag“ (Minuten je Wochentag, `settings.choreMinutes`, Tipp →
+  Zettel) und einer gezeichneten Tabelle (Aufgabe, wie oft, wie lang, fällig, heute abhaken);
+  keine Formularfelder, Tipp auf den Namen → Zettel (Turnus, Dauer fest 5–60 oder „von – bis“).
+  Eine smarte Aufgabe „Haushaltsaufgaben“ (`task.smart`, id `haushalt`, wird selbst nie
+  erledigt, Eimer statt Bild) steht in der Masterliste; in heute gezogen plant sie den Tag
+  (`ChoreDay`, gespeichert, damit nichts umspringt): die dringendsten fälligen (Dringlichkeit =
+  Tage seit zuletzt / Turnus × Anteil), die passen; passt die dringendste nicht, füllen weniger
+  dringende auf; variable werden gekürzt (in 5-Minuten-Schritten bis zum Minimum) und sind
+  dann anteilig früher wieder fällig (`lastShare`). Sie antippen → Zettel: Zeit nur für heute,
+  ⟳ austauschen und × weglassen (nicht hinter jeder Aufgabe im Tag), „außerdem gemacht“.
+  Unerledigtes bleibt fällig und wird dringender. Auf der Seite spontan abgehakt → steht
+  erledigt im Tag (`extra`), zählt nicht von selbst mit; auf „Haushaltsaufgaben“ gezogen (oder
+  „dazuzählen“) zählt es mit und der Rest wird neu geplant. Nichts fällig → kein Unterpunkt,
+  ein grünes Glitzern daneben, Tipp/Zeiger: „alles sauber!“. Keine Räume, keine Familie (vorerst).
 - Vorplanen künftiger Tage ist (vorerst) nicht vorgesehen. Vorausblättern in kommende
   Wochen geht, aber dort steht nur der Kopf (Wochenübersicht mit Terminen, Deadlines,
   Besonderem), keine Tage – Tage gibt es immer nur bis heute.

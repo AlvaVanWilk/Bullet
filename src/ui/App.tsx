@@ -17,6 +17,7 @@ import { uploadPending } from '../photos';
 import { onSynced } from '../server';
 import { QrSheet } from './Pay';
 import { PageTabs } from './PageTabs';
+import { HouseholdView } from './Household';
 import { PhotoViewer } from './Photos';
 import { PostItLayer } from './PostIt';
 import { ProjectView } from './Projects';
@@ -32,6 +33,10 @@ import { WeekView } from './WeekView';
 
 configureDrops(
   (source, target) => {
+    // a chore done besides, counted into the smart task of its day
+    if (source.from === 'chore') return target.kind === 'chores' && target.day === source.day;
+    // anything else let go over the smart task falls into its day
+    if (target.kind === 'chores') target = { kind: 'day', day: target.day };
     const task = store.task(source.taskId);
     if (!task || task.doneAt != null) return false;
     if (target.kind === 'day') {
@@ -54,6 +59,11 @@ configureDrops(
     return task.categoryId !== target.categoryId;
   },
   (source, target) => {
+    if (source.from === 'chore') {
+      store.countChoreIn(target.day!, source.taskId.replace(/^chore:/, ''));
+      return;
+    }
+    if (target.kind === 'chores') target = { kind: 'day', day: target.day };
     if (target.kind === 'day') store.addEntry(source.taskId, target.day!);
     else if (target.kind === 'project') store.updateTask(source.taskId, { projectId: target.projectId });
     else if (target.kind === 'area') store.updateTask(source.taskId, { projectId: target.projectId, areaId: target.areaId ?? null, parentId: null });
@@ -96,6 +106,7 @@ export function App() {
           : state.view.kind === 'project' ? <ProjectView id={state.view.id} />
           : state.view.kind === 'archive' ? <ArchiveView />
           : state.view.kind === 'waiting' ? <WaitingView />
+          : state.view.kind === 'household' ? <HouseholdView />
           : <WeekView />}
       </main>
       <PageTabs />

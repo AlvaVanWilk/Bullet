@@ -541,6 +541,7 @@
 .tab-planner { background: #cfdeea; }
 .tab-archive { background: #e4d6bf; }
 .tab-waiting { background: #d6e0cf; }
+.tab-household { background: #e6d3d1; }
 .page-tab .icon path { fill: none; stroke: var(--ink); stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; }
 
 /* --- the archive as a page --- */
