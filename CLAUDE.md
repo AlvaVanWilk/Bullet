@@ -84,7 +84,8 @@ Bedienung und Einrichtung: `README.md`.
 - Bereiche (`area`, `task.areaId`): Ein Projekt lässt sich in Bereiche teilen. Auf der
   Projektseite ist jeder Bereich eine Box, mit Marker in der Projektfarbe gezeichnet,
   Name in Kapitälchen oben im Rahmen (daneben klein die Zahl der offenen). Die Boxen
-  füllen die Seite zeilenweise (iPad zwei bis drei Spalten, Handy eine). Die Boxen kommen
+  füllen die Seite zeilenweise (iPad zwei bis drei Spalten, Handy eine; die Boxen einer Reihe
+  gleich hoch, keine Lücken). Die Boxen kommen
   zuerst; Aufgaben ohne Bereich stehen darunter als Liste „Ohne Bereich“ (nur wenn dort
   etwas steht, beim Ziehen als Ablage; ohne Bereiche sieht die Seite aus wie vorher). Die
   Boxen haben keine eigene Schreibzeile: Neues kommt aus der Zeile oben und wird
@@ -203,7 +204,7 @@ Bedienung und Einrichtung: `README.md`.
   Felder per Texterkennung im Gerät (tesseract.js, Dateien in `ocr/` auf dem eigenen
   Webspace, nie von fremden Servern). Bullet überweist nie selbst.
 - Esc verlässt jede Schreibzeile (der angefangene Text verfällt).
-- Mit Maus oder Trackpad: Ruht der Zeiger kurz auf einer Aufgabe mit Notiz, steht die Notiz
+- Aufgaben mit Notiz tragen ein kleines handgeschriebenes „i“. Mit Maus oder Trackpad: Ruht der Zeiger kurz auf einer Aufgabe mit Notiz, steht die Notiz
   auf einem kleinen Zettel daneben (`NoteHover.tsx`, Zeilen mit `data-note`).
 - Kategorien: Farbklecks und ein selbst gewähltes Symbol (`category.icon`, die Dinge der
   Projektbilder, fein und schwarz auf dem Klecks), nur in der Lasche „Kategorien“ und auf

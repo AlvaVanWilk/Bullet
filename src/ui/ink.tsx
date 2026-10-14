@@ -187,11 +187,12 @@ export function Bang(props: { gone?: boolean } = {}) {
   return <span class={`bang ${props.gone ? 'gone' : ''}`} aria-label={props.gone ? undefined : 'wichtig'}>!</span>;
 }
 
-/** Two little pencil lines after a task that has a note. */
+/** A small hand-written "i" after a task that has a note. */
 export function NoteMark() {
   return (
-    <svg class="note-mark" width="16" height="12" viewBox="0 0 16 12" aria-label="mit Notiz">
-      <path d="M1.5 4.2c2.6-.7 6.8-.5 12.6-.4M1.8 8.6c2.2-.4 4.9-.4 8.1-.2" />
+    <svg class="note-mark" width="12" height="16" viewBox="0 0 12 16" aria-label="mit Notiz">
+      <circle cx="6.3" cy="3.2" r="1.25" class="note-mark-dot" />
+      <path d="M4.4 7.1c.8-.3 1.4-.4 1.9-.3l-.3 6.1M4.3 13.4c1.3-.2 2.6-.2 3.8 0" />
     </svg>
   );
 }

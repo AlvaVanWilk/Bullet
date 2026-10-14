@@ -558,7 +558,7 @@ function AreaGrid(props: { list: ListProps; areas: Area[]; now: number; done: nu
         return (
           <div
             key={a.id}
-            class={`area-box ${drag?.id === a.id ? 'lifted' : ''} ${store.isFresh(a.id) ? 'ink-in' : ''}`}
+            class={`area-box ${drag?.id === a.id ? 'lifted' : ''} ${store.isFresh(a.id) ? 'box-in' : ''}`}
             // the bigger the project, the more of its shades its boxes take in turn
             style={{ '--proj-ink': boxInk(projectInk(p.color), props.done, props.areas.indexOf(a)) }}
             data-area-id={a.id}
