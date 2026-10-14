@@ -226,7 +226,9 @@ Bedienung und Einrichtung: `README.md`.
   Zettel) und einer gezeichneten Tabelle (Aufgabe, wie oft, wie lang, fällig, heute abhaken);
   keine Formularfelder, Tipp auf den Namen → Zettel (Turnus, Dauer fest 5–60 oder „von – bis“).
   Eine smarte Aufgabe „Haushaltsaufgaben“ (`task.smart`, id `haushalt`, wird selbst nie
-  erledigt, Eimer statt Bild) steht in der Masterliste; in heute gezogen plant sie den Tag
+  erledigt, Eimer statt Bild) steht in der Masterliste ganz oben (noch über den Projekten);
+  im Tag steht statt des Kästchens der Eimer (schwarz, liegen geblieben grau; sind alle
+  darunter erledigt, wird er grün mit etwas Glitzern); in heute gezogen plant sie den Tag
   (`ChoreDay`, gespeichert, damit nichts umspringt): die dringendsten fälligen (Dringlichkeit =
   Tage seit zuletzt / Turnus × Anteil), die passen; passt die dringendste nicht, füllen weniger
   dringende auf; variable werden gekürzt (in 5-Minuten-Schritten bis zum Minimum) und sind

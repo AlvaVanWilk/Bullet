@@ -280,12 +280,15 @@ export function masterEntries(s: Snapshot, now: number, seenAt = 0): MasterEntry
   const steps: MasterEntry[] = projects
     .flatMap(({ project, rows }) => rows.filter(settled).map((row) => ({ kind: 'step' as const, row, project })))
     .sort((a, b) => a.row.task.doneAt! - b.row.task.doneAt!);
+  const rows = masterRows(s, now);
   return [
+    // a smart task (the household) stands on top of everything
+    ...rows.filter((r) => r.task.smart).map((row) => ({ kind: 'task' as const, row })),
     ...projects
       .map(({ project, rows, next, empty }) => ({ kind: 'project' as const, project, rows: rows.filter((r) => !settled(r)), next, empty }))
       .filter((e) => !e.empty || e.rows.length > 0),
     ...steps,
-    ...masterRows(s, now).map((row) => ({ kind: 'task' as const, row })),
+    ...rows.filter((r) => !r.task.smart).map((row) => ({ kind: 'task' as const, row })),
   ];
 }
 

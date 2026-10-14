@@ -52,6 +52,23 @@ export function CleanDoodle() {
   );
 }
 
+/** In a day, in place of the box of the smart task: the bucket, in ink while open, grey when left, green and sparkling when all is done. */
+export function SmartMark(props: { state: string }) {
+  const done = props.state === 'done';
+  return (
+    <span class={`cb smart-mark ${done ? 'done' : ''} ${props.state === 'dropped' ? 'left' : ''}`} aria-label={done ? 'alles erledigt' : 'Haushalt'}>
+      <BucketIcon size={25} />
+      {done && (
+        <svg class="smart-sparkle" width="34" height="28" viewBox="0 0 34 28" aria-hidden="true">
+          <path d="M27 3c.3 2 .8 2.5 2.8 2.8-2 .3-2.5.8-2.8 2.8-.3-2-.8-2.5-2.8-2.8 2-.3 2.5-.8 2.8-2.8z" />
+          <path d="M5 18c.2 1.4.6 1.8 2 2-1.4.2-1.8.6-2 2-.2-1.4-.6-1.8-2-2 1.4-.2 1.8-.6 2-2z" />
+          <circle cx="29" cy="20" r="1.1" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
 // --- the page --------------------------------------------------------------------------
 
 export function HouseholdView() {

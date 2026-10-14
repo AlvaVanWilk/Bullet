@@ -136,3 +136,17 @@
   .hh-table th:nth-child(3), .hh-table td:nth-child(3) { display: none; }
   .hh-check { width: 40px; }
 }
+
+/* in a day the smart task has its bucket where the box would be */
+.smart-mark { position: relative; }
+.smart-mark .bucket path, .smart-mark .bucket circle { stroke: var(--ink); stroke-width: 1.4; transition: stroke 0.4s, fill 0.4s; }
+.smart-mark.left .bucket path, .smart-mark.left .bucket circle { stroke: var(--ink-faint, #9a9aa0); }
+.smart-mark.done .bucket path, .smart-mark.done .bucket circle { stroke: #4f8a45; stroke-width: 1.6; }
+.smart-mark.done .bucket path:first-child { fill: #d7ead0; }
+.smart-sparkle { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.smart-sparkle path { fill: #cfe3c6; stroke: #5f8a55; stroke-width: 0.9; stroke-linejoin: round; }
+.smart-sparkle circle { fill: #5f8a55; }
+.smart-sparkle > * { transform-box: fill-box; transform-origin: center; animation: hh-twinkle 0.7s ease-out both; }
+.smart-sparkle > :nth-child(2) { animation-delay: 0.15s; }
+.smart-sparkle > :nth-child(3) { animation-delay: 0.3s; }
+@keyframes hh-twinkle { 0% { opacity: 0; transform: scale(0.2) rotate(-30deg); } 60% { opacity: 1; transform: scale(1.25); } 100% { opacity: 1; transform: scale(1); } }

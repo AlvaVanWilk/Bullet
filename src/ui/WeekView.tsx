@@ -22,7 +22,7 @@ import { clickSuppressed, startDrag } from './drag';
 import { FollowToggle } from './Follow';
 import { Checkbox, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, TaskText } from './ink';
 import { ProjectIcon } from './ProjectIcon';
-import { BucketIcon, ChoreDayRows, ChoreExtraRows, CleanDoodle } from './Household';
+import { ChoreDayRows, ChoreExtraRows, CleanDoodle, SmartMark } from './Household';
 import { StatusNote } from './StatusNote';
 import { daySet, setDayFold, SubtaskDayRows, useDayFolds } from './Subtasks';
 import { ui, useNow, useStore, useToday, useUi } from './state';
@@ -481,17 +481,21 @@ function DayTaskRow(props: {
     >
       {/* a task of a project: its icon in the margin before the box (under its task, that one has it) */}
       {project && !props.sub && <ProjectIcon project={project} class="margin-icon" />}
-      {smart && <BucketIcon size={22} class="margin-icon" />}
-      <Checkbox
-        state={item.state}
-        important={task.important}
-        seed={item.key}
-        label={item.state === 'done' ? 'wieder offen' : 'erledigt'}
-        onClick={(e) => {
-          e.stopPropagation();
-          store.toggleDone(task.id, props.day);
-        }}
-      />
+      {smart ? (
+        // the household is not ticked: its chores are; it turns green (with a sparkle) when they are all done
+        <SmartMark state={item.state} />
+      ) : (
+        <Checkbox
+          state={item.state}
+          important={task.important}
+          seed={item.key}
+          label={item.state === 'done' ? 'wieder offen' : 'erledigt'}
+          onClick={(e) => {
+            e.stopPropagation();
+            store.toggleDone(task.id, props.day);
+          }}
+        />
+      )}
       <span
         class="dtask-text"
         onClick={(e) => {
