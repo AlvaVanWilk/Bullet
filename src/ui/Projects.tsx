@@ -37,7 +37,7 @@ export function Lead(props: {
   dot: boolean; bang: boolean; project?: Project | null; onIcon?: (el: HTMLElement) => void; pending?: boolean;
   /** struck through: its "!" fades away */
   struck?: boolean;
-  /** drawn under the marks like a project's icon (the bucket of the household) */
+  /** drawn under the marks like a project's icon (the house of the household) */
   icon?: preact.ComponentChildren;
 }) {
   const p = props.project;

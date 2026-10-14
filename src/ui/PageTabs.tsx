@@ -1,10 +1,10 @@
 // Tabs on the right edge of the page, like flags stuck into a notebook: the
-// planner (a checkbox), the household (a bucket), what waits (an hourglass)
+// planner (a checkbox), the household (a house), what waits (an hourglass)
 // and the archive (a box). The archive always stays the lowest.
 
 import { ArchiveIcon, BoxIcon, HourglassIcon } from './ink';
 import { ui, useUi } from './state';
-import { BucketIcon } from './Household';
+import { HouseIcon } from './Household';
 
 export function PageTabs() {
   const state = useUi();
@@ -30,7 +30,7 @@ export function PageTabs() {
         title="Haushalt"
         onClick={() => ui.set({ view: { kind: 'household' } })}
       >
-        <BucketIcon />
+        <HouseIcon />
       </button>
       <button
         type="button"

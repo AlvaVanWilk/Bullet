@@ -17,7 +17,7 @@ import { Lead, ProjectLine, ProjectList } from './Projects';
 import { CategorySymbol } from './ProjectIcon';
 import { playPaperSlide, playStrike } from './sound';
 import { SubtaskListRows } from './Subtasks';
-import { BucketIcon, CleanDoodle } from './Household';
+import { HouseIcon, CleanDoodle } from './Household';
 import { dueChores, isPlanned, planDone } from '../lib/chores';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
 
@@ -302,7 +302,7 @@ function MasterList(props: { active: boolean }) {
             dot={isOpenToday(t, today, index) && !(t.smart && planDone(store.choreDay(today)))}
             bang={t.important}
             struck={isStruck}
-            icon={t.smart === 'haushalt' ? <BucketIcon size={22} /> : undefined}
+            icon={t.smart === 'haushalt' ? <HouseIcon size={22} /> : undefined}
             project={project}
             onIcon={project ? (el) => openSlip(project, el) : undefined}
             pending={!!t.pending && t.doneAt == null}

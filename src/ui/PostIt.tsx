@@ -38,7 +38,7 @@ export function PostItLayer() {
   return (
     <div class="postit-layer" onPointerDown={(e) => { if (e.target === e.currentTarget) close(); }}>
       <Placed
-        key={`${target.kind}-${target.kind === 'event' ? target.event.id : target.kind === 'choreMinutes' ? target.weekday : target.id}`}
+        key={`${target.kind}-${target.kind === 'event' ? target.event.id : target.kind === 'choreMinutes' ? target.weekday : target.kind === 'chore' ? `${target.id}-${target.part ?? ''}` : target.id}`}
         target={target}
         variant={target.kind === 'project' ? 'pslip' : undefined}
       >
@@ -51,7 +51,7 @@ export function PostItLayer() {
         {target.kind === 'project' && <ProjectCard id={target.id} close={close} />}
         {target.kind === 'projectEdit' && <ProjectEditNote id={target.id} close={close} />}
         {target.kind === 'area' && <AreaNote id={target.id} close={close} />}
-        {target.kind === 'chore' && <ChoreNote id={target.id} close={close} />}
+        {target.kind === 'chore' && <ChoreNote id={target.id} part={target.part} close={close} />}
         {target.kind === 'choreMinutes' && <ChoreMinutesNote weekday={target.weekday} close={close} />}
       </Placed>
     </div>

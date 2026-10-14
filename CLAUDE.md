@@ -39,7 +39,7 @@ Bedienung und Einrichtung: `README.md`.
   aus den Listen (Masterliste, Kategorien); die Tage und das Archiv behalten
   alles, auch die Unteraufgaben unter ihrer Aufgabe im Tag.
 - Rechts an der Hauptseite stecken Laschen wie Klebe-Fähnchen, mit gezeichneten Symbolen
-  statt Schrift: von oben: Kästchen = Planer (Woche; schon offen → aktuelle Woche), Eimer = Haushalt,
+  statt Schrift: von oben: Kästchen = Planer (Woche; schon offen → aktuelle Woche), Haus = Haushalt,
   Sanduhr = Wartet, Kiste = Archiv (eine eigene Seite). Das Archiv bleibt immer die unterste
   Lasche, auch bei neuen (außer die Nutzerin sagt es ausdrücklich anders). Die aktive liegt vorn auf dem Papier.
 - Folgeaufgaben (`task.after`): Eine Aufgabe, die noch auf offene „Mütter“ wartet, steht
@@ -222,13 +222,17 @@ Bedienung und Einrichtung: `README.md`.
   „Text“). Ohne Neustart: Solange Bullet vorn ist, gleicht es alle 20 s ab, außerdem
   beim ersten Tippen nach einer Pause; neue Aufgaben von woanders schreiben sich dann
   sichtbar in die Liste. Erinnerungen von Apple liest eine Web-App nicht.
-- Haushalt (`chore`, `choreday`, `src/lib/chores.ts`, `src/ui/Household.tsx`): vierte Lasche
-  (Eimer). Seite mit „Zeit pro Tag“ (Minuten je Wochentag, `settings.choreMinutes`, Tipp →
-  Zettel) und einer gezeichneten Tabelle (Aufgabe, wie oft, wie lang, fällig, heute abhaken);
-  keine Formularfelder, Tipp auf den Namen → Zettel (Turnus, Dauer fest 5–60 oder „von – bis“).
+- Haushalt (`chore`, `choreday`, `src/lib/chores.ts`, `src/ui/Household.tsx`): Lasche mit einem
+  gezeichneten Haus (kein Eimer). Die Seite ist eine Journal-Doppelseite aus Fineliner-Boxen mit
+  Titel im Rahmen: „Aufgaben“ (Tabelle: was, wie oft, wie lang, fällig, heute abhaken; die
+  Schreibzeile in der Box), „Zeit pro Tag“ (Wochentage wie ein Inhaltsverzeichnis mit gepunkteter
+  Linie zu den Minuten, heute markiert, `settings.choreMinutes`) und „Heute“ (der Plan des Tages).
+  Breit: Aufgaben links, die beiden kleinen rechts; schmaler (nach Seitenbreite) darunter
+  nebeneinander. Nichts sieht nach Formular aus: Jedes Feld der Tabelle antippen → Zettel nur
+  für dieses Feld (Name + löschen, Turnus, Dauer fest 5–60 oder „von – bis“, zuletzt gemacht).
   Eine smarte Aufgabe „Haushaltsaufgaben“ (`task.smart`, id `haushalt`, wird selbst nie
-  erledigt, Eimer statt Bild) steht in der Masterliste ganz oben (noch über den Projekten);
-  im Tag steht statt des Kästchens der Eimer (schwarz, liegen geblieben grau; sind alle
+  erledigt, Haus statt Bild) steht in der Masterliste ganz oben (noch über den Projekten);
+  im Tag steht statt des Kästchens das Haus (schwarz, liegen geblieben grau; sind alle
   darunter erledigt, wird er grün mit etwas Glitzern); in heute gezogen plant sie den Tag
   (`ChoreDay`, gespeichert, damit nichts umspringt): die dringendsten fälligen (Dringlichkeit =
   Tage seit zuletzt / Turnus × Anteil), die passen; passt die dringendste nicht, füllen weniger
@@ -238,8 +242,8 @@ Bedienung und Einrichtung: `README.md`.
   Unerledigtes bleibt fällig und wird dringender. Auf der Seite spontan abgehakt → steht
   erledigt im Tag (`extra`), zählt nicht von selbst mit; auf „Haushaltsaufgaben“ gezogen (oder
   „dazuzählen“) zählt es mit und der Rest wird neu geplant. Nichts fällig → kein Unterpunkt,
-  ein grünes Glitzern daneben, Tipp/Zeiger: „alles sauber!“, und der Eimer ist gleich grün (wie
-  erledigt). Im Zettel einer Haushaltsaufgabe „zuletzt gemacht“ (heute = abhaken, gestern, vor 3
+  ein grünes Glitzern daneben, Tipp/Zeiger: „alles sauber!“, und das Haus ist gleich grün (wie
+  erledigt). „Zuletzt gemacht“ über das Feld „fällig“ (heute = abhaken, gestern, vor 3
   Tagen … noch nie, Datum). Länger als die Zeit jedes Wochentags → leise „passt an keinem Tag“
   (Tabelle und Zettel). Jeder Haken ist ein eigener Datensatz (`choretick`, id aus Tag und
   Aufgabe), damit zwei Geräte sich nicht überschreiben; der Tagesplan (`choreday`) hält nur, was

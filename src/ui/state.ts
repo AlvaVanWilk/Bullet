@@ -20,7 +20,7 @@ export type PostItTarget =
   /** name and place of an area of a project */
   | { kind: 'area'; id: string; rect: DOMRect }
   /** a chore of the household: name, how often, how long */
-  | { kind: 'chore'; id: string; rect: DOMRect }
+  | { kind: 'chore'; id: string; rect: DOMRect; part?: 'name' | 'rhythm' | 'length' | 'last' }
   /** the minutes for the household on a weekday */
   | { kind: 'choreMinutes'; weekday: number; rect: DOMRect };
 

@@ -8,7 +8,7 @@ import { useState } from 'preact/hooks';
 import {
   choreDayView, dayBudget, dueLabel, isPlanned, isDue, lengthLabel, planMinutes, rhythmLabel, sortChores, urgency,
 } from '../lib/chores';
-import { addDays, compareDays, weekdayName, type DayKey } from '../lib/dates';
+import { addDays, compareDays, weekdayIndex, weekdayName, type DayKey } from '../lib/dates';
 import type { Chore, ChoreItem, ChoreUnit } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
@@ -16,22 +16,21 @@ import { Checkbox, HandBox } from './ink';
 import { NewLine } from './NewLine';
 import { ui, useStore, useToday } from './state';
 
-const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+export type ChorePart = 'name' | 'rhythm' | 'length' | 'last';
 const WEEKDAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
 const rectOf = (el: EventTarget | null) => (el as HTMLElement).getBoundingClientRect();
 
-/** A bucket with a few bubbles, drawn by hand: the household (its tab, its task). */
-export function BucketIcon(props: { size?: number; class?: string }) {
+/** A little house drawn by hand: the household (its tab, its task). */
+export function HouseIcon(props: { size?: number; class?: string }) {
   const z = props.size ?? 24;
   return (
-    <svg class={`icon bucket ${props.class ?? ''}`} width={z} height={z} viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5.2 9.6c4.5-.6 9.1-.6 13.6 0l-1.6 10.1c-3.4.6-7 .6-10.4 0z" />
-      <path d="M5.6 9.8c.6-3.4 2.9-5.4 6.4-5.4s5.8 2 6.4 5.4" />
-      <path d="M8.2 13.4c2.4.3 5.2.3 7.6 0" />
-      <circle cx="9.6" cy="6.9" r="1.1" />
-      <circle cx="13.4" cy="5.6" r="1.5" />
-      <circle cx="16" cy="7.6" r="0.8" />
+    <svg class={`icon house ${props.class ?? ''}`} width={z} height={z} viewBox="0 0 24 24" aria-hidden="true">
+      <path class="house-wall" d="M5.9 10.2c-.1 3.2 0 6.4.1 9.6 4 .2 8 .2 12 0 .1-3.2.2-6.4.1-9.6" />
+      <path d="M3.4 11.4c2.9-2.6 5.7-5 8.6-7.3 2.9 2.3 5.8 4.7 8.6 7.3" />
+      <path d="M15.6 6.6V4.3h2.2v4.3" />
+      <path d="M10.2 19.7v-4.6c1.2-.3 2.4-.3 3.6 0v4.6" />
+      <path d="M8.1 11.7h2.3v2.2H8.1z" />
     </svg>
   );
 }
@@ -52,12 +51,12 @@ export function CleanDoodle() {
   );
 }
 
-/** In a day, in place of the box of the smart task: the bucket, in ink while open, grey when left, green and sparkling when all is done. */
+/** In a day, in place of the box of the smart task: the house, in ink while open, grey when left, green and sparkling when all is done. */
 export function SmartMark(props: { state: string }) {
   const done = props.state === 'done';
   return (
     <span class={`cb smart-mark ${done ? 'done' : ''} ${props.state === 'dropped' ? 'left' : ''}`} aria-label={done ? 'alles erledigt' : 'Haushalt'}>
-      <BucketIcon size={25} />
+      <HouseIcon size={25} />
       {done && (
         <svg class="smart-sparkle" width="34" height="28" viewBox="0 0 34 28" aria-hidden="true">
           <path d="M27 3c.3 2 .8 2.5 2.8 2.8-2 .3-2.5.8-2.8 2.8-.3-2-.8-2.5-2.8-2.8 2-.3 2.5-.8 2.8-2.8z" />
@@ -76,82 +75,117 @@ export function HouseholdView() {
   const today = useToday();
   const chores = sortChores(snap.chores);
   const minutes = snap.settings.choreMinutes;
-  const todayDay = store.choreDay(today);
+  const open = (part: ChorePart, id: string) => (e: Event) => {
+    if (!clickSuppressed()) ui.set({ postIt: { kind: 'chore', id, part, rect: rectOf(e.currentTarget) } });
+  };
   return (
     <div class="catview household">
       <header class="cat-head">
-        <span class="hh-badge" aria-hidden="true"><BucketIcon size={34} /></span>
+        <span class="hh-badge" aria-hidden="true"><HouseIcon size={34} /></span>
         <h1 class="cat-title"><span>Haushalt</span></h1>
         <button type="button" class="ghost-btn close-x" aria-label="Zur Woche" onClick={() => ui.set({ view: { kind: 'week' } })}>✕</button>
       </header>
       <div class="cat-page paper hh-page" data-paper={snap.settings.paperMain} data-scroll>
-        <h2 class="proj-section">Zeit pro Tag</h2>
-        <div class="hh-days">
-          {WEEKDAYS.map((d, i) => (
-            <button
-              key={d}
-              type="button"
-              class="hh-day"
-              onClick={(e) => ui.set({ postIt: { kind: 'choreMinutes', weekday: i, rect: rectOf(e.currentTarget) } })}
-              aria-label={`${WEEKDAY_NAMES[i]}: ${minutes[i]} Minuten`}
-            >
-              <span class="hh-day-name">{d}</span>
-              <span class="hh-day-min">{minutes[i] ? `${minutes[i]}′` : '–'}</span>
-            </button>
-          ))}
-        </div>
-        {todayDay?.budget != null && (
-          <p class="hh-note">heute {todayDay.budget} Minuten (nur heute)</p>
-        )}
-
-        <h2 class="proj-section">Aufgaben</h2>
-        {chores.length > 0 ? (
-          <HandBox seed="haushalt-tabelle" class="hh-box">
-            <table class="hh-table">
-              <thead>
-                <tr><th>Aufgabe</th><th>wie oft</th><th>wie lang</th><th>fällig</th><th class="hh-check">heute</th></tr>
-              </thead>
-              <tbody>
-                {chores.map((c) => {
-                  const doneToday = c.lastDone === today;
-                  const overdue = !doneToday && isDue(c, today) && urgency(c, today) >= 1.5;
-                  return (
-                    <tr key={c.id} class={`${store.isFresh(c.id) ? 'ink-in' : ''} ${doneToday ? 'done' : ''}`}>
-                      <td>
-                        <button type="button" class="hh-name" onClick={(e) => ui.set({ postIt: { kind: 'chore', id: c.id, rect: rectOf(e.currentTarget) } })}>
-                          {c.name}
-                        </button>
-                      </td>
-                      <td class="hh-small">{rhythmLabel(c)}</td>
-                      <td class="hh-small">{lengthLabel(c)}</td>
-                      <td class={`hh-small ${overdue ? 'overdue' : ''}`}>
-                        {dueLabel(c, today)}
-                        {!fitsSomeDay(c, minutes) && <span class="hh-nofit">passt an keinem Tag</span>}
-                      </td>
-                      <td class="hh-check">
-                        <Checkbox
-                          state={doneToday ? 'done' : 'open'}
-                          important={false}
-                          seed={`hh-${c.id}`}
-                          label={doneToday ? 'doch nicht gemacht' : 'heute gemacht'}
-                          onClick={() => store.tickChore(today, c.id, !doneToday)}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <div class="hh-spread">
+          <HandBox seed="haushalt-aufgaben" class="hh-box hh-chores" title="Aufgaben">
+            {chores.length > 0 && (
+              <table class="hh-table">
+                <thead>
+                  <tr><th>was</th><th>wie oft</th><th>wie lang</th><th>fällig</th><th class="hh-check">heute</th></tr>
+                </thead>
+                <tbody>
+                  {chores.map((c) => {
+                    const doneToday = c.lastDone === today;
+                    const overdue = !doneToday && isDue(c, today) && urgency(c, today) >= 1.5;
+                    return (
+                      <tr key={c.id} class={doneToday ? 'done' : ''}>
+                        <td>
+                          <button type="button" class="hh-cell hh-name" onClick={open('name', c.id)}>
+                            <span class={store.isFresh(c.id) ? 'ink-in' : ''}>{c.name}</span>
+                          </button>
+                        </td>
+                        <td><button type="button" class="hh-cell hh-small" onClick={open('rhythm', c.id)}>{rhythmLabel(c)}</button></td>
+                        <td><button type="button" class="hh-cell hh-small" onClick={open('length', c.id)}>{lengthLabel(c)}</button></td>
+                        <td>
+                          <button type="button" class={`hh-cell hh-small ${overdue ? 'overdue' : ''}`} onClick={open('last', c.id)}>
+                            {dueLabel(c, today)}
+                            {!fitsSomeDay(c, minutes) && <span class="hh-nofit">passt an keinem Tag</span>}
+                          </button>
+                        </td>
+                        <td class="hh-check">
+                          <Checkbox
+                            state={doneToday ? 'done' : 'open'}
+                            important={false}
+                            seed={`hh-${c.id}`}
+                            label={doneToday ? 'doch nicht gemacht' : 'heute gemacht'}
+                            onClick={() => store.tickChore(today, c.id, !doneToday)}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+            {!chores.length && (
+              <p class="hh-hint">
+                Was im Haushalt regelmäßig anfällt, hier untereinander schreiben. Wie oft, wie lang, wann zuletzt: das Feld antippen.
+              </p>
+            )}
+            <NewLine placeholder="Aufgabe …" onEnter={(name) => store.addChore(name)} />
           </HandBox>
-        ) : (
-          <p class="cat-hint">
-            Schreib auf, was im Haushalt regelmäßig anfällt. Wie oft und wie lang: Tipp auf den Namen. Dann steht
-            „Haushaltsaufgaben“ in der Masterliste: In den Tag gezogen, sucht Bullet aus, was dran ist und in die Zeit passt.
-          </p>
-        )}
-        <NewLine placeholder="Aufgabe …" onEnter={(name) => store.addChore(name)} />
+
+          <div class="hh-side">
+            <HandBox seed="haushalt-zeit" class="hh-box hh-time" title="Zeit pro Tag">
+              <ul class="hh-days">
+                {WEEKDAY_NAMES.map((d, i) => (
+                  <li key={d} class={weekdayIndex(today) === i ? 'today' : ''}>
+                    <button
+                      type="button"
+                      class="hh-day"
+                      onClick={(e) => ui.set({ postIt: { kind: 'choreMinutes', weekday: i, rect: rectOf(e.currentTarget) } })}
+                      aria-label={`${d}: ${minutes[i]} Minuten`}
+                    >
+                      <span class="hh-day-name">{d}</span>
+                      <span class="hh-leader" aria-hidden="true" />
+                      <span class="hh-day-min">{minutes[i] ? `${minutes[i]}′` : 'frei'}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </HandBox>
+            <HandBox seed="haushalt-heute" class="hh-box hh-today" title="Heute">
+              <TodayPlan day={today} />
+            </HandBox>
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+/** On the page, what the household holds today: the plan, with its minutes; or why there is none. */
+function TodayPlan(props: { day: DayKey }) {
+  const snap = useStore();
+  const cd = choreDayView(snap, props.day);
+  const budget = dayBudget(snap.settings, props.day, cd);
+  if (!isPlanned(cd)) {
+    return <p class="hh-hint">Zieh „Haushaltsaufgaben“ aus der Masterliste in heute, dann steht hier, was dran ist ({budget} Minuten).</p>;
+  }
+  if (!cd!.items.length) return <p class="hh-clean"><CleanDoodle /> alles sauber!</p>;
+  const { total, done } = planMinutes(cd!.items);
+  return (
+    <>
+      <ul class="hh-plan">
+        {cd!.items.map((i) => (
+          <li key={i.choreId} class={i.done ? 'done' : ''}>
+            <span class="hh-plan-name">{store.chore(i.choreId)?.name}</span>
+            <span class="hh-plan-min">{i.minutes}′</span>
+          </li>
+        ))}
+      </ul>
+      <p class="hh-plan-sum">{done ? `${done} von ${total}` : total} Minuten{cd!.budget != null ? ' (nur heute)' : ''}</p>
+    </>
   );
 }
 
@@ -190,8 +224,12 @@ const LAST_DONE: { ago: number | null; label: string }[] = [
 /** Whether a chore fits into the time of some weekday at all (done as short as it may be). */
 export const fitsSomeDay = (c: Chore, minutes: number[]) => c.min <= Math.max(0, ...minutes);
 
-/** A chore: its name, how often, how long (fixed, or from–to: then it may be done shorter). */
-export function ChoreNote(props: { id: string; close: () => void }) {
+/**
+ * A chore, as far as the tapped field goes: its name (and deleting it), how
+ * often, how long (fixed, or from–to: then it may be done shorter), or when it
+ * was last done. Without a field (tapped in a day): name, how often, how long.
+ */
+export function ChoreNote(props: { id: string; part?: ChorePart; close: () => void }) {
   const snap = useStore();
   const today = useToday();
   const c = store.chore(props.id);
@@ -200,87 +238,105 @@ export function ChoreNote(props: { id: string; close: () => void }) {
   if (!c) return null;
   const save = () => { if (name.trim() && name.trim() !== c.name) store.updateChore(c.id, { name: name.trim() }); };
   const range = c.max > c.min;
+  const show = (part: ChorePart) => !props.part ? part !== 'last' : props.part === part;
   return (
     <div class="note chore-note">
-      <input
-        class="note-text single"
-        value={name}
-        onInput={(e) => setName((e.target as HTMLInputElement).value)}
-        onBlur={save}
-        onKeyDown={(e) => { if (e.key === 'Enter') { save(); (e.target as HTMLInputElement).blur(); } }}
-        aria-label="Name der Aufgabe"
-      />
-      <div class="note-label">Wie oft</div>
-      <div class="chips">
-        {RHYTHMS.map((r) => (
-          <button
-            key={r.label}
-            type="button"
-            class={`chip ${c.every === r.every && c.unit === r.unit ? 'on' : ''}`}
-            onClick={() => store.updateChore(c.id, { every: r.every, unit: r.unit })}
-          >{r.label}</button>
-        ))}
-      </div>
-      <div class="note-row">
-        <span class="note-small">alle</span>
-        <Stepper value={c.every} step={1} min={1} max={30} onChange={(n) => store.updateChore(c.id, { every: n })} label="wie viele" />
-        <span class="chips">
-          {(['tage', 'wochen', 'monate'] as ChoreUnit[]).map((u) => (
-            <button key={u} type="button" class={`chip ${c.unit === u ? 'on' : ''}`} onClick={() => store.updateChore(c.id, { unit: u })}>
-              {u === 'tage' ? 'Tage' : u === 'wochen' ? 'Wochen' : 'Monate'}
-            </button>
-          ))}
-        </span>
-      </div>
-      <div class="note-label">Wie lang</div>
-      <div class="chips">
-        <button type="button" class={`chip ${!range ? 'on' : ''}`} onClick={() => store.updateChore(c.id, { max: c.min })}>fest</button>
-        <button type="button" class={`chip ${range ? 'on' : ''}`} onClick={() => store.updateChore(c.id, { max: Math.min(60, c.min + 10) })}>
-          von – bis (darf kürzer)
-        </button>
-      </div>
-      <div class="note-row">
-        <Stepper value={c.min} step={5} min={5} max={60} unit="Min" onChange={(n) => store.updateChore(c.id, { min: n, max: range ? Math.max(n, c.max) : n })} label={range ? 'mindestens' : 'Minuten'} />
-        {range && (
-          <>
-            <span class="note-small">bis</span>
-            <Stepper value={c.max} step={5} min={c.min} max={60} unit="Min" onChange={(n) => store.updateChore(c.id, { max: n })} label="höchstens" />
-          </>
-        )}
-      </div>
-      {range && <p class="note-hint">Fehlt die Zeit, wird sie kürzer gemacht und ist dann entsprechend früher wieder dran.</p>}
-      {!fitsSomeDay(c, snap.settings.choreMinutes) && (
-        <p class="note-hint">Passt an keinem Tag (höchstens {Math.max(...snap.settings.choreMinutes)} Minuten am Tag).</p>
-      )}
-      <div class="note-label">Zuletzt gemacht</div>
-      <div class="chips">
-        {LAST_DONE.map((l) => {
-          const day = l.ago == null ? null : addDays(today, -l.ago);
-          const on = (c.lastDone ?? null) === day;
-          return (
-            <button key={l.label} type="button" class={`chip ${on ? 'on' : ''}`} onClick={() => store.setChoreLastDone(c.id, day)}>{l.label}</button>
-          );
-        })}
-      </div>
-      <label class="note-when-older">
-        <span>am:</span>
+      {props.part && props.part !== 'name' && <div class="note-label chore-note-of">{c.name}</div>}
+      {show('name') && (
         <input
-          type="date"
-          max={today}
-          value={c.lastDone && !LAST_DONE.some((l) => l.ago != null && addDays(today, -l.ago) === c.lastDone) ? c.lastDone : ''}
-          onChange={(e) => {
-            const v = (e.target as HTMLInputElement).value;
-            if (v && compareDays(v, today) <= 0) store.setChoreLastDone(c.id, v);
-          }}
+          class="note-text single"
+          value={name}
+          onInput={(e) => setName((e.target as HTMLInputElement).value)}
+          onBlur={save}
+          onKeyDown={(e) => { if (e.key === 'Enter') { save(); (e.target as HTMLInputElement).blur(); } }}
+          aria-label="Name der Aufgabe"
         />
-      </label>
+      )}
+      {show('rhythm') && (
+        <>
+          <div class="note-label">Wie oft</div>
+          <div class="chips">
+            {RHYTHMS.map((r) => (
+              <button
+                key={r.label}
+                type="button"
+                class={`chip ${c.every === r.every && c.unit === r.unit ? 'on' : ''}`}
+                onClick={() => store.updateChore(c.id, { every: r.every, unit: r.unit })}
+              >{r.label}</button>
+            ))}
+          </div>
+          <div class="note-row">
+            <span class="note-small">alle</span>
+            <Stepper value={c.every} step={1} min={1} max={30} onChange={(n) => store.updateChore(c.id, { every: n })} label="wie viele" />
+            <span class="chips">
+              {(['tage', 'wochen', 'monate'] as ChoreUnit[]).map((u) => (
+                <button key={u} type="button" class={`chip ${c.unit === u ? 'on' : ''}`} onClick={() => store.updateChore(c.id, { unit: u })}>
+                  {u === 'tage' ? 'Tage' : u === 'wochen' ? 'Wochen' : 'Monate'}
+                </button>
+              ))}
+            </span>
+          </div>
+        </>
+      )}
+      {show('length') && (
+        <>
+          <div class="note-label">Wie lang</div>
+          <div class="chips">
+            <button type="button" class={`chip ${!range ? 'on' : ''}`} onClick={() => store.updateChore(c.id, { max: c.min })}>fest</button>
+            <button type="button" class={`chip ${range ? 'on' : ''}`} onClick={() => store.updateChore(c.id, { max: Math.min(60, c.min + 10) })}>
+              von – bis (darf kürzer)
+            </button>
+          </div>
+          <div class="note-row">
+            <Stepper value={c.min} step={5} min={5} max={60} unit="Min" onChange={(n) => store.updateChore(c.id, { min: n, max: range ? Math.max(n, c.max) : n })} label={range ? 'mindestens' : 'Minuten'} />
+            {range && (
+              <>
+                <span class="note-small">bis</span>
+                <Stepper value={c.max} step={5} min={c.min} max={60} unit="Min" onChange={(n) => store.updateChore(c.id, { max: n })} label="höchstens" />
+              </>
+            )}
+          </div>
+          {range && <p class="note-hint">Fehlt die Zeit, wird sie kürzer gemacht und ist dann entsprechend früher wieder dran.</p>}
+          {!fitsSomeDay(c, snap.settings.choreMinutes) && (
+            <p class="note-hint">Passt an keinem Tag (höchstens {Math.max(...snap.settings.choreMinutes)} Minuten am Tag).</p>
+          )}
+        </>
+      )}
+      {show('last') && (
+        <>
+          <div class="note-label">Zuletzt gemacht</div>
+          <div class="chips">
+            {LAST_DONE.map((l) => {
+              const day = l.ago == null ? null : addDays(today, -l.ago);
+              const on = (c.lastDone ?? null) === day;
+              return (
+                <button key={l.label} type="button" class={`chip ${on ? 'on' : ''}`} onClick={() => store.setChoreLastDone(c.id, day)}>{l.label}</button>
+              );
+            })}
+          </div>
+          <label class="note-when-older">
+            <span>am:</span>
+            <input
+              type="date"
+              max={today}
+              value={c.lastDone && !LAST_DONE.some((l) => l.ago != null && addDays(today, -l.ago) === c.lastDone) ? c.lastDone : ''}
+              onChange={(e) => {
+                const v = (e.target as HTMLInputElement).value;
+                if (v && compareDays(v, today) <= 0) store.setChoreLastDone(c.id, v);
+              }}
+            />
+          </label>
+        </>
+      )}
       <div class="note-actions">
         <button type="button" class="note-btn save" onClick={() => { save(); props.close(); }}>fertig</button>
-        <button
-          type="button"
-          class={`note-btn danger ${sure ? 'sure' : ''}`}
-          onClick={() => { if (!sure) { setSure(true); return; } store.deleteChore(c.id); props.close(); }}
-        >{sure ? 'wirklich löschen?' : 'löschen'}</button>
+        {show('name') && (
+          <button
+            type="button"
+            class={`note-btn danger ${sure ? 'sure' : ''}`}
+            onClick={() => { if (!sure) { setSure(true); return; } store.deleteChore(c.id); props.close(); }}
+          >{sure ? 'wirklich löschen?' : 'löschen'}</button>
+        )}
       </div>
     </div>
   );
@@ -405,7 +461,7 @@ function ChoreRow(props: { item: ChoreItem; day: DayKey; past: boolean; sub?: bo
       class={`dtask chore-row ${props.sub ? 'sub' : 'chore-extra'} st-${state} ${state === 'dropped' ? 'faded' : ''}`}
       onPointerDown={(e) => !props.sub && startDrag(e, e.currentTarget as HTMLElement, { taskId: `chore:${c.id}`, text: c.name, from: 'chore', day: props.day })}
     >
-      {!props.sub && <BucketIcon size={22} class="margin-icon" />}
+      {!props.sub && <HouseIcon size={22} class="margin-icon" />}
       <Checkbox
         state={state}
         important={false}
