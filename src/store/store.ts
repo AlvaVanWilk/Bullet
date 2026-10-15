@@ -617,7 +617,7 @@ export class Store {
     return chore;
   }
 
-  updateChore(id: string, patch: Partial<Pick<Chore, 'name' | 'every' | 'unit' | 'min' | 'max' | 'lastDone'>>) {
+  updateChore(id: string, patch: Partial<Pick<Chore, 'name' | 'every' | 'unit' | 'min' | 'max' | 'lastDone' | 'important'>>) {
     const c = this.chore(id);
     if (!c) return;
     const next = { ...c, ...patch };

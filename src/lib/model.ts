@@ -233,6 +233,8 @@ export interface Chore extends Base {
   /** the day it was last done, and how much of it (a share of max: done shorter, it is due sooner) */
   lastDone?: DayKey | null;
   lastShare?: number;
+  /** worse to leave undone ("!"): once due, it counts twice as urgent */
+  important?: boolean;
   createdAt: number;
 }
 

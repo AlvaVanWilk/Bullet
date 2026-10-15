@@ -38,17 +38,24 @@ export function urgency(c: Chore, day: DayKey): number {
 
 export const isDue = (c: Chore, day: DayKey) => urgency(c, day) >= 1;
 
+/**
+ * Which due chore comes first: how overdue it is, twice as much for one that is
+ * worse to leave undone ("!"). Nothing waits for ever: a plain one left twice as
+ * long catches up with an important one.
+ */
+export const priority = (c: Chore, day: DayKey) => urgency(c, day) * (c.important ? 2 : 1);
+
 /** The minutes for the household on a day: set for it alone, or those of its weekday. */
 export function dayBudget(settings: Settings, day: DayKey, cd?: ChoreDay | null): number {
   if (cd?.budget != null) return cd.budget;
   return settings.choreMinutes?.[weekdayIndex(day)] ?? 30;
 }
 
-/** The chores due on a day, most due first (then the one written first). */
+/** The chores due on a day, most due first (the important ones counting double; then the one written first). */
 export function dueChores(chores: Chore[], day: DayKey): Chore[] {
   return chores
     .filter((c) => !c.deleted && isDue(c, day) && c.lastDone !== day)
-    .sort((a, b) => urgency(b, day) - urgency(a, day) || a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1));
+    .sort((a, b) => priority(b, day) - priority(a, day) || a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1));
 }
 
 /**

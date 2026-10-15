@@ -16,6 +16,17 @@ fs.writeFileSync(path.join(app, 'bullet-config.php'), `<?php return ['google_cli
 const server = spawn('php', ['-S', '127.0.0.1:8793', '-t', run], { stdio: 'ignore' });
 const base = 'http://127.0.0.1:8793/bullet/';
 
+/**
+ * Puts away the notes of decoration given meanwhile: some come for the hour of
+ * the day (early morning, late at night), whenever the test happens to run then.
+ */
+async function putAwayAwards(page) {
+  while (await page.locator('.award-note').count()) {
+    await page.locator('.award-note').first().click();
+    await page.waitForTimeout(400);
+  }
+}
+
 async function device(browser, name) {
   const ctx = await browser.newContext({ viewport: { width: 1180, height: 820 }, hasTouch: true });
   const page = await ctx.newPage();
@@ -103,6 +114,7 @@ async function device(browser, name) {
     check('the cover takes the chosen colour at once', cover[0] === 'rgb(90, 47, 55)' && cover[1] === '#5a2f37', cover);
 
     // "Hey Siri, Bullet": set up the letterbox, send a task as the shortcut would
+    await putAwayAwards(ipad);
     await ipad.locator('.set-tab', { hasText: 'Konto' }).click();
     await ipad.locator('.note-btn', { hasText: 'einrichten' }).click();
     await ipad.waitForSelector('.copy-row code');
@@ -247,7 +259,7 @@ async function device(browser, name) {
     const yesterday = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
     // (on a Monday yesterday lies in last week)
     const inYesterday = y.getDay() === 0 ? 1 : await ipad.locator(`.day[data-day="${yesterday}"] .dtask`, { hasText: 'Fahrrad flicken' }).locator('.cb-done').count();
-    while (await ipad.locator('.award-note').count()) { await ipad.locator('.award-note').click(); await ipad.waitForTimeout(400); }
+    await putAwayAwards(ipad);
     check('a task done yesterday but in no day: "erledigt" on its post-it, then "gestern" – done there, struck in the list',
       struckNow === 1 && inYesterday === 1, { struckNow, inYesterday });
 
@@ -383,7 +395,7 @@ async function device(browser, name) {
     await ipad.waitForTimeout(400);
     const leavingNow = await ipad.locator('.proj-tasks .row.leaving', { hasText: 'Bretter prüfen' }).count();
     await ipad.waitForTimeout(2200);
-    while (await ipad.locator('.award-note').count()) { await ipad.locator('.award-note').click(); await ipad.waitForTimeout(400); }
+    await putAwayAwards(ipad);
     const goneLater = await ipad.locator('.proj-tasks .row', { hasText: 'Bretter prüfen' }).count();
     const holzSays = await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.area-empty').textContent().catch(() => null);
     await ipad.locator('.projview .close-x').click();
@@ -432,6 +444,7 @@ async function device(browser, name) {
       { catSubs, catProjects, opened, festFold });
 
     // a milestone: a finished project gives a doodle (announced once); held on free paper in today, it sticks there, on both devices
+    await putAwayAwards(ipad);
     await ipad.locator('.tab-projects').click();
     await ipad.waitForTimeout(800);
     await ipad.locator('.proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
@@ -447,6 +460,8 @@ async function device(browser, name) {
     await ipad.waitForTimeout(700);
     await ipad.mouse.up();
     await ipad.waitForTimeout(500);
+    // with more than one kind given (one may come for the hour), the doodles are chosen first
+    if (!(await ipad.locator('.fan-disc.piece').count())) await ipad.locator('.fan-disc.kind[aria-label="Kritzelei"]').click();
     await ipad.locator('.fan-disc.piece').first().click();
     await ipad.waitForTimeout(400);
     await ipad.mouse.click(dayBox.x + 40, dayBox.y + 4);

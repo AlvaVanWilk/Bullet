@@ -67,10 +67,11 @@ export function seedDemo(today: DayKey) {
   store.addTask('Sperrmüll anmelden', null, { projectId: umzug.id, deadline: today });
 
   // the household: a few chores, some due
-  const chore = (name: string, every: number, unit: 'tage' | 'wochen' | 'monate', min: number, max: number, ago: number | null) => {
+  const chore = (name: string, every: number, unit: 'tage' | 'wochen' | 'monate', min: number, max: number, ago: number | null, important = false) => {
     const c = store.addChore(name)!;
-    store.updateChore(c.id, { every, unit, min, max, lastDone: ago == null ? null : addDays(today, -ago) });
+    store.updateChore(c.id, { every, unit, min, max, lastDone: ago == null ? null : addDays(today, -ago), important });
   };
+  chore('Wäsche waschen', 2, 'tage', 15, 15, 3, true);
   chore('Bad putzen', 1, 'wochen', 20, 30, 9);
   chore('Staubsaugen', 4, 'tage', 15, 25, 5);
   chore('Bettwäsche wechseln', 2, 'wochen', 15, 15, 10);

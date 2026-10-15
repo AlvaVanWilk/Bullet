@@ -12,7 +12,7 @@ import { addDays, compareDays, weekdayIndex, weekdayName, type DayKey } from '..
 import type { Chore, ChoreItem, ChoreUnit } from '../lib/model';
 import { store } from '../store/store';
 import { clickSuppressed, startDrag } from './drag';
-import { Checkbox, HandBox } from './ink';
+import { Bang, Checkbox, HandBox } from './ink';
 import { NewLine } from './NewLine';
 import { ui, useStore, useToday } from './state';
 
@@ -101,6 +101,7 @@ export function HouseholdView() {
                       <tr key={c.id} class={doneToday ? 'done' : ''}>
                         <td>
                           <button type="button" class="hh-cell hh-name" onClick={open('name', c.id)}>
+                            {c.important && <Bang />}
                             <span class={store.isFresh(c.id) ? 'ink-in' : ''}>{c.name}</span>
                           </button>
                         </td>
@@ -179,7 +180,7 @@ function TodayPlan(props: { day: DayKey }) {
       <ul class="hh-plan">
         {cd!.items.map((i) => (
           <li key={i.choreId} class={i.done ? 'done' : ''}>
-            <span class="hh-plan-name">{store.chore(i.choreId)?.name}</span>
+            <span class="hh-plan-name">{store.chore(i.choreId)?.important && <Bang />}{store.chore(i.choreId)?.name}</span>
             <span class="hh-plan-min">{i.minutes}′</span>
           </li>
         ))}
@@ -252,6 +253,19 @@ export function ChoreNote(props: { id: string; part?: ChorePart; close: () => vo
           aria-label="Name der Aufgabe"
         />
       )}
+      {show('name') && (
+        <div class="note-row">
+          <button
+            type="button"
+            class={`note-bang ${c.important ? 'on' : ''}`}
+            aria-pressed={!!c.important}
+            onClick={() => store.updateChore(c.id, { important: !c.important })}
+          >
+            <span class="bang">!</span> {c.important ? 'wichtig' : 'als wichtig markieren'}
+          </button>
+        </div>
+      )}
+      {show('name') && c.important && <p class="note-hint">Bleibt sie liegen, ist es schlimmer: Sobald sie fällig ist, kommt sie eher dran.</p>}
       {show('rhythm') && (
         <>
           <div class="note-label">Wie oft</div>
@@ -394,7 +408,7 @@ export function ChoresTodayNote(props: { day: DayKey; close: () => void }) {
             if (!c) return null;
             return (
               <li key={i.choreId} class={i.done ? 'done' : ''}>
-                <span class="chores-name">{c.name}</span>
+                <span class="chores-name">{c.important && <Bang />}{c.name}</span>
                 <span class="chores-min">{i.minutes}′</span>
                 {!i.done && (
                   <>
@@ -464,7 +478,7 @@ function ChoreRow(props: { item: ChoreItem; day: DayKey; past: boolean; sub?: bo
       {!props.sub && <HouseIcon size={22} class="margin-icon" />}
       <Checkbox
         state={state}
-        important={false}
+        important={!!c.important}
         seed={`chore-${props.day}-${c.id}`}
         label={props.item.done ? 'doch nicht gemacht' : 'erledigt'}
         onClick={(e) => { e.stopPropagation(); store.tickChore(props.day, c.id, !props.item.done); }}

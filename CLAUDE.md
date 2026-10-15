@@ -235,7 +235,9 @@ Bedienung und Einrichtung: `README.md`.
   im Tag steht statt des Kästchens das Haus (schwarz, liegen geblieben grau; sind alle
   darunter erledigt, wird er grün mit etwas Glitzern); in heute gezogen plant sie den Tag
   (`ChoreDay`, gespeichert, damit nichts umspringt): die dringendsten fälligen (Dringlichkeit =
-  Tage seit zuletzt / Turnus × Anteil), die passen; passt die dringendste nicht, füllen weniger
+  Tage seit zuletzt / Turnus × Anteil; mit „!“ (`chore.important`, im Namens-Zettel) zählt eine
+  fällige doppelt, ändert aber nicht, wann sie fällig ist: Wichtiges kommt eher dran, aber
+  nichts wartet ewig), die passen; passt die dringendste nicht, füllen weniger
   dringende auf; variable werden gekürzt (in 5-Minuten-Schritten bis zum Minimum) und sind
   dann anteilig früher wieder fällig (`lastShare`). Sie antippen → Zettel: Zeit nur für heute,
   ⟳ austauschen und × weglassen (nicht hinter jeder Aufgabe im Tag), „außerdem gemacht“.

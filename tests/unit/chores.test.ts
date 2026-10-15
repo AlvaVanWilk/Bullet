@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayBudget, dueDay, dueLabel, lengthLabel, planChores, rhythmLabel, urgency } from '../../src/lib/chores';
+import { dayBudget, dueChores, dueDay, dueLabel, lengthLabel, planChores, rhythmLabel, urgency } from '../../src/lib/chores';
 import { DEFAULT_SETTINGS, type Chore } from '../../src/lib/model';
 import { CHORE_TASK_ID, Store } from '../../src/store/store';
 import { dayItems } from '../../src/lib/logic';
@@ -116,5 +116,15 @@ describe('chores', () => {
     s.addEntry(CHORE_TASK_ID, DAY);
     expect(s.choreDay(DAY)!.items).toEqual([]);
     expect(dayItems(s.snapshot(), DAY, DAY).find((i) => i.task.id === CHORE_TASK_ID)!.state).toBe('done');
+  });
+  it('put an important one ("!") first once due, but a plain one left long enough catches up', () => {
+    const kitchen = chore('kueche', { every: 1, unit: 'tage', lastDone: '2026-10-12', createdAt: 1 });
+    const wash = chore('waesche', { every: 1, unit: 'tage', lastDone: '2026-10-12', createdAt: 2, important: true });
+    // both left two days: the washing first
+    expect(dueChores([kitchen, wash], DAY).map((c) => c.id)).toEqual(['waesche', 'kueche']);
+    // the kitchen left five days, the washing two: the kitchen first
+    expect(dueChores([{ ...kitchen, lastDone: '2026-10-09' }, wash], DAY).map((c) => c.id)).toEqual(['kueche', 'waesche']);
+    // not due yet stays not due, important or not
+    expect(dueChores([{ ...wash, every: 1, unit: 'wochen' }], DAY)).toEqual([]);
   });
 });
