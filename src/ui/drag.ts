@@ -135,13 +135,19 @@ function targetOf(el: HTMLElement): DropTarget | null {
   return null;
 }
 
+/** What lights up while something is held over a target: the target, or what it names (data-drop-glow, a selector). */
+function glowOf(el: HTMLElement | null): HTMLElement | null {
+  const sel = el?.dataset.dropGlow;
+  return (sel && document.querySelector<HTMLElement>(sel)) || el;
+}
+
 function hitTest() {
   if (!g) return;
   const el = (document.elementFromPoint(g.x, g.y) as HTMLElement | null)?.closest<HTMLElement>('[data-drop]') ?? null;
   const ok = el && targetOf(el) && accept(g.source, targetOf(el)!) ? el : null;
   if (ok !== g.over) {
-    g.over?.classList.remove('drop-over');
-    ok?.classList.add('drop-over');
+    glowOf(g.over)?.classList.remove('drop-over');
+    glowOf(ok)?.classList.add('drop-over');
     g.over = ok;
   }
   g.ghost?.classList.toggle('can-drop', !!ok);
@@ -212,7 +218,7 @@ function cleanup() {
   if (!g) return;
   if (g.timer) clearTimeout(g.timer);
   if (g.scrollFrame != null) cancelAnimationFrame(g.scrollFrame);
-  g.over?.classList.remove('drop-over');
+  glowOf(g.over)?.classList.remove('drop-over');
   g.row.classList.remove('lifted');
   g.ghost?.remove();
   document.body.classList.remove('is-dragging');

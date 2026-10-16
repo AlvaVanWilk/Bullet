@@ -58,7 +58,15 @@ export function WeekView() {
 
   return (
     // held on free paper: decoration (Deco.tsx)
-    <div class={`week ${ahead ? 'ahead' : ''}`} onPointerDown={onDecoPress} onContextMenu={onDecoMenu}>
+    <div
+      class={`week ${ahead ? 'ahead' : ''}`}
+      onPointerDown={onDecoPress}
+      onContextMenu={onDecoMenu}
+      // only today takes what is dragged in: let go anywhere on this week's page, it goes there (today lights up)
+      data-drop={current ? 'day' : undefined}
+      data-day={current ? today : undefined}
+      data-drop-glow={current ? '.day.today' : undefined}
+    >
       <WeekHead monday={monday} today={today} events={events} now={now} />
       {!ahead && (
         <div class="days paper" data-paper={snap.settings.paperMain} ref={scrollRef} data-scroll>

@@ -505,12 +505,13 @@ async function device(browser, name) {
     await ipad.locator('.tab-master').click();
     await ipad.waitForTimeout(500);
     const smart = await ipad.locator('.sheet.front .row', { hasText: 'Haushaltsaufgaben' }).boundingBox();
-    const hhToday = await ipad.locator('.day.today').boundingBox();
+    // let go over the head of the week, not over today: the whole page of this week takes it into today
+    const hhToday = await ipad.locator('.week-head').boundingBox();
     await ipad.mouse.move(smart.x + 90, smart.y + 12);
     await ipad.mouse.down();
     await ipad.waitForTimeout(450);
     await ipad.mouse.move(smart.x + 110, smart.y + 30, { steps: 4 });
-    await ipad.mouse.move(hhToday.x + 200, hhToday.y + hhToday.height - 20, { steps: 12 });
+    await ipad.mouse.move(hhToday.x + 300, hhToday.y + hhToday.height / 2, { steps: 12 });
     await ipad.mouse.up();
     await ipad.waitForTimeout(700);
     const planned = await ipad.$$eval('.day.today .chore-row .tt-text', (els) => els.map((e) => e.textContent));
@@ -520,7 +521,7 @@ async function device(browser, name) {
     await ipad.locator('.tab-household').click();
     await ipad.waitForTimeout(900);
     const dueNow = await ipad.locator('.hh-table tbody tr', { hasText: 'Bad putzen' }).locator('td').nth(3).textContent();
-    check('household: a chore on its page; "Haushaltsaufgaben" into today plans it under itself, ticked it is done today',
+    check('household: a chore on its page; "Haushaltsaufgaben" let go anywhere on the week goes into today and plans it under itself, ticked it is done today',
       hhRows === 1 && planned.join() === 'Bad putzen' && choreDone === 1 && dueNow === 'heute gemacht', { hhRows, planned, choreDone, dueNow });
   } catch (err) {
     failed = true;

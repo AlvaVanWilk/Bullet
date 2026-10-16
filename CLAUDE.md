@@ -13,7 +13,9 @@ Bedienung und Einrichtung: `README.md`.
   (durchgestrichen verblasst es: erledigt ist nichts mehr wichtig).
 - Ein kleiner schwarzer Punkt vor einer Aufgabe der Masterliste heißt: Sie steht heute
   offen im Tag. Der Punkt verschwindet, wenn der Tag vorbei ist und sie nicht erledigt wurde.
-- Ziehen schreibt immer nur hinüber. Das Original bleibt, auch im alten Tag.
+- Ziehen schreibt immer nur hinüber. Das Original bleibt, auch im alten Tag. In die aktuelle
+  Woche Gezogenes darf überall auf der Seite losgelassen werden (Kopf, frühere Tage, freies Papier)
+  und landet in heute (heute leuchtet auf, `data-drop-glow`); in Tage ziehen geht ohnehin nur nach heute.
 - Unter heute liegt eine gestrichelte Linie: Dort Geschriebenes wird eine neue Aufgabe
   der Masterliste und steht im Tag. Beim Tippen werden Aufgaben aus der Liste
   vorgeschlagen, die heute noch nicht offen stehen (antippen = hineinschreiben).
