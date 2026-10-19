@@ -59,54 +59,45 @@ export function dueChores(chores: Chore[], day: DayKey): Chore[] {
 }
 
 /**
- * How long a chore with a range would like to be done: as short as it may be
- * when it has only just become due, its full length once it is overdue by a
- * whole rhythm (or was never done), in between in steps of five minutes.
- */
-export function wantedMinutes(c: Chore, day: DayKey): number {
-  const min = c.min, max = Math.max(c.min, c.max);
-  if (max <= min) return max;
-  const t = Math.min(1, Math.max(0, urgency(c, day) - 1));
-  return Math.min(max, Math.max(min, Math.round((min + t * (max - min)) / 5) * 5));
-}
-
-/**
- * The plan of a day: what is kept (done already, or counted in by hand) and
- * takes its time first; then, most due first, what fits in what is left, as
- * long as it would like to be (longer the more overdue it is), or shorter down
- * to its shortest when time is short. What does not fit is passed over for
- * something less due that does. Time still left at the end lengthens what was
- * planned, most due first, up to its full length.
+ * The plan of a day. What is kept (done already, or counted in by hand) takes
+ * its time first. If everything due fits in full, everything comes in full: there
+ * is nothing to decide. Otherwise:
+ *
+ * 1. Most due first, every chore that still fits is taken, for now as short as
+ *    it may be (so the more pressing ones all get their turn). One that does not
+ *    fit even then is passed over for something less due that does.
+ * 2. The time left is handed out five minutes at a time, each time to the chore
+ *    that needs it most: the more overdue (and "!") it is and the further it still
+ *    is from its full length, the sooner. So what has lain long gets more time.
+ *
+ * Done shorter, a chore is due again sooner and so more overdue next time: then it
+ * gets more of the time. Nothing has to be remembered for that.
  */
 export function planChores(chores: Chore[], day: DayKey, budget: number, keep: ChoreItem[] = [], skipped: string[] = []): ChoreItem[] {
   const plan = [...keep];
   let left = budget - keep.reduce((n, i) => n + i.minutes, 0);
   const taken = new Set([...keep.map((i) => i.choreId), ...skipped]);
-  const planned: Chore[] = [];
+  const chosen: { c: Chore; item: ChoreItem; full: number; weight: number }[] = [];
   for (const c of dueChores(chores, day)) {
-    if (taken.has(c.id) || left <= 0) continue;
-    const want = wantedMinutes(c, day);
-    if (want <= left) {
-      plan.push({ choreId: c.id, minutes: want, done: false });
-      planned.push(c);
-      left -= want;
-    } else if (c.min <= left) {
-      // shortened to the time there is (in steps of five minutes)
-      const minutes = Math.max(c.min, Math.floor(left / 5) * 5);
-      plan.push({ choreId: c.id, minutes, done: false });
-      planned.push(c);
-      left -= minutes;
-    }
+    if (taken.has(c.id) || c.min > left) continue;
+    const item: ChoreItem = { choreId: c.id, minutes: c.min, done: false };
+    plan.push(item);
+    chosen.push({ c, item, full: Math.max(c.min, c.max), weight: priority(c, day) });
+    left -= c.min;
   }
-  // nothing else fits: what is planned may take longer, most due first
-  for (const c of planned) {
-    if (left < 5) break;
-    const item = plan.find((i) => i.choreId === c.id)!;
-    const more = Math.min(Math.max(c.min, c.max) - item.minutes, Math.floor(left / 5) * 5);
-    if (more > 0) {
-      item.minutes += more;
-      left -= more;
+  for (;;) {
+    let best: (typeof chosen)[number] | null = null;
+    let bestScore = 0;
+    for (const x of chosen) {
+      const step = Math.min(5, x.full - x.item.minutes);
+      if (step <= 0 || step > left) continue;
+      const score = x.weight * (1 - x.item.minutes / x.full);
+      if (score > bestScore) { best = x; bestScore = score; }
     }
+    if (!best) break;
+    const step = Math.min(5, best.full - best.item.minutes);
+    best.item.minutes += step;
+    left -= step;
   }
   return plan;
 }

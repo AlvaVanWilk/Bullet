@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayBudget, dueChores, dueDay, wantedMinutes, dueLabel, lengthLabel, planChores, rhythmLabel, urgency } from '../../src/lib/chores';
+import { dayBudget, dueChores, dueDay, dueLabel, lengthLabel, planChores, rhythmLabel, urgency } from '../../src/lib/chores';
 import { DEFAULT_SETTINGS, type Chore } from '../../src/lib/model';
 import { CHORE_TASK_ID, Store } from '../../src/store/store';
 import { dayItems } from '../../src/lib/logic';
@@ -127,17 +127,24 @@ describe('chores', () => {
     // not due yet stays not due, important or not
     expect(dueChores([{ ...wash, every: 1, unit: 'wochen' }], DAY)).toEqual([]);
   });
-  it('with a range: shorter when only just due, longer the more overdue; spare time lengthens them again', () => {
+  it('when the time is short: the pressing ones all come in, and what has lain longest gets more of the time', () => {
     const just = chore('kueche', { every: 1, unit: 'wochen', min: 10, max: 30, lastDone: '2026-10-07' }); // due today
     const half = chore('bad', { every: 1, unit: 'wochen', min: 10, max: 30, lastDone: '2026-10-04' }); // three days over
     const long = chore('keller', { every: 1, unit: 'wochen', min: 10, max: 30, lastDone: '2026-09-23' }); // three weeks
-    expect(wantedMinutes(just, DAY)).toBe(10);
-    expect(wantedMinutes(half, DAY)).toBe(20);
-    expect(wantedMinutes(long, DAY)).toBe(30);
-    expect(wantedMinutes(chore('neu', { min: 10, max: 30 }), DAY)).toBe(30);
-    // all three in 60 minutes: as they would like (30 + 20 + 10)
-    expect(planChores([just, half, long], DAY, 60).map((i) => `${i.choreId}:${i.minutes}`)).toEqual(['keller:30', 'bad:20', 'kueche:10']);
-    // with time to spare and nothing else due, the one just due may take longer
-    expect(planChores([just], DAY, 25).map((i) => `${i.choreId}:${i.minutes}`)).toEqual(['kueche:25']);
+    const mins = (budget: number, list = [just, half, long]) =>
+      Object.fromEntries(planChores(list, DAY, budget).map((i) => [i.choreId, i.minutes]));
+    // everything fits: everything in full, nothing to decide
+    expect(mins(90)).toEqual({ keller: 30, bad: 30, kueche: 30 });
+    // not enough: all three come in, the time leans towards what has lain longest
+    const m = mins(60);
+    expect(m.keller + m.bad + m.kueche).toBe(60);
+    expect(m.keller).toBeGreaterThan(m.bad);
+    expect(m.bad).toBeGreaterThan(m.kueche);
+    expect(m.kueche).toBeGreaterThanOrEqual(10);
+    // done short last time, it is due sooner and so gets more now
+    const fullBefore = { ...just, lastDone: '2026-10-06' };
+    expect(mins(40, [fullBefore, half]).kueche).toBeLessThanOrEqual(mins(40, [fullBefore, half]).bad);
+    const n = mins(40, [{ ...fullBefore, lastShare: 0.5 }, half]);
+    expect(n.kueche).toBeGreaterThan(n.bad);
   });
 });

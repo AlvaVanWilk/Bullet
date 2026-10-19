@@ -239,12 +239,12 @@ Bedienung und Einrichtung: `README.md`.
   (`ChoreDay`, gespeichert, damit nichts umspringt): die dringendsten fälligen (Dringlichkeit =
   Tage seit zuletzt / Turnus × Anteil; mit „!“ (`chore.important`, im Namens-Zettel) zählt eine
   fällige doppelt, ändert aber nicht, wann sie fällig ist: Wichtiges kommt eher dran, aber
-  nichts wartet ewig), die passen; passt die dringendste nicht, füllen weniger
-  dringende auf; variable bekommen ihre Länge nach Überfälligkeit (`wantedMinutes`: gerade
-  fällig → Minimum, um einen ganzen Turnus überfällig oder noch nie gemacht → volle Länge,
-  dazwischen in 5-Minuten-Schritten), bei knapper Zeit gekürzt bis zum Minimum; bleibt am Ende
-  Zeit übrig und passt nichts anderes mehr, werden die geplanten (dringendste zuerst) bis zur
-  vollen Länge verlängert. Kürzer gemacht → anteilig früher wieder fällig (`lastShare`). Sie antippen → Zettel: Zeit nur für heute,
+  nichts wartet ewig), die passen. Passt alles Fällige in voller Länge, kommt alles voll (nichts zu
+  entscheiden). Sonst (`planChores`): erst dringendste zuerst alle, die noch passen, mit ihrer
+  kürzesten Dauer (passt die dringendste nicht einmal so, füllen weniger dringende auf); dann
+  die übrige Zeit in 5-Minuten-Schritten an die, die sie am meisten braucht (Dringlichkeit ×
+  „!“ × wie weit noch von der vollen Länge): Was lange liegt, bekommt mehr Zeit. Kürzer gemacht → anteilig früher wieder fällig (`lastShare`), beim nächsten Mal
+  also dringender und länger. Sie antippen → Zettel: Zeit nur für heute,
   ⟳ austauschen und × weglassen (nicht hinter jeder Aufgabe im Tag), „außerdem gemacht“.
   Unerledigtes bleibt fällig und wird dringender. Auf der Seite spontan abgehakt → steht
   erledigt im Tag (`extra`), zählt nicht von selbst mit; auf „Haushaltsaufgaben“ gezogen (oder
