@@ -240,8 +240,11 @@ Bedienung und Einrichtung: `README.md`.
   Tage seit zuletzt / Turnus × Anteil; mit „!“ (`chore.important`, im Namens-Zettel) zählt eine
   fällige doppelt, ändert aber nicht, wann sie fällig ist: Wichtiges kommt eher dran, aber
   nichts wartet ewig), die passen; passt die dringendste nicht, füllen weniger
-  dringende auf; variable werden gekürzt (in 5-Minuten-Schritten bis zum Minimum) und sind
-  dann anteilig früher wieder fällig (`lastShare`). Sie antippen → Zettel: Zeit nur für heute,
+  dringende auf; variable bekommen ihre Länge nach Überfälligkeit (`wantedMinutes`: gerade
+  fällig → Minimum, um einen ganzen Turnus überfällig oder noch nie gemacht → volle Länge,
+  dazwischen in 5-Minuten-Schritten), bei knapper Zeit gekürzt bis zum Minimum; bleibt am Ende
+  Zeit übrig und passt nichts anderes mehr, werden die geplanten (dringendste zuerst) bis zur
+  vollen Länge verlängert. Kürzer gemacht → anteilig früher wieder fällig (`lastShare`). Sie antippen → Zettel: Zeit nur für heute,
   ⟳ austauschen und × weglassen (nicht hinter jeder Aufgabe im Tag), „außerdem gemacht“.
   Unerledigtes bleibt fällig und wird dringender. Auf der Seite spontan abgehakt → steht
   erledigt im Tag (`extra`), zählt nicht von selbst mit; auf „Haushaltsaufgaben“ gezogen (oder

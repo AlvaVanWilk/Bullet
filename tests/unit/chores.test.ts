@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayBudget, dueChores, dueDay, dueLabel, lengthLabel, planChores, rhythmLabel, urgency } from '../../src/lib/chores';
+import { dayBudget, dueChores, dueDay, wantedMinutes, dueLabel, lengthLabel, planChores, rhythmLabel, urgency } from '../../src/lib/chores';
 import { DEFAULT_SETTINGS, type Chore } from '../../src/lib/model';
 import { CHORE_TASK_ID, Store } from '../../src/store/store';
 import { dayItems } from '../../src/lib/logic';
@@ -126,5 +126,18 @@ describe('chores', () => {
     expect(dueChores([{ ...kitchen, lastDone: '2026-10-09' }, wash], DAY).map((c) => c.id)).toEqual(['kueche', 'waesche']);
     // not due yet stays not due, important or not
     expect(dueChores([{ ...wash, every: 1, unit: 'wochen' }], DAY)).toEqual([]);
+  });
+  it('with a range: shorter when only just due, longer the more overdue; spare time lengthens them again', () => {
+    const just = chore('kueche', { every: 1, unit: 'wochen', min: 10, max: 30, lastDone: '2026-10-07' }); // due today
+    const half = chore('bad', { every: 1, unit: 'wochen', min: 10, max: 30, lastDone: '2026-10-04' }); // three days over
+    const long = chore('keller', { every: 1, unit: 'wochen', min: 10, max: 30, lastDone: '2026-09-23' }); // three weeks
+    expect(wantedMinutes(just, DAY)).toBe(10);
+    expect(wantedMinutes(half, DAY)).toBe(20);
+    expect(wantedMinutes(long, DAY)).toBe(30);
+    expect(wantedMinutes(chore('neu', { min: 10, max: 30 }), DAY)).toBe(30);
+    // all three in 60 minutes: as they would like (30 + 20 + 10)
+    expect(planChores([just, half, long], DAY, 60).map((i) => `${i.choreId}:${i.minutes}`)).toEqual(['keller:30', 'bad:20', 'kueche:10']);
+    // with time to spare and nothing else due, the one just due may take longer
+    expect(planChores([just], DAY, 25).map((i) => `${i.choreId}:${i.minutes}`)).toEqual(['kueche:25']);
   });
 });
