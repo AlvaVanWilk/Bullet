@@ -94,9 +94,9 @@ Bedienung und Einrichtung: `README.md`.
   füllen die Seite zeilenweise (iPad zwei bis drei Spalten, Handy eine; die Boxen einer Reihe
   gleich hoch, keine Lücken). Die Boxen kommen
   zuerst; Aufgaben ohne Bereich stehen darunter als Liste „Ohne Bereich“ (nur wenn dort
-  etwas steht, beim Ziehen als Ablage; ohne Bereiche sieht die Seite aus wie vorher). Die
-  Boxen haben keine eigene Schreibzeile: Neues kommt aus der Zeile oben und wird
-  hineingezogen.
+  etwas steht, beim Ziehen als Ablage; ohne Bereiche sieht die Seite aus wie vorher). Jede
+  Box hat unten ihre eigene Schreibzeile „+ Aufgabe …“ (getönt): dort Geschriebenes kommt
+  gleich in diesen Bereich; die Zeile oben schreibt Aufgaben ohne Bereich.
   Reihenfolge wählbar (`area.order`): Namen gedrückt halten und die Box an einen
   anderen Platz ziehen (rastet ein), oder Namen antippen → Zettel mit „ganz nach vorn“,
   ‹ ›, umbenennen, löschen (Aufgaben bleiben, dann unter den Boxen). Aufgaben zwischen
@@ -151,6 +151,7 @@ Bedienung und Einrichtung: `README.md`.
   eine andere Mutter, wird sie nächster Schritt, sobald sie frei ist (wenn das Projekt
   dann keinen hat).
   Ohne nächsten Schritt: die Projektzeile mit blassem „→ ?“.
+- Die Lasche „Master“ bringt im Hauptfenster auch die Planungsseite (Woche) nach vorn.
 - Hauptseite: Kopf (Kalenderwoche, Boxen Termine/Deadlines/Besonderes) scrollt nicht.
   Tage von Montag bis heute; heute nie unterhalb der Fenstermitte. Vergangene Termine
   blass. Deadlines im Kopf in normaler Schrift; nur überfällige rot und leuchtend.

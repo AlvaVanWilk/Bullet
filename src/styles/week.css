@@ -621,9 +621,9 @@
 .cat-badge > .csym { grid-area: 1 / 1; position: relative; }
 .cat-badge .csym path { stroke-width: 1.2; }
 /* the one line for new tasks on a project page, on top, its "+" and words in the colour of the project */
-.proj-add .new-line-mark { color: color-mix(in srgb, var(--proj-ink) 75%, transparent); }
-.proj-add .new-line input::placeholder { color: color-mix(in srgb, var(--proj-ink) 70%, var(--paper)); opacity: 1; }
-.proj-add .new-line input { border-bottom-color: color-mix(in srgb, var(--proj-ink) 35%, transparent); }
+.proj-add .new-line-mark, .area-add .new-line-mark { color: color-mix(in srgb, var(--proj-ink) 75%, transparent); }
+.proj-add .new-line input::placeholder, .area-add .new-line input::placeholder { color: color-mix(in srgb, var(--proj-ink) 70%, var(--paper)); opacity: 1; }
+.proj-add .new-line input, .area-add .new-line input { border-bottom-color: color-mix(in srgb, var(--proj-ink) 35%, transparent); }
 /* with areas and no task outside them, "Ohne Bereich" waits until a task is carried */
 .proj-loose-head.empty, .proj-loose.empty { display: none; }
 body.is-dragging .proj-loose-head.empty { display: block; }
@@ -662,3 +662,5 @@ body.is-dragging .proj-loose.empty { display: block; border: 1.5px dashed color-
 .cat-add-project-btn { font-family: var(--clean); font-size: 13px; color: var(--ink-faint); padding: 6px 4px; }
 .cat-add-project-btn:active { color: var(--ink); }
 .cat-add-project .new-line { max-width: 420px; }
+.area-add .new-line { margin: 2px 0 0; }
+.area-add .new-line input { font-size: 18px; }

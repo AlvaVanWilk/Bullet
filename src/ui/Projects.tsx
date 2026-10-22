@@ -580,11 +580,14 @@ function AreaGrid(props: { list: ListProps; areas: Area[]; now: number; done: nu
               )}
             >
               <ProjectTasks {...props.list} rows={rows} />
-              {/* no line of its own: tasks come in from the line on top, carried here */}
-              {!rows.length && (
-                <p class="area-empty">
-                  {snap.tasks.some((t) => !t.deleted && t.projectId === p.id && t.areaId === a.id) ? 'nichts mehr offen' : 'noch leer · Aufgaben hierher ziehen'}
-                </p>
+              {!rows.length && snap.tasks.some((t) => !t.deleted && t.projectId === p.id && t.areaId === a.id) && (
+                <p class="area-empty">nichts mehr offen</p>
+              )}
+              {/* a line of its own: written here, a task goes straight into this area */}
+              {p.doneAt == null && (
+                <div class="area-add">
+                  <NewLine placeholder="Aufgabe …" onEnter={(text) => store.addTask(text, null, { projectId: p.id, areaId: a.id })} />
+                </div>
               )}
             </HandBox>
           </div>

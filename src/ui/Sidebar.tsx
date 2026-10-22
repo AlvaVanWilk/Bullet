@@ -130,7 +130,8 @@ export function Sidebar() {
           <button
             type="button" role="tab" aria-selected={front === 'master'}
             class={`tab tab-master ${front === 'master' ? 'on' : ''}`}
-            onClick={() => switchTo('master')}
+            // the master list goes with the planner: its tab brings the page of the week too
+            onClick={() => { switchTo('master'); if (ui.get().view.kind !== 'week') ui.set({ view: { kind: 'week' } }); }}
             onContextMenu={(e) => { e.preventDefault(); ui.set({ view: { kind: 'archive' } }); }}
             {...longPress(() => ui.set({ view: { kind: 'archive' } }))}
           >

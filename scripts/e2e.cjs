@@ -398,10 +398,20 @@ async function device(browser, name) {
     await putAwayAwards(ipad);
     const goneLater = await ipad.locator('.proj-tasks .row', { hasText: 'Bretter prüfen' }).count();
     const holzSays = await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.area-empty').textContent().catch(() => null);
-    await ipad.locator('.projview .close-x').click();
-    await ipad.waitForTimeout(400);
     check('a task done on its project page is struck a moment, then leaves the page',
       leavingNow === 1 && goneLater === 0 && holzSays === 'nichts mehr offen', { leavingNow, goneLater, holzSays });
+    // written on the line of a box, a task goes straight into that area
+    await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.area-add input').fill('Schleifpapier kaufen');
+    await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.area-add input').press('Enter');
+    await ipad.waitForTimeout(400);
+    const writtenInHolz = await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.tt-text', { hasText: 'Schleifpapier kaufen' }).count();
+    // the tab of the master list brings the planner to the page too (instead of closing the project)
+    await ipad.locator('.tab-master').click();
+    await ipad.waitForTimeout(900);
+    const plannerBack = await ipad.locator('.week-head').count();
+    check('a box has its own line (written there, a task goes into that area); the tab "Master" brings the planner back',
+      writtenInHolz === 1 && plannerBack === 1, { writtenInHolz, plannerBack });
+    await ipad.waitForTimeout(400);
 
     // a category: a task dropped on another becomes a part of it (in the master list under it); projects belong to it too
     await ipad.locator('.tab-categories').click();
