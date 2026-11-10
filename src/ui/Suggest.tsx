@@ -20,8 +20,8 @@ export function SuggestList(props: {
   if (!props.found.length) return null;
   return (
     <ul class={`suggest-list ${props.class ?? ''}`} role="listbox">
-      {/* pointerdown keeps the keyboard open for the next line */}
-      <li class={`suggest-new ${props.pick === -1 ? 'on' : ''}`} onPointerDown={(e) => { e.preventDefault(); props.onNew(); }}>
+      {/* a tap that keeps the keyboard open for the next line (a finger set down to scroll does nothing) */}
+      <li class={`suggest-new ${props.pick === -1 ? 'on' : ''}`} {...tapKeepingKeyboard(props.onNew)}>
         <span class="suggest-plus">+</span> „{props.text.trim()}“ neu anlegen <kbd>Enter</kbd>
       </li>
       <li class="suggest-head">{props.head}</li>
@@ -33,7 +33,7 @@ export function SuggestList(props: {
             role="option"
             aria-selected={props.pick === i}
             class={`suggest-item ${props.pick === i ? 'on' : ''}`}
-            onPointerDown={(e) => { e.preventDefault(); props.onTake(t); }}
+            {...tapKeepingKeyboard(() => props.onTake(t))}
           >
             <span style={cat ? { color: categoryColor(cat.color).ink } : undefined}>
               {t.important && <span class="bang">!</span>}{t.text}
@@ -44,6 +44,27 @@ export function SuggestList(props: {
       })}
     </ul>
   );
+}
+
+let downAt: { x: number; y: number } | null = null;
+
+/**
+ * Acts on a tap: pressed and let go at nearly the same place. Pressing does not
+ * take the focus from the line, so the keyboard stays open.
+ */
+function tapKeepingKeyboard(act: () => void) {
+  return {
+    onPointerDown: (e: PointerEvent) => {
+      e.preventDefault();
+      downAt = { x: e.clientX, y: e.clientY };
+    },
+    onPointerUp: (e: PointerEvent) => {
+      const start = downAt;
+      downAt = null;
+      if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) < 10) act();
+    },
+    onPointerCancel: () => { downAt = null; },
+  };
 }
 
 /** Where an offered task stands now: for an appointment, in a project, in a category, or just in the list. */

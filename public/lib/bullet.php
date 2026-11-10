@@ -457,7 +457,13 @@ function validRecord($r): bool
     if (!is_int($r['updatedAt'] ?? null) && !is_float($r['updatedAt'] ?? null)) {
         return false;
     }
-    return strlen((string) json_encode($r)) <= MAX_RECORD_BYTES;
+    return true;
+}
+
+/** Larger than a record may be (counted as stored: umlauts as themselves, not escaped). */
+function recordTooBig(array $r): bool
+{
+    return strlen((string) json_encode($r, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) > MAX_RECORD_BYTES;
 }
 
 function isNewer(array $incoming, ?array $current): bool

@@ -48,6 +48,8 @@ interface Gesture {
   ghost: HTMLElement | null;
   over: HTMLElement | null;
   scrollFrame: number | null;
+  /** moved since it was lifted: only then does letting go drop it (held in place and let go, it was a slow tap) */
+  moved: boolean;
 }
 
 let g: Gesture | null = null;
@@ -77,7 +79,7 @@ export function startDrag(e: PointerEvent, row: HTMLElement, source: DragSource)
   if ((e.target as HTMLElement).closest('button, input, textarea, select')) return;
   g = {
     pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY,
-    row, source, timer: null, active: false, ghost: null, over: null, scrollFrame: null,
+    row, source, timer: null, active: false, ghost: null, over: null, scrollFrame: null, moved: false,
   };
   g.timer = setTimeout(activate, e.pointerType === 'mouse' ? 200 : HOLD_MS);
   addEventListener('pointermove', onMove, { passive: true });
@@ -114,6 +116,7 @@ function onMove(e: PointerEvent) {
     if (Math.hypot(g.x - g.startX, g.y - g.startY) > SLOP_PX) cleanup();
     return;
   }
+  if (!g.moved && Math.hypot(g.x - g.startX, g.y - g.startY) > SLOP_PX) g.moved = true;
   place();
   hitTest();
   autoScroll();
@@ -183,6 +186,13 @@ function autoScroll() {
 function onUp(e: PointerEvent) {
   if (!g || e.pointerId !== g.pointerId) return;
   if (!g.active) {
+    cleanup();
+    return;
+  }
+  if (!g.moved) {
+    // held still and let go: a slow tap, not a drop (its click may still open the note)
+    g.ghost?.remove();
+    g.ghost = null;
     cleanup();
     return;
   }

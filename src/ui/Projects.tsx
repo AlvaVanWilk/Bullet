@@ -192,7 +192,7 @@ export function ProjectCard(props: { id: string; close: () => void }) {
         })}
         {!open.length && <li class="pslip-empty">{p.doneAt != null ? 'abgeschlossen' : 'Nichts mehr offen.'}</li>}
       </ul>
-      <NewLine placeholder="Neue Aufgabe im Projekt …" onEnter={(text) => store.addTask(text, null, { projectId: p.id })} />
+      {p.doneAt == null && <NewLine placeholder="Neue Aufgabe im Projekt …" onEnter={(text) => store.addTask(text, null, { projectId: p.id })} />}
       <p class="pslip-hint">Zum Planen: Aufgabe gedrückt halten und in heute ziehen.</p>
     </div>
   );
@@ -373,9 +373,7 @@ export function ProjectView(props: { id: string }) {
           </>
         )}
         <div class="proj-foot">
-          <button type="button" class="note-btn" onClick={() => store.finishProject(p.id, p.doneAt == null)}>
-            {p.doneAt == null ? 'Projekt abschließen' : 'wieder öffnen'}
-          </button>
+          <FinishButton project={p} />
         </div>
         <ProjectDecorEnd seed={p.id} ink={projectInk(p.color)} done={shownDone} />
       </div>
@@ -659,7 +657,7 @@ export function AreaSelect(props: { task: Task }) {
     <label class="note-select">
       <span class="note-label">Bereich</span>
       <span class="select-mark" aria-hidden="true" />
-      <select value={current} onChange={(e) => store.updateTask(t.id, { areaId: (e.target as HTMLSelectElement).value || null })}>
+      <select value={current} onChange={(e) => store.updateTask(t.id, { areaId: (e.target as HTMLSelectElement).value || null, parentId: null })}>
         <option value="">ohne</option>
         {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
       </select>
@@ -686,6 +684,7 @@ function ProjectNotes(props: { project: Project }) {
   useEffect(() => () => save(), []);
   return (
     <textarea
+      maxLength={6000}
       class="proj-notes"
       value={text}
       rows={Math.max(2, text.split('\n').length + 1)}
@@ -831,5 +830,31 @@ export function ProjectSelect(props: { task: Task }) {
         {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
     </label>
+  );
+}
+
+/**
+ * "Projekt abschließen": with tasks still open it asks once (they would leave the
+ * master list with the project); finished, "wieder öffnen".
+ */
+function FinishButton(props: { project: Project }) {
+  const snap = useStore();
+  const p = props.project;
+  const [sure, setSure] = useState(false);
+  const open = snap.tasks.filter((t) => !t.deleted && t.projectId === p.id && t.doneAt == null).length;
+  if (p.doneAt != null) {
+    return <button type="button" class="note-btn" onClick={() => store.finishProject(p.id, false)}>wieder öffnen</button>;
+  }
+  return (
+    <button
+      type="button"
+      class={`note-btn ${sure ? 'sure' : ''}`}
+      onClick={() => {
+        if (open && !sure) { setSure(true); return; }
+        store.finishProject(p.id, true);
+      }}
+    >
+      {sure ? `noch ${open} offen – trotzdem abschließen?` : 'Projekt abschließen'}
+    </button>
   );
 }

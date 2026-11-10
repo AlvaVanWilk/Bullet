@@ -317,6 +317,21 @@ test('broken records are refused', async () => {
   assert.equal(r2.status, 400);
 });
 
+test('a record that is too big is left out and named; the others still go through', async () => {
+  const big = { id: 'zu-gross', type: 'task', updatedAt: 5, note: 'ä'.repeat(15000) };
+  const fine = { id: 'passt', type: 'task', updatedAt: 5, text: 'Brot' };
+  // umlauts count as themselves: 15000 of them are 30000 bytes, too big
+  const r = await ipad.call({ action: 'sync', since: 0, changes: [big, fine] });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.rejected, ['zu-gross']);
+  const back = await phone.call({ action: 'sync', since: 0, changes: [] });
+  const ids = back.body.changes.map((c) => c.id);
+  assert.ok(ids.includes('passt') && !ids.includes('zu-gross'));
+  // 8000 umlauts would have counted as 48000 bytes escaped; stored as they are they fit
+  const umlauts = { id: 'umlaute', type: 'task', updatedAt: 5, note: 'ä'.repeat(8000) };
+  assert.deepEqual((await ipad.call({ action: 'sync', since: 0, changes: [umlauts] })).body.rejected, []);
+});
+
 test('the data folder is closed to the web', async () => {
   assert.ok(existsSync(join(app, 'bullet-daten/.htaccess')));
 });

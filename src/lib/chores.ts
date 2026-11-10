@@ -32,7 +32,8 @@ const daysBetween = (a: DayKey, b: DayKey) => Math.round((parseDay(b).getTime() 
  */
 export function urgency(c: Chore, day: DayKey): number {
   if (!c.lastDone) return 100;
-  const span = Math.max(1, intervalDays(c) * Math.min(1, Math.max(0.1, c.lastShare ?? 1)));
+  // the same rounding as dueDay: due on the day it says
+  const span = Math.max(1, Math.round(intervalDays(c) * Math.min(1, Math.max(0.1, c.lastShare ?? 1))));
   return daysBetween(c.lastDone, day) / span;
 }
 
@@ -149,12 +150,16 @@ export const choreTickId = (day: DayKey, choreId: string) => `choretick-${day}-$
  * besides (done outside the plan). Undefined while the smart task has not
  * planned the day and nothing was ticked.
  */
-export function choreDayView(s: { choreDays: ChoreDay[]; choreTicks: ChoreTick[] }, day: DayKey): ChoreDay | undefined {
+export function choreDayView(s: { choreDays: ChoreDay[]; choreTicks: ChoreTick[]; chores?: Chore[] }, day: DayKey): ChoreDay | undefined {
+  // a chore deleted meanwhile (here or on another device) leaves the plan, unless it was done
+  const gone = new Set((s.chores ?? []).filter((c) => c.deleted).map((c) => c.id));
   const cd = s.choreDays.find((c) => !c.deleted && c.day === day);
   const ticks = new Map(s.choreTicks.filter((t) => !t.deleted && t.day === day).map((t) => [t.choreId, t]));
   if (!cd && !ticks.size) return undefined;
   const isDone = (i: ChoreItem) => { const t = ticks.get(i.choreId); return t ? t.done : !!i.done; };
-  const items = (cd?.items ?? []).map((i) => ({ ...i, done: isDone(i), before: ticks.get(i.choreId)?.before ?? i.before ?? null }));
+  const items = (cd?.items ?? [])
+    .map((i) => ({ ...i, done: isDone(i), before: ticks.get(i.choreId)?.before ?? i.before ?? null }))
+    .filter((i) => i.done || !gone.has(i.choreId));
   const planned = new Set(items.map((i) => i.choreId));
   const extra: ChoreItem[] = [];
   for (const i of cd?.extra ?? []) if (!planned.has(i.choreId) && !ticks.has(i.choreId) && i.done) extra.push(i);
@@ -169,9 +174,14 @@ export const isPlanned = (cd: ChoreDay | undefined | null) => !!cd && cd.planned
 
 /**
  * Whether the household of a day is done: everything in its plan ticked, or
- * nothing was due when it was planned (that is as good as done).
+ * nothing was due when it was planned (that is as good as done). Due but none
+ * fitting the time (a free day) is not done: it is only nothing for today.
  */
 export function planDone(cd: ChoreDay | undefined | null): boolean {
-  return isPlanned(cd) && cd!.items.every((i) => i.done);
+  if (!isPlanned(cd)) return false;
+  return cd!.items.length ? cd!.items.every((i) => i.done) : !(cd!.due ?? 0);
 }
+
+/** Planned, nothing in the plan, and nothing was due: "alles sauber!". */
+export const allClean = (cd: ChoreDay | undefined | null) => isPlanned(cd) && !cd!.items.length && !(cd!.due ?? 0);
 

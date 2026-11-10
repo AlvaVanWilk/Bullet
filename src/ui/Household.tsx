@@ -6,7 +6,7 @@
 
 import { useState } from 'preact/hooks';
 import {
-  choreDayView, dayBudget, dueLabel, isPlanned, isDue, lengthLabel, planMinutes, rhythmLabel, sortChores, urgency,
+  allClean, choreDayView, dayBudget, dueLabel, isPlanned, isDue, lengthLabel, planMinutes, rhythmLabel, sortChores, urgency,
 } from '../lib/chores';
 import { addDays, compareDays, weekdayIndex, weekdayName, type DayKey } from '../lib/dates';
 import type { Chore, ChoreItem, ChoreUnit } from '../lib/model';
@@ -173,7 +173,9 @@ function TodayPlan(props: { day: DayKey }) {
   if (!isPlanned(cd)) {
     return <p class="hh-hint">Zieh „Haushaltsaufgaben“ aus der Masterliste in heute, dann steht hier, was dran ist ({budget} Minuten).</p>;
   }
-  if (!cd!.items.length) return <p class="hh-clean"><CleanDoodle /> alles sauber!</p>;
+  if (!cd!.items.length) {
+    return allClean(cd) ? <p class="hh-clean"><CleanDoodle /> alles sauber!</p> : <p class="hh-hint">Heute passt nichts in die Zeit ({budget} Minuten).</p>;
+  }
   const { total, done } = planMinutes(cd!.items);
   return (
     <>
@@ -385,7 +387,7 @@ export function ChoreMinutesNote(props: { weekday: number; close: () => void }) 
  * The note of the smart task for a day: the time for this day only, and what
  * was chosen; one can be swapped (another that is due takes its place) or taken out.
  */
-export function ChoresTodayNote(props: { day: DayKey; close: () => void }) {
+export function ChoresTodayNote(props: { day: DayKey; entryId?: string; close: () => void }) {
   const snap = useStore();
   const cd = store.choreDay(props.day);
   const usual = dayBudget({ ...snap.settings }, props.day);
@@ -421,7 +423,7 @@ export function ChoresTodayNote(props: { day: DayKey; close: () => void }) {
           })}
         </ul>
       ) : (
-        <p class="note-hint">{isPlanned(cd) ? 'Nichts fällig – alles sauber!' : 'Zieh „Haushaltsaufgaben“ in den Tag, dann wird geplant.'}</p>
+        <p class="note-hint">{allClean(cd) ? 'Nichts fällig – alles sauber!' : isPlanned(cd) ? `Heute passt nichts in die Zeit (${budget} Minuten). Mehr Zeit oben, dann wird neu geplant.` : 'Zieh „Haushaltsaufgaben“ in den Tag, dann wird geplant.'}</p>
       )}
       {isPlanned(cd) && <p class="note-small">{total} von {budget} Minuten verplant</p>}
       {cd && cd.extra.length > 0 && (
@@ -438,6 +440,10 @@ export function ChoresTodayNote(props: { day: DayKey; close: () => void }) {
       <div class="note-actions">
         <button type="button" class="note-btn save" onClick={props.close}>fertig</button>
         <button type="button" class="note-btn" onClick={() => ui.set({ view: { kind: 'household' }, postIt: null })}>Haushalt öffnen</button>
+        {/* written into a day by mistake: out again (what was ticked stays done) */}
+        {props.entryId && (
+          <button type="button" class="note-btn" onClick={() => { store.removeEntry(props.entryId!); props.close(); }}>aus dem Tag nehmen</button>
+        )}
       </div>
     </div>
   );
@@ -480,7 +486,7 @@ function ChoreRow(props: { item: ChoreItem; day: DayKey; past: boolean; sub?: bo
         state={state}
         important={!!c.important}
         seed={`chore-${props.day}-${c.id}`}
-        label={props.item.done ? 'doch nicht gemacht' : 'erledigt'}
+        label={`${c.name}: ${props.item.done ? 'doch nicht gemacht' : 'erledigt'}`}
         onClick={(e) => { e.stopPropagation(); store.tickChore(props.day, c.id, !props.item.done); }}
       />
       <span class="dtask-text" onClick={(e) => { if (!clickSuppressed()) ui.set({ postIt: { kind: 'chore', id: c.id, rect: rectOf(e.currentTarget) } }); }}>

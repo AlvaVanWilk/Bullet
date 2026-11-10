@@ -22,7 +22,7 @@ import { clickSuppressed, startDrag } from './drag';
 import { FollowToggle } from './Follow';
 import { Checkbox, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, TaskText } from './ink';
 import { ProjectIcon } from './ProjectIcon';
-import { isPlanned } from '../lib/chores';
+import { allClean } from '../lib/chores';
 import { ChoreDayRows, ChoreExtraRows, CleanDoodle, SmartMark } from './Household';
 import { StatusNote } from './StatusNote';
 import { daySet, setDayFold, SubtaskDayRows, useDayFolds } from './Subtasks';
@@ -47,14 +47,30 @@ export function WeekView() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const index = entriesByTask(snap.entries);
 
-  // Today is always well in view: its heading near the top, never below the middle.
+  // Today is always well in view: its heading near the top, never below the middle. Until the
+  // page is touched it stays so, also when appointments or entries arrive later and push it down.
+  const touched = useRef(false);
+  useLayoutEffect(() => { touched.current = false; }, [today, monday]);
   useLayoutEffect(() => {
     const box = scrollRef.current;
-    if (!box) return;
+    if (!box || touched.current) return;
     const el = box.querySelector<HTMLElement>('.day.today');
     // a little of yesterday stays visible above
     box.scrollTop = el && current ? Math.max(0, el.offsetTop - Math.min(box.clientHeight * 0.2, 120)) : 0;
-  }, [today, monday]);
+  });
+  useEffect(() => {
+    const box = scrollRef.current;
+    if (!box) return;
+    const touch = () => { touched.current = true; };
+    box.addEventListener('pointerdown', touch, { passive: true });
+    box.addEventListener('wheel', touch, { passive: true });
+    box.addEventListener('touchstart', touch, { passive: true });
+    return () => {
+      box.removeEventListener('pointerdown', touch);
+      box.removeEventListener('wheel', touch);
+      box.removeEventListener('touchstart', touch);
+    };
+  }, [!ahead]);
 
   return (
     // held on free paper: decoration (Deco.tsx)
@@ -472,7 +488,7 @@ function DayTaskRow(props: {
   // nothing was due when the smart task planned the day: a little sparkle instead
   const clean = smart && (() => {
     const cd = store.choreDay(props.day);
-    return isPlanned(cd) && cd!.items.length === 0;
+    return allClean(cd);
   })();
 
   return (
@@ -498,7 +514,7 @@ function DayTaskRow(props: {
           state={item.state}
           important={task.important}
           seed={item.key}
-          label={item.state === 'done' ? 'wieder offen' : 'erledigt'}
+          label={`${task.text}: ${item.state === 'done' ? 'wieder offen' : 'erledigt'}`}
           onClick={(e) => {
             e.stopPropagation();
             store.toggleDone(task.id, props.day);

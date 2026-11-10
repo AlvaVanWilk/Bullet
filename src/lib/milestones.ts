@@ -119,7 +119,9 @@ export function reachedOnNewDay(s: Snapshot, today: DayKey, now: number): Reache
   const yesterday = addDays(today, -1);
   const live = s.tasks.filter((t) => !t.deleted);
   const hadTasks = live.some((t) => t.createdAt < now - DAY_MS);
-  if (!hadTasks || live.some((t) => t.doneDay === yesterday)) return [];
+  // household work counts too: a day of only chores was no idle day
+  const choresDone = s.choreTicks.some((t) => !t.deleted && t.done && t.day === yesterday);
+  if (!hadTasks || choresDone || live.some((t) => t.doneDay === yesterday)) return [];
   return [{ key: 'faul', day: yesterday }];
 }
 

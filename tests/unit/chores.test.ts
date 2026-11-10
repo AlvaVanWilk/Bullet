@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayBudget, dueChores, dueDay, dueLabel, lengthLabel, planChores, rhythmLabel, urgency } from '../../src/lib/chores';
+import { allClean, dayBudget, dueChores, dueDay, planDone, dueLabel, lengthLabel, planChores, rhythmLabel, urgency } from '../../src/lib/chores';
 import { DEFAULT_SETTINGS, type Chore } from '../../src/lib/model';
 import { CHORE_TASK_ID, Store } from '../../src/store/store';
 import { dayItems } from '../../src/lib/logic';
@@ -144,7 +144,32 @@ describe('chores', () => {
     // done short last time, it is due sooner and so gets more now
     const fullBefore = { ...just, lastDone: '2026-10-06' };
     expect(mins(40, [fullBefore, half]).kueche).toBeLessThanOrEqual(mins(40, [fullBefore, half]).bad);
-    const n = mins(40, [{ ...fullBefore, lastShare: 0.5 }, half]);
+    const n = mins(35, [{ ...fullBefore, lastShare: 0.5 }, half]);
     expect(n.kueche).toBeGreaterThan(n.bad);
+  });
+  it('a free day is not "alles sauber" while chores are due; a deleted chore leaves the plan; "zuletzt gemacht" unticks today', () => {
+    let t = 1000;
+    const s = new Store(() => (t += 10));
+    s.persist = false;
+    s.today = () => DAY;
+    const bath = s.addChore('Bad')!;
+    const floor = s.addChore('Boden')!;
+    // no time today: nothing planned, but not clean and not done either
+    s.setChoreBudget(DAY, 0);
+    s.addEntry(CHORE_TASK_ID, DAY);
+    expect(s.choreDay(DAY)!.items).toEqual([]);
+    expect(allClean(s.choreDay(DAY))).toBe(false);
+    expect(planDone(s.choreDay(DAY))).toBe(false);
+    // time again: both planned; one deleted, it leaves the plan, and ticking the other makes the day done
+    s.setChoreBudget(DAY, 60);
+    expect(s.choreDay(DAY)!.items).toHaveLength(2);
+    s.deleteChore(bath.id);
+    expect(s.choreDay(DAY)!.items.map((i) => i.choreId)).toEqual([floor.id]);
+    s.tickChore(DAY, floor.id, true);
+    expect(planDone(s.choreDay(DAY))).toBe(true);
+    // done yesterday after all: today's tick goes
+    s.setChoreLastDone(floor.id, '2026-10-13');
+    expect(s.choreDay(DAY)!.items[0].done).toBe(false);
+    expect(s.chore(floor.id)!.lastDone).toBe('2026-10-13');
   });
 });

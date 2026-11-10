@@ -154,7 +154,8 @@ export function isSubtask(s: Snapshot): (t: Task) => boolean {
  * none), one level only (the other is no part itself, and this one has no parts).
  */
 export function canBeSubtask(task: Task, parent: Task, tasks: Task[]): boolean {
-  if (parent.id === task.id || parent.parentId || task.parentId === parent.id) return false;
+  const live = (id: string | null | undefined) => !!id && tasks.some((t) => t.id === id && !t.deleted);
+  if (parent.id === task.id || live(parent.parentId) || task.parentId === parent.id) return false;
   if ((parent.projectId ?? null) !== (task.projectId ?? null)) return false;
   return !tasks.some((t) => !t.deleted && t.parentId === task.id);
 }
@@ -231,6 +232,10 @@ function listRows(s: Snapshot, now: number, include: (t: Task) => boolean): List
       else below.set(anchor, [t]);
     }
   }
+  // what it came after is not in this list (a part of a task, another project's task): it takes
+  // its own place, by when it was written, instead of trailing at the very end
+  const freeIds = new Set(free.map((t) => t.id));
+  for (const [id, anchor] of anchors) if (anchor && !freeIds.has(anchor)) anchors.set(id, null);
   const rows: ListRow[] = [];
   const seen = new Set<string>();
   const visit = (t: Task) => {
@@ -409,8 +414,12 @@ export function dayItems(s: Snapshot, day: DayKey, today: DayKey, index = entrie
     .map((task) => ({ key: `d-${task.id}`, task, kind: 'deadline', state: deadlineState(task, day, today) }));
   const shownAsDeadline = new Set(deadlines.map((d) => d.task.id));
 
+  // one line per task (two entries of the same task in a day: from two devices, before entries had one id)
+  const seen = new Set<string>();
   const entries: DayItem[] = s.entries
     .filter((e) => !e.deleted && e.day === day)
+    .sort((a, b) => Number(!!a.retro) - Number(!!b.retro) || byCreated(a, b))
+    .filter((e) => !seen.has(e.taskId) && !!seen.add(e.taskId))
     .sort(byCreated)
     .flatMap((entry) => {
       const task = tasksById.get(entry.taskId);

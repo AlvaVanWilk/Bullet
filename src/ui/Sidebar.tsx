@@ -18,7 +18,7 @@ import { CategorySymbol } from './ProjectIcon';
 import { playPaperSlide, playStrike } from './sound';
 import { SubtaskListRows } from './Subtasks';
 import { HouseIcon, CleanDoodle } from './Household';
-import { dueChores, isPlanned, planDone } from '../lib/chores';
+import { allClean, dueChores, isPlanned, planDone } from '../lib/chores';
 import { device, ui, useDevice, useNow, useStore, useToday, useUi } from './state';
 
 const SWAP_MS = 640;
@@ -92,7 +92,10 @@ export function Sidebar() {
     device.set(dev.sidebarOpen ? { sidebarOpen: false } : { sidebarOpen: true, sidebarTab: 'master' });
   }
 
-  const openCount = allRows(snap, Date.now()).filter((r) => r.task.doneAt == null).length;
+  // what is left to do: not the household (it is never done itself), not what lies in a finished project
+  const finished = new Set(snap.projects.filter((p) => !p.deleted && p.doneAt != null).map((p) => p.id));
+  const openCount = allRows(snap, Date.now())
+    .filter((r) => r.task.doneAt == null && !r.task.smart && !(r.task.projectId && finished.has(r.task.projectId))).length;
 
   return (
     <>
@@ -131,7 +134,11 @@ export function Sidebar() {
             type="button" role="tab" aria-selected={front === 'master'}
             class={`tab tab-master ${front === 'master' ? 'on' : ''}`}
             // the master list goes with the planner: its tab brings the page of the week too
-            onClick={() => { switchTo('master'); if (ui.get().view.kind !== 'week') ui.set({ view: { kind: 'week' } }); }}
+            onClick={() => {
+              if (justLongPressed()) return;
+              switchTo('master');
+              if (ui.get().view.kind !== 'week') ui.set({ view: { kind: 'week' } });
+            }}
             onContextMenu={(e) => { e.preventDefault(); ui.set({ view: { kind: 'archive' } }); }}
             {...longPress(() => ui.set({ view: { kind: 'archive' } }))}
           >
@@ -163,12 +170,16 @@ export function Sidebar() {
   );
 }
 
+/** When a long press last fired: the click that follows letting go must not do the tap's job too. */
+let longPressedAt = 0;
+const justLongPressed = () => Date.now() - longPressedAt < 1500;
+
 /** Hidden way into the archive: hold the "Master" tab. */
 function longPress(fn: () => void) {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const stop = () => { if (timer) clearTimeout(timer); timer = null; };
   return {
-    onPointerDown: () => { stop(); timer = setTimeout(fn, 900); },
+    onPointerDown: () => { stop(); timer = setTimeout(() => { longPressedAt = Date.now(); fn(); }, 900); },
     onPointerUp: stop,
     onPointerLeave: stop,
     onPointerCancel: stop,
@@ -251,15 +262,18 @@ function MasterList(props: { active: boolean }) {
     return true;
   });
   const struckRows = rows.filter((r) => r.task.doneAt != null && (r.task.doneAt <= seen || striking.has(r.task.id)));
+  // a finished project's line is struck too: the broom takes it along
+  const struckProjects = entries.flatMap((e) => (e.kind === 'project' && e.project.doneAt != null ? [e.project.doneAt] : []));
+  const struckTimes = [...struckRows.map((r) => r.task.doneAt!), ...struckProjects];
   const shown = new Map(rows.map((r) => [r.task.id, r]));
 
   // "Aufräumen": the struck tasks are swept off the list (the archive keeps them).
   const sweep = () => {
-    if (!struckRows.length || sweeping) return;
+    if (!struckTimes.length || sweeping) return;
     setSweeping(true);
     playPaperSlide(0.3);
     setTimeout(() => {
-      store.updateSettings({ listClearedAt: Math.max(...struckRows.map((r) => r.task.doneAt!)) });
+      store.updateSettings({ listClearedAt: Math.max(...struckTimes) });
       setSweeping(false);
     }, 520);
   };
@@ -338,7 +352,7 @@ function MasterList(props: { active: boolean }) {
         <button
           type="button"
           class="broom"
-          disabled={!struckRows.length}
+          disabled={!struckTimes.length}
           onClick={sweep}
           aria-label="Aufräumen: Durchgestrichenes wegräumen"
           title="Aufräumen: Durchgestrichenes wegräumen (bleibt im Archiv)"
@@ -467,6 +481,6 @@ function CategoryList() {
 /** Nothing of the household to do today: planned with nothing in it, or nothing due at all. */
 function choresClean(today: string): boolean {
   const cd = store.choreDay(today);
-  if (isPlanned(cd)) return cd!.items.length === 0;
+  if (isPlanned(cd)) return allClean(cd);
   return dueChores(store.snapshot().chores, today).length === 0;
 }

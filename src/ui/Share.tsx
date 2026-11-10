@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { dayKey, MONTHS, parseDay } from '../lib/dates';
 import { handFont } from '../lib/fonts';
-import { projectAreas, subtaskRows } from '../lib/logic';
+import { isSubtask, projectAreas, type Snapshot } from '../lib/logic';
 import { makePdf } from '../lib/pdf';
 import type { Task } from '../lib/model';
 import { photoBlob } from '../photos';
@@ -95,9 +95,15 @@ function longDay(day: string): string {
 
 // --- what goes along -----------------------------------------------------------------------
 
+/** All parts of a task for sharing, in the order written: also those waiting for another, and those done long ago. */
+function allSubtasks(s: Snapshot, parentId: string): Task[] {
+  const sub = isSubtask(s);
+  return s.tasks.filter((t) => !t.deleted && t.parentId === parentId && sub(t)).sort((a, b) => a.createdAt - b.createdAt);
+}
+
 function tasksOf(task: Task, opts: Options): { task: Task; sub: boolean }[] {
   const subs = opts.subtasks
-    ? subtaskRows(store.snapshot(), task.id, Date.now()).map((r) => r.task).filter((t) => opts.done || t.doneAt == null)
+    ? allSubtasks(store.snapshot(), task.id).filter((t) => opts.done || t.doneAt == null)
     : [];
   return [{ task, sub: false }, ...subs.map((t) => ({ task: t, sub: true }))];
 }
@@ -345,7 +351,7 @@ export function ShareSheet() {
 function ShareWindow(props: { taskId: string }) {
   const snap = useStore();
   const task = store.task(props.taskId);
-  const subs = task ? subtaskRows(snap, task.id, Date.now()).map((r) => r.task) : [];
+  const subs = task ? allSubtasks(snap, task.id) : [];
   const openSubs = subs.filter((t) => t.doneAt == null);
   const [opts, setOpts] = useState<Options>({ subtasks: subs.length > 0, done: false, notes: true, photos: true, small: false });
   const [made, setMade] = useState<Made | null>(null);

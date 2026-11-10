@@ -146,13 +146,22 @@ try {
             if (!is_int($since) || $since < 0 || !is_array($changes) || count($changes) > MAX_CHANGES) {
                 fail(400, 'bad_request');
             }
+            // a broken record refuses the whole request; one that is only too big is left out
+            // (and named), so that it does not hold up everything else for good
+            $taken = [];
+            $rejected = [];
             foreach ($changes as $record) {
                 if (!validRecord($record)) {
                     fail(400, 'bad_record');
                 }
+                if (recordTooBig($record)) {
+                    $rejected[] = $record['id'];
+                } else {
+                    $taken[] = $record;
+                }
             }
-            $result = exchangeRecords($uid, $since, array_values($changes));
-            reply(200, ['ok' => true] + $result);
+            $result = exchangeRecords($uid, $since, $taken);
+            reply(200, ['ok' => true, 'rejected' => $rejected] + $result);
 
         case 'logout':
             endSession();

@@ -126,8 +126,13 @@ export async function connect(): Promise<void> {
     return;
   }
   if (status.user) {
-    if (known && known.email !== status.user.email) await store.clear();
+    // The data on this device belongs to whoever signed in last (kept even when that session ran out):
+    // someone else signing in starts from an empty page and never sees or takes over that data.
+    const owner = readLocal<string | null>('owner', known?.email ?? null);
+    if (owner ? owner !== status.user.email : !store.isEmpty()) await store.clear();
+    writeLocal('owner', status.user.email);
     writeLocal('user', status.user);
+    void navigator.storage?.persist?.().catch(() => {});
     setState({ mode: 'signedIn', user: status.user, offline: false });
     startSyncLoop();
     void syncNow();
@@ -141,13 +146,17 @@ export function signIn(hint?: string) {
 }
 
 export async function signOut(): Promise<void> {
+  await syncNow();
+  // what could not be sent yet would be gone with the local data
+  const unsent = store.pendingChanges().length;
+  if (unsent && !confirm(`${unsent === 1 ? 'Eine Änderung ist' : `${unsent} Änderungen sind`} noch nicht abgeglichen (kein Netz?). Trotzdem abmelden? Sie gehen dann verloren.`)) return;
   try {
-    await syncNow();
     await api('logout');
   } catch {
     /* sign out locally anyway */
   }
   writeLocal('user', null);
+  writeLocal('owner', null);
   await store.clear();
   setState({ mode: 'signedOut', configured: true, note: null });
 }
@@ -186,21 +195,35 @@ const POLL_MS = 20000;
 const TOUCH_SYNC_MS = 5000;
 let lastSync = 0;
 
-export async function syncNow(): Promise<void> {
-  if (state.mode !== 'signedIn') return;
-  if (syncing) {
+/** Records sent at most in one go (the server takes up to 2000, and a few MB). */
+const SYNC_BATCH = 400;
+let inflight: Promise<void> | null = null;
+
+/** Exchanges changes with the server; while one runs, another round follows and this waits for it. */
+export function syncNow(): Promise<void> {
+  if (state.mode !== 'signedIn') return Promise.resolve();
+  if (syncing && inflight) {
     syncAgain = true;
-    return;
+    return inflight;
   }
+  inflight = runSync().finally(() => { inflight = null; });
+  return inflight;
+}
+
+async function runSync(): Promise<void> {
   syncing = true;
   lastSync = Date.now();
   try {
     do {
       syncAgain = false;
-      const sent = store.pendingChanges();
-      const res = await api<{ seq: number; changes: never[] }>('sync', { since: store.lastSeq, changes: sent });
+      const pending = store.pendingChanges();
+      const sent = pending.slice(0, SYNC_BATCH);
+      const res = await api<{ seq: number; changes: never[]; rejected?: string[] }>('sync', { since: store.lastSeq, changes: sent });
       store.applyRemote(res.changes);
+      // too big for the server (a very long note): it stays here, it is not sent again and again
       store.acknowledge(sent, res.seq);
+      if (res.rejected?.length) console.warn('Bullet: zu große Einträge nicht abgeglichen', res.rejected);
+      if (pending.length > sent.length) syncAgain = true;
       if (state.mode === 'signedIn' && state.offline) setState({ ...state, offline: false });
     } while (syncAgain);
     for (const fn of syncListeners) fn();

@@ -131,13 +131,16 @@ export function SubtaskSection(props: { task: Task; today: DayKey }) {
   const latest = useRef(text);
   latest.current = text;
   const add = (value: string) => {
-    if (!value.trim()) return;
-    store.addTask(value, task.categoryId, { projectId: task.projectId ?? null, areaId: task.areaId ?? null, parentId: task.id });
+    // the task as it is now (its project or category may have changed since the note opened)
+    const p = store.task(task.id);
+    if (!value.trim() || !p) return;
+    store.addTask(value, p.categoryId, { projectId: p.projectId ?? null, areaId: p.areaId ?? null, parentId: p.id });
     setText('');
   };
   // as everywhere on the post-its, what was written counts when the note goes away
   useEffect(() => () => add(latest.current), []);
-  if (task.parentId) return null;
+  // a part of another task has no parts of its own (a link to a deleted task does not count)
+  if (task.parentId && store.task(task.parentId)) return null;
   const subs = snap.tasks
     .filter((t) => !t.deleted && t.parentId === task.id)
     .sort((a, b) => Number(a.doneAt != null) - Number(b.doneAt != null) || a.createdAt - b.createdAt);

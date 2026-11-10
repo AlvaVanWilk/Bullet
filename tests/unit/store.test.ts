@@ -467,4 +467,18 @@ describe('hiding appointments', () => {
     s.setDone(send.id, false);
     expect(s.task(idea.id)).toMatchObject({ doneDay: '2026-10-11' });
   });
+  it('writes a task into a day once, even from two devices at the same time', () => {
+    const a = makeStore();
+    const task = a.addTask('Brot kaufen')!;
+    const b = makeStore();
+    b.applyRemote([...a.records.values()]);
+    a.addEntry(task.id, '2026-10-14');
+    b.addEntry(task.id, '2026-10-14');
+    a.applyRemote([...b.records.values()].filter((r) => r.type === 'entry'));
+    const lines = dayItems(a.snapshot(), '2026-10-14', '2026-10-14').filter((i) => i.task.id === task.id);
+    expect(lines).toHaveLength(1);
+    // taken out of the day, it is gone there
+    a.removeEntry(lines[0].entry!.id);
+    expect(dayItems(a.snapshot(), '2026-10-14', '2026-10-14').filter((i) => i.task.id === task.id)).toHaveLength(0);
+  });
 });

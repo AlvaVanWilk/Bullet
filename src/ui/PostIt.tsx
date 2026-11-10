@@ -36,14 +36,17 @@ export function PostItLayer() {
   if (!target) return null;
   const close = () => ui.set({ postIt: null });
   return (
-    <div class="postit-layer" onPointerDown={(e) => { if (e.target === e.currentTarget) close(); }}>
+    // closes on letting go beside the note, while it still lies over the page: the tap never reaches
+    // what is underneath (a box would be ticked, a row opened)
+    <div class="postit-layer" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
+      <EscCloses close={close} />
       <Placed
         key={`${target.kind}-${target.kind === 'event' ? target.event.id : target.kind === 'choreMinutes' ? target.weekday : target.kind === 'chore' ? `${target.id}-${target.part ?? ''}` : target.id}`}
         target={target}
         variant={target.kind === 'project' ? 'pslip' : undefined}
       >
         {target.kind === 'task' && (store.task(target.id)?.smart === 'haushalt'
-          ? <ChoresTodayNote day={target.day ?? today} close={close} />
+          ? <ChoresTodayNote day={target.day ?? today} entryId={target.entryId} close={close} />
           : <TaskNote target={target} close={close} />)}
         {target.kind === 'category' && <CategoryNote id={target.id} close={close} />}
         {target.kind === 'special' && <SpecialNote id={target.id} date={target.date} close={close} />}
@@ -56,6 +59,24 @@ export function PostItLayer() {
       </Placed>
     </div>
   );
+}
+
+/** Esc leaves a field of the note first (what was written stays), a second Esc closes the note. */
+function EscCloses(props: { close: () => void }) {
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && el.closest('.postit') && /^(TEXTAREA|INPUT|SELECT)$/.test(el.tagName)) {
+        el.blur();
+        return;
+      }
+      props.close();
+    };
+    addEventListener('keydown', key);
+    return () => removeEventListener('keydown', key);
+  }, []);
+  return null;
 }
 
 /** Puts the note beside the tapped thing, inside the window. A variant looks different (the card of a project). */
@@ -113,8 +134,37 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
   const [askDay, setAskDay] = useState(false);
   const latest = useRef({ text, note });
   latest.current = { text, note };
-  // Saving happens when the note goes away, by "speichern" or by tapping beside it.
-  useEffect(() => () => saveTask(props.target.id, latest.current.text, latest.current.note), []);
+  // what text and note said when they were last taken from the task or saved: only what was
+  // changed here since is written back (an edit from another device meanwhile is not undone)
+  const base = useRef({ text: task?.text ?? '', note: task?.note ?? '' });
+  const flush = () => {
+    saveTask(props.target.id, latest.current.text, latest.current.note, base.current);
+    const t = store.task(props.target.id);
+    if (t) base.current = { text: t.text, note: t.note ?? '' };
+  };
+  // Saving happens when the note goes away, by "speichern" or by tapping beside it; also when a
+  // field is left and when the app goes into the background (iOS may close it there).
+  useEffect(() => {
+    const hidden = () => { if (document.visibilityState === 'hidden') flush(); };
+    document.addEventListener('visibilitychange', hidden);
+    return () => {
+      document.removeEventListener('visibilitychange', hidden);
+      flush();
+    };
+  }, []);
+  // changed elsewhere while open, and not touched here: show the new words
+  useEffect(() => {
+    if (!task) return;
+    if (task.text !== base.current.text && latest.current.text === base.current.text) {
+      base.current = { ...base.current, text: task.text };
+      setText(task.text);
+    }
+    const n = task.note ?? '';
+    if (n !== base.current.note && latest.current.note === base.current.note) {
+      base.current = { ...base.current, note: n };
+      setNote(n);
+    }
+  }, [task?.text, task?.note]);
   if (!task) return null;
   const cats = liveCategories(snap);
   const cat = cats.find((c) => c.id === task.categoryId);
@@ -134,10 +184,12 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
   return (
     <div class="note">
       <textarea
+        maxLength={6000}
         class="note-text"
         value={text}
         rows={2}
         onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
+        onBlur={flush}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -160,8 +212,10 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
       )}
 
       <textarea
+        maxLength={6000}
         class="note-memo"
         value={note}
+        onBlur={flush}
         rows={Math.min(6, Math.max(2, note.split('\n').length + 1))}
         placeholder="Notiz …"
         onInput={(e) => setNote((e.target as HTMLTextAreaElement).value)}
@@ -223,7 +277,8 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
           <select
             value={cat?.id ?? ''}
             style={{ color: cat ? categoryColor(cat.color).ink : undefined }}
-            onChange={(e) => store.updateTask(task.id, { categoryId: (e.target as HTMLSelectElement).value || null })}
+            // a part of a task takes its task's category: given one of its own, it stands on its own
+            onChange={(e) => store.updateTask(task.id, { categoryId: (e.target as HTMLSelectElement).value || null, ...(task.parentId ? { parentId: null } : {}) })}
           >
             <option value="">ohne</option>
             {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -397,14 +452,14 @@ function DonePicker(props: { today: DayKey; onPick: (day: DayKey) => void }) {
   );
 }
 
-function saveTask(id: string, text: string, note: string) {
+function saveTask(id: string, text: string, note: string, base: { text: string; note: string }) {
   const t = store.task(id);
   if (!t) return;
   const patch: { text?: string; note?: string } = {};
   const clean = text.trim();
-  if (clean && clean !== t.text) patch.text = clean;
+  if (clean && text !== base.text && clean !== t.text) patch.text = clean;
   const memo = note.trim();
-  if (memo !== (t.note ?? '')) patch.note = memo;
+  if (note !== base.note && memo !== (t.note ?? '')) patch.note = memo;
   if (Object.keys(patch).length) store.updateTask(id, patch);
 }
 

@@ -92,3 +92,11 @@
   .wlist .tt { line-height: 18px; }
   .wlist .prep-count { min-width: 14px; height: 14px; padding: 0 3px; font-size: 11px; }
 }
+
+/* iOS zooms into any field under 16px when it is tapped, and stays zoomed: on small screens they are 16px */
+@media (max-width: 760px) {
+  .note-date input[type='date'],
+  .note-when-older input,
+  .pay-field input,
+  .pay-field.iban input { font-size: 16px; }
+}

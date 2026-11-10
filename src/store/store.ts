@@ -12,7 +12,7 @@ import {
   type AnyRecord, type Area, type Award, type Category, type Chore, type ChoreDay, type ChoreItem, type ChoreTick, type Deco, type Entry, type Hide,
   type Project, type Settings, type Special, type Task, type TaskLink,
 } from '../lib/model';
-import { choreDayId, choreDayView, choreTickId, dayBudget, planChores, shareOf, urgency } from '../lib/chores';
+import { choreDayId, choreDayView, choreTickId, dayBudget, dueChores, planChores, shareOf, urgency } from '../lib/chores';
 import { STORAGE_PREFIX } from '../stage';
 import { isNewer } from './merge';
 
@@ -30,6 +30,12 @@ const ARRIVING_MAX = 5;
 
 /** The one smart task of the household (the same id on every device). */
 export const CHORE_TASK_ID = 'haushalt';
+
+/**
+ * One id per task and day: written into the same day on two devices at once,
+ * it is the same entry, not two.
+ */
+export const entryId = (taskId: string, day: DayKey) => stableId('e', `${taskId}|${day}`);
 
 type Effect = { kind: 'done'; taskId: string } | { kind: 'written'; id: string };
 
@@ -444,8 +450,10 @@ export class Store {
     const task = this.task(id);
     if (!task) return;
     this.put({ ...task, deleted: true });
-    for (const r of this.records.values()) {
+    for (const r of [...this.records.values()]) {
       if (r.type === 'entry' && r.taskId === id && !r.deleted) this.put({ ...r, deleted: true });
+      // its parts stand on their own again (and may have parts themselves)
+      if (r.type === 'task' && r.parentId === id && !r.deleted) this.put({ ...r, parentId: null, byParent: null });
     }
     this.changed(true);
   }
@@ -459,7 +467,7 @@ export class Store {
     for (const r of this.records.values()) {
       if (r.type === 'entry' && !r.deleted && r.taskId === taskId && r.day === day) return null;
     }
-    const entry: Entry = { id: newId(), type: 'entry', updatedAt: 0, taskId, day, createdAt: this.now() };
+    const entry: Entry = { id: entryId(taskId, day), type: 'entry', updatedAt: 0, taskId, day, createdAt: this.now() };
     this.put(entry);
     this.markFresh(entry.id);
     // the smart task of the household plans its chores for the day it is written into
@@ -477,7 +485,7 @@ export class Store {
     if (!task || task.doneAt != null) return;
     const there = [...this.records.values()].some((r) => r.type === 'entry' && !r.deleted && r.taskId === taskId && r.day === day);
     if (!there) {
-      const entry: Entry = { id: newId(), type: 'entry', updatedAt: 0, taskId, day, createdAt: this.now(), retro: true };
+      const entry: Entry = { id: entryId(taskId, day), type: 'entry', updatedAt: 0, taskId, day, createdAt: this.now(), retro: true };
       this.put(entry);
       this.markFresh(entry.id);
     }
@@ -511,10 +519,13 @@ export class Store {
     if (any) this.changed(true);
   }
 
-  removeEntry(entryId: string) {
-    const r = this.records.get(entryId);
+  removeEntry(id: string) {
+    const r = this.records.get(id);
     if (r?.type !== 'entry' || r.deleted) return;
-    this.put({ ...r, deleted: true });
+    // every entry of that task in that day (from before entries had one id per task and day)
+    for (const e of [...this.records.values()]) {
+      if (e.type === 'entry' && !e.deleted && e.taskId === r.taskId && e.day === r.day) this.put({ ...e, deleted: true });
+    }
     this.changed(true);
   }
 
@@ -632,10 +643,14 @@ export class Store {
   setChoreLastDone(id: string, day: DayKey | null) {
     const c = this.chore(id);
     if (!c) return;
-    if (day === this.today()) {
+    const today = this.today();
+    if (day === today) {
       this.tickChore(day, id, true);
       return;
     }
+    // ticked today after all not: today's tick goes (it would keep the box filled)
+    const tick = this.records.get(choreTickId(today, id));
+    if (tick?.type === 'choretick' && !tick.deleted && tick.done) this.put({ ...tick, done: false, before: null });
     this.put({ ...c, lastDone: day, lastShare: 1 });
     this.changed(true);
   }
@@ -664,7 +679,9 @@ export class Store {
   /** The plan stored back: only what is planned and for how long (whether done is in the ticks). */
   private putPlan(cd: ChoreDay, items: ChoreItem[], patch: Partial<ChoreDay> = {}) {
     const { planned: _view, ...stored } = cd;
-    this.put({ ...stored, ...patch, items: items.map((i) => ({ choreId: i.choreId, minutes: i.minutes, done: false })), extra: [] });
+    const skipped = new Set(patch.skipped ?? cd.skipped ?? []);
+    const due = dueChores(this.snapshot().chores, cd.day).filter((c) => !skipped.has(c.id)).length;
+    this.put({ ...stored, ...patch, due, items: items.map((i) => ({ choreId: i.choreId, minutes: i.minutes, done: false })), extra: [] });
   }
 
   /**

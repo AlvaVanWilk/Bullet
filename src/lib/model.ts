@@ -263,6 +263,8 @@ export interface ChoreDay extends Base {
   extra: ChoreItem[];
   /** swapped out this day: not planned again */
   skipped?: string[];
+  /** how many chores were due (and not left out) when it was last planned: none, and the day is clean */
+  due?: number;
   /** (only in the view of a day, never stored) whether the smart task planned it */
   planned?: boolean;
 }

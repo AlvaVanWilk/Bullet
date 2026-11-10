@@ -459,6 +459,8 @@ async function device(browser, name) {
     await ipad.waitForTimeout(800);
     await ipad.locator('.proj-row .cat-name', { hasText: 'Gartenhaus' }).click();
     await ipad.locator('.proj-foot .note-btn').click();
+    // with tasks still open it asks once
+    if ((await ipad.locator('.proj-foot .note-btn').textContent()).includes('trotzdem')) await ipad.locator('.proj-foot .note-btn').click();
     await ipad.waitForSelector('.award-note');
     const award = await ipad.locator('.award-note').innerText();
     await ipad.locator('.award-note').click();

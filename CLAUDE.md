@@ -69,7 +69,7 @@ Bedienung und Einrichtung: `README.md`.
   Projektseite: Titel in Kapitälchen; Bild groß und schräg auf einem Klecks (Klecksform
   mit Spritzern, ohne Umrandung) in seiner Farbe, Fortschritt,
   Notizen, Aufgaben (eine Schreibzeile „+ Aufgabe …“ oben, in der Projektfarbe getönt),
-  „Projekt abschließen“. Auf der Projektseite steht nur Offenes: Erledigtes wird kurz
+  „Projekt abschließen“ (mit offenen Aufgaben fragt es einmal nach). Auf der Projektseite steht nur Offenes: Erledigtes wird kurz
   durchgestrichen und gleitet hinaus (`PAGE_LEAVE_MS`; das Archiv behält es). Dafür wird
   die Seite bunter, je mehr erledigt ist (`ProjectDecor.tsx`, eine Überraschung: die
   Nutzerin will die Stufen nicht vorher kennen): Der Klecks wächst nach links und
@@ -249,7 +249,9 @@ Bedienung und Einrichtung: `README.md`.
   ⟳ austauschen und × weglassen (nicht hinter jeder Aufgabe im Tag), „außerdem gemacht“.
   Unerledigtes bleibt fällig und wird dringender. Auf der Seite spontan abgehakt → steht
   erledigt im Tag (`extra`), zählt nicht von selbst mit; auf „Haushaltsaufgaben“ gezogen (oder
-  „dazuzählen“) zählt es mit und der Rest wird neu geplant. Nichts fällig → kein Unterpunkt,
+  „dazuzählen“) zählt es mit und der Rest wird neu geplant. Antippen → Zettel auch mit „aus dem Tag nehmen“. Ist etwas fällig, passt aber nichts in
+  die Zeit (freier Tag), steht dort leise „Heute passt nichts in die Zeit“ (nicht sauber,
+  nicht grün; `choreday.due`). Nichts fällig → kein Unterpunkt,
   ein grünes Glitzern daneben, Tipp/Zeiger: „alles sauber!“, und das Haus ist gleich grün (wie
   erledigt). „Zuletzt gemacht“ über das Feld „fällig“ (heute = abhaken, gestern, vor 3
   Tagen … noch nie, Datum). Länger als die Zeit jedes Wochentags → leise „passt an keinem Tag“
@@ -277,5 +279,14 @@ Bedienung und Einrichtung: `README.md`.
   `main` kommt nur, was die Nutzerin im Testordner angesehen und mit „freigeben“
   freigegeben hat.
 - UI-Texte auf Deutsch, Bezeichner und Kommentare im Code auf Englisch.
+- Robustheit: Einträge im Tag haben eine feste id aus Aufgabe und Tag (`entryId`), damit
+  zwei Geräte nicht zwei Zeilen erzeugen. Die Daten auf dem Gerät gehören dem zuletzt
+  Angemeldeten (`owner`); meldet sich jemand anderes an, beginnt das Gerät leer. Ein zu großer
+  Datensatz (über 20 000 Bytes, Umlaute einfach gezählt) wird vom Server einzeln abgelehnt
+  (`rejected`), der Rest geht durch; Notizen sind auf 6000 Zeichen begrenzt. Abmelden mit
+  nicht abgeglichenen Änderungen fragt nach. Das Post-it schreibt beim Schließen nur zurück,
+  was in ihm geändert wurde (auch beim Verlassen eines Felds und wenn die App in den
+  Hintergrund geht), schließt beim Loslassen daneben (der Tipp löst darunter nichts aus) und
+  mit Esc (im Feld: erst das Feld verlassen).
 - Vor dem Pushen: `npm test`, `npm run test:php`, `npm run build`, danach
   `node scripts/e2e.cjs` (zwei Geräte, Abgleich, Stile von Post-it und Einstellungen).
