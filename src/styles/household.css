@@ -182,6 +182,8 @@
   .hh-table th:nth-child(2), .hh-table td:nth-child(2),
   .hh-table th:nth-child(3), .hh-table td:nth-child(3) { display: none; }
   .hh-table th:nth-child(4) { width: 40%; }
+  /* narrow: "noch nie gemacht" wraps instead of being cut */
+  .hh-table td:nth-child(4) .hh-cell { white-space: normal; line-height: 22px; padding-top: 3px; padding-bottom: 3px; }
   .hh-table th.hh-check, .hh-check { width: 40px; }
 }
 
