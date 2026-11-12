@@ -157,6 +157,12 @@ Bedienung und Einrichtung: `README.md`.
   blass. Deadlines im Kopf in normaler Schrift; nur überfällige rot und leuchtend.
   Erledigte verschwinden aus dem Kopf (beim Abhaken kurz dünn durchgestrichen, dann
   ausgeblendet; auch in früheren Wochen), Folgeaufgaben rücken nach.
+- Kleine, befriedigende Rückmeldungen (kurz, nie bremsend, bei „weniger Bewegung“ aus):
+  Abhaken lässt das Kästchen kurz unter dem Stift nachgeben, mit leisem Kratzen (Geräusche
+  abschaltbar); ist alles, was heute offen stand, erledigt, steht unter „heute“ in grüner
+  Tinte „geschafft ✓“ (geht wieder, wenn Neues dazukommt); ein Seitenwechsel legt die neue
+  Seite kurz von der Seite auf; was in heute gezogen wird, lässt den Tag kurz warm
+  aufleuchten; Knöpfe geben unter dem Finger nach.
 - Tage als „6 DIENSTAG“ (oder „DIENSTAG 6“) in Kapitälchen; Hervorhebung wählbar
   (grauer Marker, Marker in Wochenfarbe, gerader Strich, Striche links/rechts, Rahmen).
 - Besonderes in Grau, ohne Sternchen.

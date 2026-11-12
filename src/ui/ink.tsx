@@ -6,6 +6,7 @@ import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import rough from 'roughjs';
 import type { Options } from 'roughjs/bin/core';
 import type { BoxState } from '../lib/logic';
+import { playStrike } from './sound';
 
 const gen = rough.generator();
 const pathCache = new Map<string, { d: string }[]>();
@@ -80,11 +81,27 @@ export function Checkbox(props: { state: BoxState; important: boolean; seed: str
   const dash = paths(`cbd|${s}`, () => gen.line(0.5, 11.2, 21.5, 10.6, { roughness: 0.5, strokeWidth: 1.6, seed: s }));
   const glass = paths(`cbh|${s}`, () => gen.path(HOURGLASS, { roughness: 0.45, strokeWidth: 1.4, seed: s }));
   const filled = props.state === 'done' || props.state === 'doneBefore';
+  // ticked just now (not when shown already ticked): the box gives a little under the pen
+  const was = useRef(filled);
+  const [pop, setPop] = useState(false);
+  useLayoutEffect(() => {
+    if (filled && !was.current) {
+      setPop(true);
+      const timer = setTimeout(() => setPop(false), 380);
+      was.current = filled;
+      return () => clearTimeout(timer);
+    }
+    was.current = filled;
+  }, [filled]);
   return (
     <button
       type="button"
-      class={`cb cb-${props.state} ${props.important ? 'cb-important' : ''}`}
-      onClick={props.onClick}
+      class={`cb cb-${props.state} ${props.important ? 'cb-important' : ''} ${pop ? 'cb-pop' : ''}`}
+      onClick={(e) => {
+        // a short scratch of the pen as it fills the box
+        if (!filled && props.state !== 'pending') playStrike(0.16);
+        props.onClick?.(e);
+      }}
       aria-label={props.label}
       aria-pressed={filled}
     >

@@ -213,8 +213,18 @@ function onUp(e: PointerEvent) {
     setTimeout(() => ghost.remove(), 320);
     g.ghost = null;
   }
+  // what took it answers with a short glow, so the eye sees where it landed
+  const landed = over && target ? glowOf(over) : null;
   cleanup();
-  if (over && target) drop(source, target);
+  if (over && target) {
+    drop(source, target);
+    if (landed) {
+      landed.classList.remove('drop-landed');
+      void landed.offsetWidth;
+      landed.classList.add('drop-landed');
+      setTimeout(() => landed.classList.remove('drop-landed'), 700);
+    }
+  }
 }
 
 function onCancel(e: PointerEvent) {

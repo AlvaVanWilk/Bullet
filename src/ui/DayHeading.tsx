@@ -6,7 +6,7 @@ import { dayNumber, isoWeek, weekdayName, type DayKey } from '../lib/dates';
 import type { Settings } from '../lib/model';
 import { HandBox } from './ink';
 
-export function DayHeading(props: { day: DayKey; isToday: boolean; settings: Pick<Settings, 'dayFormat' | 'dayStyle'> }) {
+export function DayHeading(props: { day: DayKey; isToday: boolean; allDone?: boolean; settings: Pick<Settings, 'dayFormat' | 'dayStyle'> }) {
   const num = <span class="dt-num">{dayNumber(props.day)}</span>;
   const name = <span class="dt-name">{weekdayName(props.day)}</span>;
   const text = (
@@ -14,7 +14,13 @@ export function DayHeading(props: { day: DayKey; isToday: boolean; settings: Pic
       {props.settings.dayFormat === 'tag' ? <>{name} {num}</> : <>{num} {name}</>}
     </span>
   );
-  const note = props.isToday && <span class="today-note">heute</span>;
+  // everything of today done: under "heute" a little "geschafft", written in quickly (it goes again with something new)
+  const note = props.isToday && (
+    <span class="today-note">
+      heute
+      {props.allDone && <span class="today-done">geschafft</span>}
+    </span>
+  );
   const style = props.settings.dayStyle;
   if (style === 'rahmen') {
     return (

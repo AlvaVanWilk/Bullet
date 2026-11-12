@@ -302,7 +302,7 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
       data-day={props.day}
       data-deco-anchor={`day|${props.day}`}
     >
-      <DayHeading day={props.day} isToday={isToday} settings={snap.settings} />
+      <DayHeading day={props.day} isToday={isToday} settings={snap.settings} allDone={isToday && dayAllDone(props.items)} />
       {(special.length > 0 || specials.length > 0) && (
         <ul class="day-specials">
           {special.map((ev) => <li key={ev.id} onClick={(e) => openEvent(ev, e)}>{ev.title}</li>)}
@@ -548,4 +548,9 @@ function DayTaskRow(props: {
       )}
     </li>
   );
+}
+
+/** Everything that stood open in the day is done (and something was): the day is "geschafft". */
+function dayAllDone(items: DayItem[]): boolean {
+  return items.some((i) => i.state === 'done') && !items.some((i) => i.state === 'open');
 }
