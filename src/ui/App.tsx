@@ -103,7 +103,7 @@ export function App() {
       <Sidebar />
       <main class="page paper" data-paper={snap.settings.paperMain}>
         {state.view.kind === 'category' ? <CategoryView key={state.view.id} id={state.view.id} />
-          : state.view.kind === 'project' ? <ProjectView key={state.view.id} id={state.view.id} />
+          : state.view.kind === 'project' ? <ProjectView key={state.view.id} id={state.view.id} page={state.view.page} />
           : state.view.kind === 'archive' ? <ArchiveView />
           : state.view.kind === 'waiting' ? <WaitingView />
           : state.view.kind === 'household' ? <HouseholdView />

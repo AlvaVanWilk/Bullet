@@ -50,6 +50,17 @@ export function seedDemo(today: DayKey) {
   store.addTask('Bretter am Dach prüfen', null, { projectId: garten.id, areaId: holz.id });
   store.addTask('Morsche Latte ersetzen', null, { projectId: garten.id, areaId: holz.id });
   store.addTask('Farbton aussuchen', null, { projectId: garten.id, areaId: farbeArea.id });
+  // the idea sheet of the garden shed: a few thoughts, tied
+  const farbIdee = store.addThought(garten.id, 'Farbe', 8, -3, 'root')!;
+  store.updateThought(farbIdee.id, { style: 'cloud' });
+  store.addThought(garten.id, 'Schwedenrot oder doch Grün?', 15, -6, farbIdee.id);
+  const fest = store.addThought(garten.id, 'Grillfest im Mai', -14, -4, 'root')!;
+  store.updateThought(fest.id, { style: 'box' });
+  store.addThought(garten.id, 'Lichterkette', -20, 1, fest.id);
+  const dach = store.addThought(garten.id, 'Dachpappe erneuern?', 6, 5, 'root')!;
+  store.updateThought(dach.id, { style: 'marker' });
+  store.thoughtToTask(dach.id);
+  store.addThought(garten.id, 'Regentonne an die Rinne', -6, 7);
   const app = store.addProject('Bullet')!;
   store.updateProject(app.id, { icon: 'feder', color: '#3f6f8c' });
   const ideen = store.addArea(app.id, 'Ideen und Bugs')!;

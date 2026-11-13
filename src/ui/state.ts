@@ -22,10 +22,12 @@ export type PostItTarget =
   /** a chore of the household: name, how often, how long */
   | { kind: 'chore'; id: string; rect: DOMRect; part?: 'name' | 'rhythm' | 'length' | 'last' }
   /** the minutes for the household on a weekday */
-  | { kind: 'choreMinutes'; weekday: number; rect: DOMRect };
+  | { kind: 'choreMinutes'; weekday: number; rect: DOMRect }
+  /** a thought on the idea sheet of a project */
+  | { kind: 'thought'; id: string; rect: DOMRect };
 
 export interface UiState {
-  view: { kind: 'week' } | { kind: 'category'; id: string } | { kind: 'project'; id: string } | { kind: 'archive' } | { kind: 'waiting' } | { kind: 'household' };
+  view: { kind: 'week' } | { kind: 'category'; id: string } | { kind: 'project'; id: string; page?: 'ideas' } | { kind: 'archive' } | { kind: 'waiting' } | { kind: 'household' };
   /** 0 = this week, -1 = last week … */
   weekOffset: number;
   postIt: PostItTarget | null;

@@ -26,6 +26,7 @@ import { PhotoStrip } from './Photos';
 import { AreaNote, AreaSelect, ProjectCard, ProjectEditNote, ProjectSelect } from './Projects';
 import { movePick, SuggestList } from './Suggest';
 import { ChoreMinutesNote, ChoreNote, ChoresTodayNote } from './Household';
+import { ThoughtNote } from './Ideas';
 
 const WIDTH = 312;
 
@@ -56,6 +57,7 @@ export function PostItLayer() {
         {target.kind === 'area' && <AreaNote id={target.id} close={close} />}
         {target.kind === 'chore' && <ChoreNote id={target.id} part={target.part} close={close} />}
         {target.kind === 'choreMinutes' && <ChoreMinutesNote weekday={target.weekday} close={close} />}
+        {target.kind === 'thought' && <ThoughtNote id={target.id} close={close} />}
       </Placed>
     </div>
   );

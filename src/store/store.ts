@@ -9,7 +9,7 @@ import { canBeSubtask, deadlineFor, isWaiting, wouldLoop, type Snapshot } from '
 import { milestone, reachedOnChore, reachedOnDone, reachedOnNewDay, reachedOnProject, type Reached } from '../lib/milestones';
 import {
   DEFAULT_SETTINGS, SETTINGS_ID,
-  type AnyRecord, type Area, type Award, type Category, type Chore, type ChoreDay, type ChoreItem, type ChoreTick, type Deco, type Entry, type Hide,
+  type AnyRecord, type Area, type Award, type Category, type Chore, type ChoreDay, type ChoreItem, type ChoreTick, type Deco, type Thought, type Thread, type Entry, type Hide,
   type Project, type Settings, type Special, type Task, type TaskLink,
 } from '../lib/model';
 import { choreDayId, choreDayView, choreTickId, dayBudget, dueChores, planChores, shareOf, urgency } from '../lib/chores';
@@ -77,7 +77,7 @@ export class Store {
 
   snapshot(): Snapshot {
     if (this.snapshotCache?.version === this.version) return this.snapshotCache.snap;
-    const snap: Snapshot = { tasks: [], categories: [], projects: [], areas: [], entries: [], specials: [], hides: [], decos: [], awards: [], chores: [], choreDays: [], choreTicks: [], settings: DEFAULT_SETTINGS };
+    const snap: Snapshot = { tasks: [], categories: [], projects: [], areas: [], entries: [], specials: [], hides: [], decos: [], awards: [], chores: [], choreDays: [], choreTicks: [], thoughts: [], threads: [], settings: DEFAULT_SETTINGS };
     for (const r of this.records.values()) {
       switch (r.type) {
         case 'task': snap.tasks.push(r); break;
@@ -92,6 +92,8 @@ export class Store {
         case 'chore': snap.chores.push(r); break;
         case 'choreday': snap.choreDays.push(r); break;
         case 'choretick': snap.choreTicks.push(r); break;
+        case 'thought': snap.thoughts.push(r); break;
+        case 'thread': snap.threads.push(r); break;
         case 'settings': {
           const calendars = r.calendars && !Array.isArray(r.calendars) ? r.calendars : {};
           snap.settings = { ...DEFAULT_SETTINGS, ...r, calendars };
@@ -845,8 +847,91 @@ export class Store {
     this.put({ ...project, deleted: true });
     for (const r of this.records.values()) {
       if (r.type === 'task' && r.projectId === id && !r.deleted) this.put({ ...r, projectId: null, next: false, areaId: null });
+      // its idea sheet goes with it
+      if ((r.type === 'thought' || r.type === 'thread') && r.projectId === id && !r.deleted) this.put({ ...r, deleted: true });
     }
     this.changed(true);
+  }
+
+  // --- the idea sheet of a project -------------------------------------------------------
+
+  thought(id: string | null | undefined): Thought | undefined {
+    const r = id ? this.records.get(id) : undefined;
+    return r?.type === 'thought' && !r.deleted ? r : undefined;
+  }
+
+  /** A thought written on the sheet at a square; with `from`, a thread ties it to that one (a branch). */
+  addThought(projectId: string, text: string, x: number, y: number, from?: string | null): Thought | null {
+    const clean = text.trim();
+    if (!clean || !this.project(projectId)) return null;
+    const t: Thought = {
+      id: newId(), type: 'thought', updatedAt: 0, projectId, text: clean, x: Math.round(x), y: Math.round(y), style: 'plain', createdAt: this.now(),
+    };
+    this.put(t);
+    this.markFresh(t.id);
+    if (from) this.connect(projectId, from, t.id);
+    this.changed(true);
+    return t;
+  }
+
+  updateThought(id: string, patch: Partial<Pick<Thought, 'text' | 'x' | 'y' | 'style' | 'taskId'>>) {
+    const t = this.thought(id);
+    if (!t) return;
+    const next = { ...t, ...patch };
+    if (patch.text !== undefined) {
+      next.text = patch.text.trim();
+      if (!next.text) return;
+    }
+    next.x = Math.round(next.x);
+    next.y = Math.round(next.y);
+    this.put(next);
+    this.changed(true);
+  }
+
+  /** Rubbed out: its threads go with it (the task it became stays). */
+  deleteThought(id: string) {
+    const t = this.thought(id);
+    if (!t) return;
+    this.put({ ...t, deleted: true });
+    for (const r of [...this.records.values()]) {
+      if (r.type === 'thread' && !r.deleted && (r.from === id || r.to === id)) this.put({ ...r, deleted: true });
+    }
+    this.changed(true);
+  }
+
+  /** The thread between two (the same on every device, whichever end was first). */
+  threadId(projectId: string, a: string, b: string): string {
+    const [x, y] = a < b ? [a, b] : [b, a];
+    return stableId('th', `${projectId}|${x}|${y}`);
+  }
+
+  /** Ties two thoughts (or a thought and "root", the name in the middle) together; again, it does nothing. */
+  connect(projectId: string, a: string, b: string): Thread | null {
+    if (a === b || (a !== 'root' && !this.thought(a)) || (b !== 'root' && !this.thought(b))) return null;
+    const id = this.threadId(projectId, a, b);
+    const had = this.records.get(id);
+    if (had?.type === 'thread' && !had.deleted) return had;
+    const th: Thread = { id, type: 'thread', updatedAt: 0, projectId, from: a, to: b, createdAt: this.now() };
+    this.put(th);
+    this.markFresh(id);
+    this.changed(true);
+    return th;
+  }
+
+  disconnect(id: string) {
+    const r = this.records.get(id);
+    if (r?.type !== 'thread' || r.deleted) return;
+    this.put({ ...r, deleted: true });
+    this.changed(true);
+  }
+
+  /** A thought becomes a task of its project (the thought stays, with the task's box before it). */
+  thoughtToTask(id: string): Task | null {
+    const t = this.thought(id);
+    if (!t || (t.taskId && this.task(t.taskId))) return null;
+    const task = this.addTask(t.text, null, { projectId: t.projectId });
+    if (task) this.updateThought(id, { taskId: task.id });
+    return task;
   }
 
   addSpecial(text: string, date: DayKey, yearly: boolean): Special | null {

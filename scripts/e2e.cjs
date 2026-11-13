@@ -400,6 +400,31 @@ async function device(browser, name) {
     const holzSays = await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.area-empty').textContent().catch(() => null);
     check('a task done on its project page is struck a moment, then leaves the page',
       leavingNow === 1 && goneLater === 0 && holzSays === 'nichts mehr offen', { leavingNow, goneLater, holzSays });
+    // the idea sheet: turned to by the corner; a thought written on free paper, tied to the name, turned into a task
+    await ipad.locator('.dog-ear').click();
+    await ipad.waitForSelector('.idea-sheet');
+    await ipad.waitForTimeout(400);
+    const sheetBox = await ipad.locator('.idea-sheet').boundingBox();
+    await ipad.mouse.click(sheetBox.x + 60, sheetBox.y + sheetBox.height - 90);
+    await ipad.keyboard.type('Lichterkette');
+    await ipad.keyboard.press('Enter');
+    await ipad.waitForTimeout(400);
+    await ipad.locator('.idea-root').click();
+    await ipad.keyboard.type('Grillfest');
+    await ipad.keyboard.press('Enter');
+    await ipad.waitForTimeout(400);
+    const ideas = await ipad.$$eval('.idea .idea-text', (els) => els.map((e) => e.textContent));
+    const tiedToName = await ipad.locator('.idea-thread').count();
+    await ipad.locator('.idea', { hasText: 'Lichterkette' }).click();
+    await ipad.locator('.postit .note-btn', { hasText: 'als Aufgabe' }).click();
+    await ipad.waitForTimeout(300);
+    const boxed = await ipad.locator('.idea', { hasText: 'Lichterkette' }).locator('.cb').count();
+    await ipad.locator('.dog-ear').click();
+    await ipad.waitForSelector('.proj-page');
+    const asTask = await ipad.locator('.proj-tasks .tt-text', { hasText: 'Lichterkette' }).count();
+    check('the idea sheet: thoughts written anywhere, a branch tied to the name, one becomes a task of the project',
+      ideas.includes('Lichterkette') && ideas.includes('Grillfest') && tiedToName === 1 && boxed === 1 && asTask === 1,
+      { ideas, tiedToName, boxed, asTask });
     // written on the line of a box, a task goes straight into that area
     await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.area-add input').fill('Schleifpapier kaufen');
     await ipad.locator('.area-box', { hasText: 'Holz' }).locator('.area-add input').press('Enter');

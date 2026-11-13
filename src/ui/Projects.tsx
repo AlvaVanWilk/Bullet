@@ -19,6 +19,8 @@ import { FollowRows, FollowToggle, useFolds, type Folds } from './Follow';
 import { useGridRows } from './gridRows';
 import { Bang, ClipMark, HandBox, hasClip, Hourglass, NoteMark, PendingWho, ScheduledDot, TaskText } from './ink';
 import { NewLine } from './NewLine';
+import { DogEar, IdeaSheet } from './Ideas';
+import { playPaperSlide } from './sound';
 import { ColorWheel } from './ColorWheel';
 import { DrawPad } from './DrawPad';
 import { blotLayers, boxInk, nameMark, NameDecor, ProjectDecor, ProjectDecorEnd, shades } from './ProjectDecor';
@@ -289,7 +291,7 @@ function useLeaving(snap: ReturnType<typeof store.snapshot>, projectId: string) 
 }
 
 /** A project opened in the main page. */
-export function ProjectView(props: { id: string }) {
+export function ProjectView(props: { id: string; page?: 'ideas' }) {
   const snap = useStore();
   const now = useNow();
   const today = useToday();
@@ -343,7 +345,10 @@ export function ProjectView(props: { id: string }) {
         </div>
         <button type="button" class="ghost-btn close-x" aria-label="Zur Woche" onClick={() => ui.set({ view: { kind: 'week' } })}>✕</button>
       </header>
-      <div class="proj-page paper" data-paper={snap.settings.paperMain} data-drop="project" data-project={p.id} data-scroll>
+      {props.page === 'ideas' ? (
+        <IdeaSheet key="ideas" project={p} />
+      ) : (
+      <div key="tasks" class="proj-page paper" data-paper={snap.settings.paperMain} data-drop="project" data-project={p.id} data-scroll>
         <ProjectNotes project={p} />
         <h2 class="proj-section">Aufgaben</h2>
         {/* one line for new tasks, on top (they go into no area; from there into a box) */}
@@ -377,6 +382,12 @@ export function ProjectView(props: { id: string }) {
         </div>
         <ProjectDecorEnd seed={p.id} ink={projectInk(p.color)} done={shownDone} />
       </div>
+      )}
+      {/* the corner of the page: turned, the other page of the project (tasks, or the idea sheet) */}
+      <DogEar
+        label={props.page === 'ideas' ? 'Aufgaben' : 'Ideen'}
+        onTurn={() => { playPaperSlide(0.3); ui.set({ view: { kind: 'project', id: p.id, page: props.page === 'ideas' ? undefined : 'ideas' } }); }}
+      />
     </div>
   );
 }

@@ -20,6 +20,7 @@ import './styles/week.css';
 import './styles/notes.css';
 import './styles/deco.css';
 import './styles/household.css';
+import './styles/ideas.css';
 import './styles/screens.css';
 import { seedDemo } from './demo';
 import { googleStatus } from './google/calendar';

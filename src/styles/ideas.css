@@ -1,0 +1,173 @@
+/* --- the idea sheet of a project: free thoughts around its name, tied by threads --- */
+
+/* turned to: the sheet lays itself over from the corner */
+@keyframes sheet-turn {
+  from { opacity: 0.3; transform: translateX(14px) rotate(0.4deg); transform-origin: 100% 100%; }
+  to { opacity: 1; transform: none; }
+}
+.idea-sheet, .projview > .proj-page { animation: sheet-turn 0.26s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@media (prefers-reduced-motion: reduce) { .idea-sheet, .projview > .proj-page { animation: none; } }
+
+.idea-sheet {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.idea-canvas { position: relative; touch-action: pan-x pan-y; user-select: none; -webkit-user-select: none; }
+.idea-canvas.linking { cursor: crosshair; }
+
+/* threads: a fineliner between the thoughts, drawn in when new */
+.idea-threads { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.thread-ink { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; opacity: 0.75; }
+.idea-thread.fresh .thread-ink { stroke-dasharray: 1; stroke-dashoffset: 1; animation: thread-draw 0.45s ease-out forwards; }
+@keyframes thread-draw { to { stroke-dashoffset: 0; } }
+.thread-hit { fill: none; stroke: transparent; stroke-width: 22; pointer-events: stroke; cursor: pointer; }
+.idea-thread.chosen .thread-ink { stroke: var(--proj-ink, var(--ink)); opacity: 1; stroke-width: 2; }
+.thread-cut { pointer-events: all; cursor: pointer; }
+.thread-cut circle { fill: var(--paper); stroke: var(--proj-ink, var(--ink)); stroke-width: 1.3; }
+.thread-cut text { font-size: 15px; fill: var(--ink); }
+
+/* the name of the project in the middle, on a blot of its colour */
+.idea-root {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(-2deg);
+  padding: 10px 26px 12px;
+  border: 0;
+  border-radius: 46% 54% 50% 48% / 55% 45% 55% 45%;
+  background: color-mix(in srgb, var(--proj-mark, #cfc8b9) 55%, var(--paper));
+  color: var(--ink);
+  font: inherit;
+  font-size: 26px;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 0 0 6px var(--paper);
+  z-index: 2;
+}
+.idea-root.source, .idea.source { outline: 2px dashed var(--proj-ink, var(--ink)); outline-offset: 6px; }
+
+/* a thought: written on the squares, the paper shows around it (and hides the thread under it) */
+.idea {
+  position: absolute;
+  max-width: 280px;
+  min-height: var(--grid);
+  padding: 0 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: var(--grid);
+  font-size: var(--hand-size, 21px);
+  background: var(--paper);
+  border-radius: 10px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: grab;
+  z-index: 1;
+}
+.idea-text { overflow-wrap: anywhere; }
+.idea .cb { margin-left: -8px; }
+.idea.carried {
+  z-index: 5;
+  cursor: grabbing;
+  box-shadow: 0 8px 18px rgba(60, 45, 20, 0.22);
+  rotate: -1.5deg;
+}
+.idea.done .idea-text { color: var(--ink-soft); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.idea.box { padding: 4px 12px; border-radius: 3px; }
+.idea.cloud { padding: 6px 14px; border-radius: 50%; }
+.idea.marker .idea-text {
+  background: linear-gradient(transparent 32%, color-mix(in srgb, var(--proj-mark, #e6d99a) 75%, transparent) 32%, color-mix(in srgb, var(--proj-mark, #e6d99a) 75%, transparent) 88%, transparent 88%);
+  padding: 0 3px;
+  border-radius: 3px;
+}
+.idea-frame { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.idea-frame path { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-linecap: round; }
+
+/* the line to write on, where the paper was tapped */
+.idea-writer { position: absolute; z-index: 6; }
+/* lying ready, out of sight, until the paper is tapped */
+.idea-writer.resting { left: 0; top: 0; opacity: 0; pointer-events: none; }
+.idea-writer input {
+  width: 240px;
+  height: var(--grid);
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 1.5px solid color-mix(in srgb, var(--proj-ink, var(--ink)) 55%, transparent);
+  background: var(--paper);
+  font: inherit;
+  font-size: var(--hand-size, 21px);
+  line-height: var(--grid);
+  color: var(--ink);
+  outline: none;
+}
+
+.idea-hint {
+  position: sticky;
+  left: 50%;
+  bottom: 18px;
+  width: max-content;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: var(--postit, #f6e7a1);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(60, 45, 20, 0.2);
+  font-size: 18px;
+  z-index: 7;
+}
+.idea-empty {
+  position: sticky;
+  left: 38px;
+  bottom: 30px;
+  max-width: 420px;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 18px;
+  line-height: var(--grid);
+  pointer-events: none;
+}
+.thought-note .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* the corner of the page, turned up a little: to the other page of the project */
+.dog-ear {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  z-index: 8;
+  transition: transform 0.2s cubic-bezier(0.3, 0.7, 0.4, 1.2);
+  transform-origin: 100% 100%;
+}
+.dog-ear svg { position: absolute; inset: 0; overflow: visible; filter: drop-shadow(-3px -2px 4px rgba(60, 45, 20, 0.18)); }
+.dog-ear-under { fill: #3a4256; }
+.dog-ear-flap { stroke: rgba(43, 43, 48, 0.25); stroke-width: 0.8; }
+.dog-ear-line { fill: none; stroke: rgba(43, 43, 48, 0.35); stroke-width: 1; }
+.dog-ear-label {
+  position: absolute;
+  right: 50px;
+  bottom: 8px;
+  font-size: 18px;
+  color: var(--proj-ink, var(--ink-soft));
+  white-space: nowrap;
+  transform: rotate(-4deg);
+}
+.dog-ear-label::after { content: ' ↗'; }
+.dog-ear:hover, .dog-ear:focus-visible { transform: scale(1.12); }
+.dog-ear:active { transform: scale(1.22); }
+
+@media (max-width: 760px) {
+  .idea { max-width: 200px; }
+  .idea-root { font-size: 22px; }
+}

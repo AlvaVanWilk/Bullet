@@ -88,6 +88,20 @@ Bedienung und Einrichtung: `README.md`.
   Projekt (und solche ohne Kategorie, die hineinkommen) übernehmen die Kategorie; wechselt
   sie, gehen die mit, die die alte hatten. Die Projektzeile der Masterliste steht in der
   Farbe der Kategorie.
+- Ideenblatt (`thought`, `thread`, `src/ui/Ideas.tsx`): die zweite Seite eines Projekts, erreicht
+  über ein Eselsohr unten rechts („Ideen ↗“, zurück „Aufgaben ↗“; Papiergeräusch, die Seite legt
+  sich über). Großes gepunktetes Blatt, in der Mitte der Projektname auf einem Klecks in der
+  Projektfarbe. Freies Papier antippen → dort schreiben (Enter legt den Gedanken ab, Esc
+  verwirft); den Namen antippen → ein Zweig (neuer Gedanke daneben, mit Faden verbunden).
+  Gedanken sitzen auf den Punktreihen (Lage in Kästchen ab der Mitte), lassen sich mit dem Finger
+  tragen (rasten ein) und antippen → Zettel: Text, Aussehen (schlicht, Kasten, Wolke – mit
+  Fineliner gezeichnet –, Marker in Projektfarbe), „＋ Zweig“, „⌒ verbinden“ (dann antippen,
+  womit), „→ als Aufgabe“ (wird Aufgabe des Projekts; der Gedanke bleibt und trägt ihr Kästchen,
+  erledigt → dünn durchgestrichen), „wegradieren“ (Fäden gehen mit, die Aufgabe bleibt). Fäden
+  von Hand gezeichnet mit leichtem Bogen, beim Entstehen gezogen; antippen → ✂ schneidet.
+  Ein Faden hat eine feste id aus seinen beiden Enden (kein doppelter von zwei Geräten). Das
+  Schreibfeld liegt bereit und bekommt den Fokus im Tippen selbst (sonst keine iPad-Tastatur).
+  Projekt gelöscht → sein Ideenblatt geht mit.
 - Bereiche (`area`, `task.areaId`): Ein Projekt lässt sich in Bereiche teilen. Auf der
   Projektseite ist jeder Bereich eine Box, mit Marker in der Projektfarbe gezeichnet,
   Name in Kapitälchen oben im Rahmen (daneben klein die Zahl der offenen). Die Boxen

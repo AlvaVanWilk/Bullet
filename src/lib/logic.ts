@@ -3,7 +3,7 @@
 
 import { addDays, compareDays, daySearchText, parseDay, weekDays, type DayKey } from './dates';
 import { choreDayView, planDone } from './chores';
-import type { Area, Award, CalEvent, Category, Chore, ChoreDay, ChoreTick, Deco, Entry, Hide, Project, Settings, Special, Task, TaskLink } from './model';
+import type { Area, Award, CalEvent, Category, Chore, ChoreDay, ChoreTick, Thought, Thread, Deco, Entry, Hide, Project, Settings, Special, Task, TaskLink } from './model';
 
 export interface Snapshot {
   tasks: Task[];
@@ -18,6 +18,8 @@ export interface Snapshot {
   chores: Chore[];
   choreDays: ChoreDay[];
   choreTicks: ChoreTick[];
+  thoughts: Thought[];
+  threads: Thread[];
   settings: Settings;
 }
 

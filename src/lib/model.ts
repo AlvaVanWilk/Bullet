@@ -284,9 +284,37 @@ export interface ChoreTick extends Base {
   before?: { lastDone: DayKey | null; lastShare: number } | null;
 }
 
-export type AnyRecord = Task | Category | Project | Area | Entry | Special | Settings | Hide | Deco | Award | Chore | ChoreDay | ChoreTick;
+export type ThoughtStyle = 'plain' | 'box' | 'cloud' | 'marker';
+
+/**
+ * A thought on the idea sheet of a project: written freely anywhere on the
+ * paper, around the project's name in the middle. Not (yet) a task; it can become one.
+ */
+export interface Thought extends Base {
+  type: 'thought';
+  projectId: string;
+  text: string;
+  /** where it lies, in squares of the paper from the middle (where the name of the project stands) */
+  x: number;
+  y: number;
+  style: ThoughtStyle;
+  /** the task it became (its box shows whether that is done) */
+  taskId?: string | null;
+  createdAt: number;
+}
+
+/** A thread drawn between two thoughts (or a thought and the name in the middle: "root"); the id comes from the pair. */
+export interface Thread extends Base {
+  type: 'thread';
+  projectId: string;
+  from: string;
+  to: string;
+  createdAt: number;
+}
+
+export type AnyRecord = Task | Category | Project | Area | Entry | Special | Settings | Hide | Deco | Award | Chore | ChoreDay | ChoreTick | Thought | Thread;
 export type RecordType = AnyRecord['type'];
-export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'area', 'entry', 'special', 'settings', 'hide', 'deco', 'award', 'chore', 'choreday', 'choretick'];
+export const RECORD_TYPES: RecordType[] = ['task', 'category', 'project', 'area', 'entry', 'special', 'settings', 'hide', 'deco', 'award', 'chore', 'choreday', 'choretick', 'thought', 'thread'];
 
 export const SETTINGS_ID = 'settings';
 
