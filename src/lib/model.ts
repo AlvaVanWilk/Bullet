@@ -289,7 +289,9 @@ export type ThoughtStyle = 'plain' | 'box' | 'cloud' | 'circle' | 'marker';
 /** A stroke under or behind the words. */
 export type ThoughtMark = 'marker' | 'underline' | 'double' | 'wavy';
 /** A little drawing beside a thought. */
-export type ThoughtDoodle = 'star' | 'bang' | 'question' | 'bulb' | 'heart' | 'bolt' | 'flower' | 'check';
+export type ThoughtDoodle =
+  | 'star' | 'bang' | 'question' | 'check' | 'heart' | 'bulb' | 'bolt' | 'flower'
+  | 'target' | 'skill' | 'money' | 'music' | 'clock' | 'chat' | 'person' | 'pin' | 'flag' | 'book';
 
 /**
  * A thought on the idea sheet of a project: written freely anywhere on the

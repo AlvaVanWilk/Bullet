@@ -59,23 +59,43 @@ export const FILL_COLORS: { key: string; label: string; color: string }[] = [
 const fillColor = (key?: string | null) => FILL_COLORS.find((c) => c.key === key)?.color;
 
 /** The little drawings beside a thought, on 24 × 24, drawn by hand when shown. */
-const DOODLES: Record<ThoughtDoodle, { label: string; d: string }> = {
-  star: { label: 'Stern', d: 'M12 3 L14.6 9.2 L21 9.6 L16 13.8 L17.6 20.4 L12 16.8 L6.4 20.4 L8 13.8 L3 9.6 L9.4 9.2 Z' },
-  bang: { label: 'Ausrufezeichen', d: 'M12 3 Q13.2 9.5 12.2 15.2 M12.2 19.6 L12.3 20.6' },
-  question: { label: 'Fragezeichen', d: 'M7.8 8 Q8 3.6 12.4 3.8 Q16.6 4.2 16.2 8 Q15.8 11 12.6 12.4 Q12 14 12.2 15.6 M12.2 19.6 L12.3 20.6' },
-  bulb: { label: 'Glühbirne', d: 'M9 17 Q9 14 7.5 12 Q5.6 9 7.4 6 Q9.4 3.2 12.4 3.4 Q16.6 3.8 17.2 7.8 Q17.6 10.4 15.6 12.6 Q14.6 14 14.8 17 Z M9.6 19.4 L14.4 19.4 M10.4 21.4 L13.6 21.4' },
-  heart: { label: 'Herz', d: 'M12 20 Q4 14 4.2 9.2 Q4.6 5 8.4 5 Q11 5.2 12 8 Q13 5.2 15.6 5 Q19.6 5 19.8 9.2 Q20 14 12 20 Z' },
-  bolt: { label: 'Blitz', d: 'M13.5 2.5 L6.5 13.2 L11.4 13.2 L10 21.5 L17.5 10.2 L12.4 10.2 Z' },
-  flower: { label: 'Blüte', d: 'M12 9.4 Q9.4 4 12 2.8 Q14.6 4 12 9.4 M14.6 11 Q19.8 8.8 21 11.6 Q19.6 14.2 14.6 12.6 M12 14.6 Q14.6 20 12 21.2 Q9.4 20 12 14.6 M9.4 12.6 Q4.2 14.2 3 11.6 Q4.4 8.8 9.4 11 M12 10 Q13.4 10.2 13.4 11.8 Q13.2 13.4 12 13.4 Q10.6 13.4 10.6 11.8 Q10.8 10.2 12 10' },
-  check: { label: 'Haken', d: 'M4.5 12.8 L9.6 18.2 L19.6 5.4' },
+// a dot of 1.9 around (x, y), as a path to fill
+const dot = (x: number, y: number, r = 1.9) => `M${x - r} ${y} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0 Z`;
+const ring = (x: number, y: number, r: number) => `M${x - r} ${y} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0`;
+
+/**
+ * The little drawings beside a thought, on 24 × 24, drawn by hand when shown:
+ * d is drawn with the pen (w: how thick), solid is filled in (a dot, a wedge).
+ */
+const DOODLES: Record<ThoughtDoodle, { label: string; d: string; solid?: string; w?: number }> = {
+  star: { label: 'Stern', d: 'M12 2.6 L14.7 8.9 L21.3 9.4 L16.2 13.7 L17.9 20.4 L12 16.7 L6.1 20.4 L7.8 13.7 L2.7 9.4 L9.3 8.9 Z', w: 1.7 },
+  bang: { label: 'Ausrufezeichen', d: '', solid: `M9.6 2.6 Q12 1.6 14.6 2.6 L13.3 15 Q12 16 10.8 15 Z ${dot(12.1, 19.8, 2.2)}` },
+  question: { label: 'Fragezeichen', d: 'M7.2 8.2 Q7.4 3 12.4 3.2 Q17.2 3.6 16.8 8.2 Q16.4 11.4 13 12.8 Q12 13.8 12.1 15.6', solid: dot(12.1, 19.8, 2), w: 2.6 },
+  check: { label: 'Haken', d: 'M4.2 12.6 L9.6 18.4 L20 5.2', w: 2.6 },
+  heart: { label: 'Herz', d: 'M12 20 Q4 14 4.2 9.2 Q4.6 5 8.4 5 Q11 5.2 12 8 Q13 5.2 15.6 5 Q19.6 5 19.8 9.2 Q20 14 12 20 Z', w: 1.8 },
+  bulb: { label: 'Glühbirne', d: 'M9.4 16.6 Q9.4 14 7.9 12.2 Q6.2 9.4 7.8 6.8 Q9.6 4.4 12.2 4.5 Q15.8 4.8 16.4 8.2 Q16.8 10.6 15 12.4 Q14.4 13.8 14.6 16.6 Z M9.8 19 L14.2 19 M10.6 21.2 L13.4 21.2 M12 0.8 L12 2.2 M4 3.6 L5.2 4.8 M20 3.6 L18.8 4.8 M2.2 10 L3.8 10 M20.2 10 L21.8 10', w: 1.6 },
+  bolt: { label: 'Blitz', d: 'M13.5 2.5 L6.5 13.2 L11.4 13.2 L10 21.5 L17.5 10.2 L12.4 10.2 Z', w: 1.7 },
+  flower: { label: 'Blüte', d: 'M12 9.4 Q9.4 4 12 2.8 Q14.6 4 12 9.4 M14.6 11 Q19.8 8.8 21 11.6 Q19.6 14.2 14.6 12.6 M12 14.6 Q14.6 20 12 21.2 Q9.4 20 12 14.6 M9.4 12.6 Q4.2 14.2 3 11.6 Q4.4 8.8 9.4 11', solid: dot(12, 11.8, 1.8), w: 1.5 },
+  target: { label: 'Ziel', d: `${ring(12, 12.6, 8.4)} ${ring(12, 12.6, 4.4)} M12 12.6 L20.4 4.2 M17.2 4 L20.6 3.8 L20.4 7.2`, solid: dot(12, 12.6, 1.4), w: 1.5 },
+  skill: { label: 'Können', d: 'M7.4 12 L16.6 12 M4.4 8.6 L4.4 15.4 M7.4 6.6 L7.4 17.4 M16.6 6.6 L16.6 17.4 M19.6 8.6 L19.6 15.4', w: 2.3 },
+  money: { label: 'Geld', d: 'M9 6.6 Q6.8 4.2 8.8 2.8 Q12 4.2 15.2 2.8 Q17.2 4.2 15 6.6 Z M9 6.8 Q3.8 11.4 4.4 16.6 Q5.2 21.2 12 21.2 Q18.8 21.2 19.6 16.6 Q20.2 11.4 15 6.8 M14.6 11.4 Q13 10 11.4 11.2 Q9.8 12.6 10 14.6 Q10.4 17.4 12.8 17.2 Q14 17.1 14.8 16.2 M8.4 13.6 L12.8 13.6 M8.4 15.4 L12.4 15.4', w: 1.5 },
+  music: { label: 'Musik', d: 'M9.6 17.2 L9.6 5.8 M18.4 15.2 L18.4 3.8', solid: 'M9.6 5.8 L18.4 3.8 L18.4 6.8 L9.6 8.8 Z M5.4 17.8 Q5.2 15.4 7.8 15.2 Q10 15.2 9.8 17 Q9.6 19.2 7.2 19.4 Q5.6 19.4 5.4 17.8 Z M14.2 15.8 Q14 13.4 16.6 13.2 Q18.8 13.2 18.6 15 Q18.4 17.2 16 17.4 Q14.4 17.4 14.2 15.8 Z', w: 1.7 },
+  clock: { label: 'Zeit', d: `${ring(12, 12, 8.6)} M12 6.6 L12 12 L15.8 14.2`, w: 1.6 },
+  chat: { label: 'Sprechen', d: 'M4.6 5 Q12 3.4 19.4 5 Q21 9.6 19.4 14 Q15.2 15.2 11 14.8 L6.4 19.4 L7.6 14.4 Q4.8 14 4.4 12 Q3.8 8 4.6 5 Z M8.4 9.6 L8.5 9.7 M12 9.6 L12.1 9.7 M15.6 9.6 L15.7 9.7', w: 1.6 },
+  person: { label: 'Person', d: `${ring(12, 7.4, 3.2)} M5.4 20.8 Q5.8 13.2 12 13 Q18.2 13.2 18.6 20.8`, w: 1.6 },
+  pin: { label: 'Ort', d: `M12 21.4 Q5.4 13.8 5.7 9.4 Q6.1 3.2 12 3.2 Q17.9 3.2 18.3 9.4 Q18.6 13.8 12 21.4 Z ${ring(12, 9.4, 2.4)}`, w: 1.6 },
+  flag: { label: 'Meilenstein', d: 'M6 21.6 L6 2.8 M6 4 Q10 2.2 13 4 Q16 5.8 19.6 4 L19.6 12.6 Q16 14.4 13 12.6 Q10 10.8 6 12.6', w: 1.6 },
+  book: { label: 'Lernen', d: 'M12 6.6 Q8 4 3.4 5 L3.4 18.6 Q8 17.6 12 20.2 Q16 17.6 20.6 18.6 L20.6 5 Q16 4 12 6.6 Z M12 6.6 L12 20.2', w: 1.5 },
 };
 
 /** A doodle drawn with a pen, a little shaky. */
 export function DoodleMark(props: { doodle: ThoughtDoodle; seed: string; size?: number; class?: string }) {
   const z = props.size ?? 24;
-  const drawn = gen.toPaths(gen.path(DOODLES[props.doodle].d, { roughness: 0.7, stroke: INK, strokeWidth: 1.5, seed: seedOf(props.seed) }));
+  const doodle = DOODLES[props.doodle];
+  const drawn = doodle.d ? gen.toPaths(gen.path(doodle.d, { roughness: 0.7, stroke: INK, strokeWidth: doodle.w ?? 1.5, seed: seedOf(props.seed) })) : [];
   return (
-    <svg class={`idea-doodle ${props.class ?? ''}`} width={z} height={z} viewBox="0 0 24 24" aria-hidden="true">
+    <svg class={`idea-doodle ${props.class ?? ''}`} width={z} height={z} viewBox="0 0 24 24" aria-hidden="true" style={{ '--doodle-w': doodle.w ?? 1.5 }}>
+      {doodle.solid && <path class="solid" d={doodle.solid} />}
       {drawn.map((d, i) => <path key={i} d={d.d} />)}
     </svg>
   );

@@ -166,9 +166,10 @@
 .idea-frame path { fill: none; stroke: currentColor; stroke-width: 1.25; stroke-linecap: round; }
 /* a little drawing at its corner */
 .idea-doodle { overflow: visible; }
-.idea-doodle path { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.idea-doodle.on-idea { position: absolute; top: -16px; right: -18px; transform: rotate(8deg); pointer-events: none; }
-.idea.big .idea-doodle.on-idea { top: -18px; right: -22px; width: 30px; height: 30px; }
+.idea-doodle path { fill: none; stroke: currentColor; stroke-width: var(--doodle-w, 1.5); stroke-linecap: round; stroke-linejoin: round; }
+.idea-doodle path.solid { fill: currentColor; stroke-width: 0.7; }
+.idea-doodle.on-idea { position: absolute; top: -19px; right: -21px; width: 28px; height: 28px; transform: rotate(8deg); pointer-events: none; }
+.idea.big .idea-doodle.on-idea { top: -22px; right: -26px; width: 34px; height: 34px; }
 
 /* the note: pens and doodles to choose */
 .thought-colors { display: flex; gap: 8px; flex-wrap: wrap; }

@@ -99,7 +99,8 @@ Bedienung und Einrichtung: `README.md`.
   Striche unter der Schrift; Projektfarbe, gelb, rosa, mint, himmelblau, flieder – gedeckt, `thought.fill`); Strich (Marker, unterstrichen, doppelt, Welle);
   GROSS; Farbe des Stifts (Tinte, rot, blau, grün, ocker, pflaume – gedeckt; färbt Schrift,
   Rahmen, Strich, Kritzel; Marker dann in dieser Farbe, sonst in Projektfarbe); Kritzel an der
-  Ecke (Stern, !, ?, Glühbirne, Herz, Blitz, Blüte, Haken); „＋ Zweig“, „⌒ verbinden“ (dann
+  Ecke (Stern, ! (kräftig), ?, Haken, Herz, Glühbirne, Blitz, Blüte, Ziel, Können (Hantel), Geld,
+  Musik, Zeit, Sprechen, Person, Ort, Meilenstein, Lernen); „＋ Zweig“, „⌒ verbinden“ (dann
   antippen, womit; so verbunden mit Pfeil hin), „→ als Aufgabe“ (wird Aufgabe des Projekts; der Gedanke bleibt und trägt ihr Kästchen,
   erledigt → dünn durchgestrichen), „wegradieren“ (Fäden gehen mit, die Aufgabe bleibt). Fäden
   von Hand gezeichnet mit leichtem Bogen von Rand zu Rand, beim Entstehen gezogen; Pfeilspitzen
