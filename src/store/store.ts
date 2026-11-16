@@ -946,6 +946,30 @@ export class Store {
     this.changed(true);
   }
 
+  /** A thread bent by hand (null: back to its own little bow). */
+  setBend(id: string, bend: Thread['bend']) {
+    const r = this.records.get(id);
+    if (r?.type !== 'thread' || r.deleted) return;
+    const clean = bend ? { n: Math.round(Math.max(-2000, Math.min(2000, bend.n))), t: Math.round(Math.max(-0.45, Math.min(0.45, bend.t)) * 1000) / 1000 } : null;
+    this.put({ ...r, bend: clean });
+    this.changed(true);
+  }
+
+  /** Several thoughts carried together: each to its new square, in one go. */
+  moveThoughts(moves: { id: string; x: number; y: number }[]) {
+    let any = false;
+    for (const m of moves) {
+      const t = this.thought(m.id);
+      if (!t) continue;
+      const x = Math.round(m.x);
+      const y = Math.round(m.y);
+      if (x === t.x && y === t.y) continue;
+      this.put({ ...t, x, y });
+      any = true;
+    }
+    if (any) this.changed(true);
+  }
+
   disconnect(id: string) {
     const r = this.records.get(id);
     if (r?.type !== 'thread' || r.deleted) return;

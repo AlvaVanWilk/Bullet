@@ -109,6 +109,12 @@ Bedienung und Einrichtung: `README.md`.
   kleiner Knoten an der Stelle). ⑂ → Gedanken antippen = teilt sich; beim „⌒ verbinden“ einen Faden
   antippen = laufen zusammen. Wird ein Faden geschnitten (oder sein Gedanke wegradiert), gehen die
   Zweige an ihm mit.
+  Biegen (`thread.bend`: Mitte quer in px, längs als Anteil): Faden gedrückt halten (Maus: gleich ziehen)
+  und ziehen, die gegriffene Stelle folgt dem Finger; ↺ im Faden-Menü macht ihn wieder sanft.
+  Mehrere auswählen: aufs freie Papier drücken, kurz halten, Rahmen ziehen (Maus: gleich ziehen; oder
+  der Knopf mit dem gestrichelten Rahmen oben rechts); Ausgewählte gestrichelt umrandet, einen davon
+  ziehen trägt alle (`moveThoughts`), antippen nimmt einen dazu oder heraus, Papier antippen / „fertig“ /
+  Esc lässt los, „wegradieren“ (zweimal tippen) radiert alle. Schnelles Wischen scrollt wie immer.
   Ein Faden hat eine feste id aus seinen beiden Enden (kein doppelter von zwei Geräten). Das
   Schreibfeld liegt bereit und bekommt den Fokus im Tippen selbst (sonst keine iPad-Tastatur).
   Projekt gelöscht → sein Ideenblatt geht mit.

@@ -61,6 +61,20 @@ describe('idea sheet', () => {
     s.updateThought(a.id, { fill: null });
     expect(s.thought(a.id)!.fill).toBeNull();
   });
+  it('carries several thoughts together and bends a thread by hand', () => {
+    const s = makeStore();
+    const p = s.addProject('Garten')!;
+    const a = s.addThought(p.id, 'Hochbeet', 3, 0)!;
+    const b = s.addThought(p.id, 'Erde', 8, 2)!;
+    s.moveThoughts([{ id: a.id, x: 5, y: 1 }, { id: b.id, x: 10.4, y: 3 }, { id: 'weg', x: 1, y: 1 }]);
+    expect(s.thought(a.id)).toMatchObject({ x: 5, y: 1 });
+    expect(s.thought(b.id)).toMatchObject({ x: 10, y: 3 });
+    const th = s.connect(p.id, a.id, b.id)!;
+    s.setBend(th.id, { n: 60.4, t: 0.9 });
+    expect(s.records.get(th.id)).toMatchObject({ bend: { n: 60, t: 0.45 } });
+    s.setBend(th.id, null);
+    expect((s.records.get(th.id) as { bend?: unknown }).bend).toBeNull();
+  });
   it('lets a thread split off the middle of another (a Y), and cuts the branch with its stem', () => {
     const s = makeStore();
     const p = s.addProject('Garten')!;

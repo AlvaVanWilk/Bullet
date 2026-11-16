@@ -8,6 +8,7 @@
 .idea-sheet, .projview > .proj-page { animation: sheet-turn 0.26s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
 @media (prefers-reduced-motion: reduce) { .idea-sheet, .projview > .proj-page { animation: none; } }
 
+.idea-wrap { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .idea-sheet {
   position: relative;
   flex: 1 1 auto;
@@ -16,7 +17,36 @@
   overscroll-behavior: contain;
 }
 .idea-canvas { position: relative; touch-action: pan-x pan-y; user-select: none; -webkit-user-select: none; }
-.idea-canvas.linking { cursor: crosshair; }
+.idea-canvas.linking, .idea-canvas.selecting { cursor: crosshair; }
+/* chosen together: a dashed pencil line around each */
+.idea.selected { outline: 1.5px dashed var(--proj-ink, var(--ink)); outline-offset: 5px; }
+/* the frame being drawn to choose */
+.idea-lasso {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+  border: 1.5px dashed var(--proj-ink, var(--ink));
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--proj-mark, #cfc8b9) 14%, transparent);
+}
+/* the tool for it, in the corner of the sheet */
+.idea-tools { position: absolute; top: 12px; right: 14px; z-index: 7; }
+.idea-tool {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(43, 43, 48, 0.18);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  box-shadow: 0 2px 6px rgba(60, 45, 20, 0.12);
+  cursor: pointer;
+}
+.idea-tool.on { color: var(--proj-ink, var(--ink)); border-color: var(--proj-ink, var(--ink)); background: color-mix(in srgb, var(--proj-mark, #cfc8b9) 30%, var(--paper)); }
+.idea-hint .chip.danger { color: var(--red); }
+.idea-hint .chip.sure { background: var(--red); color: var(--paper); }
 
 /* threads: a fineliner between the thoughts, drawn in when new */
 .idea-threads { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
@@ -166,9 +196,12 @@
 }
 
 .idea-hint {
-  position: sticky;
+  position: absolute;
   left: 50%;
   bottom: 18px;
+  max-width: calc(100% - 32px);
+  flex-wrap: wrap;
+  justify-content: center;
   width: max-content;
   transform: translateX(-50%);
   display: flex;

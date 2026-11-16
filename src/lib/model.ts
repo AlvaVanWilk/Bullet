@@ -326,6 +326,8 @@ export interface Thread extends Base {
   to: string;
   /** arrowheads: at the end it goes to, at its start, at both (none: a plain line) */
   arrow?: 'to' | 'from' | 'both' | null;
+  /** bent by hand: where its middle lies, across the line (px) and along it (share of its length); none: its own little bow */
+  bend?: { n: number; t: number } | null;
   createdAt: number;
 }
 

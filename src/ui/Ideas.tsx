@@ -21,6 +21,15 @@ const MID_X = COLS / 2;
 const MID_Y = ROWS / 2;
 /** How far a finger must go before a thought is carried (less is a tap). */
 const SLOP = 6;
+/** How long a finger rests before it draws a frame to choose, or bends a thread (a quick move scrolls). */
+const HOLD_MS = 380;
+
+/** While held: the page does not scroll under the finger (touchmove cancelled; pointer events go on). */
+function holdPage(active: () => boolean) {
+  const block = (e: TouchEvent) => { if (active()) e.preventDefault(); };
+  window.addEventListener('touchmove', block, { passive: false });
+  return () => window.removeEventListener('touchmove', block);
+}
 
 const gen = rough.generator();
 const INK = '#2b2b30';
@@ -139,7 +148,26 @@ export function IdeaSheet(props: { project: Project }) {
   const threads = snap.threads.filter((t) => !t.deleted && t.projectId === p.id);
   // the measured size of each thought (and of the name in the middle), for the threads to meet them
   const [sizes, setSizes] = useState<Record<string, { w: number; h: number }>>({});
-  const [carry, setCarry] = useState<{ id: string; dx: number; dy: number } | null>(null);
+  const [carry, setCarry] = useState<{ ids: string[]; dx: number; dy: number } | null>(null);
+  // chosen together (a frame drawn around them): carried together
+  const [selected, setSelected] = useState<string[]>([]);
+  const [selectTool, setSelectTool] = useState(false);
+  const [frame, setFrame] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const [sureErase, setSureErase] = useState(false);
+  // a thread being bent by hand, before it is let go
+  const [bending, setBending] = useState<{ id: string; bend: { n: number; t: number } | null } | null>(null);
+  const justBent = useRef(false);
+  const canvas = useRef<HTMLDivElement>(null);
+  const live = new Set(thoughts.map((t) => t.id));
+  const chosen = selected.filter((id) => live.has(id));
+  useEffect(() => { setSureErase(false); }, [chosen.length]);
+  // Esc lets go of what is chosen
+  useEffect(() => {
+    if (!chosen.length && !selectTool) return;
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { setSelected([]); setSelectTool(false); } };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [chosen.length, selectTool]);
   const [chosenThread, setChosenThread] = useState<string | null>(null);
 
   // the middle in view when the sheet is opened
@@ -165,7 +193,7 @@ export function IdeaSheet(props: { project: Project }) {
     if (id === 'root') return { x: px(0), y: py(0) };
     const t = thoughts.find((x) => x.id === id);
     if (!t) return null;
-    const off = carry?.id === id ? { x: carry.dx, y: carry.dy } : { x: 0, y: 0 };
+    const off = carry?.ids.includes(id) ? { x: carry.dx, y: carry.dy } : { x: 0, y: 0 };
     return { x: px(t.x) + off.x + size.w / 2, y: py(t.y) + off.y + size.h / 2 };
   };
 
@@ -190,36 +218,174 @@ export function IdeaSheet(props: { project: Project }) {
     };
     const ea = end(th.from);
     const eb = end(th.to);
+    const bend = bending?.id === id ? bending.bend : th.bend ?? null;
     let g: ThreadGeom | null = null;
     if (ea && eb) {
-      const a = ea.hw ? edgeOf(ea.c, ea.hw, ea.hh, eb.c.x, eb.c.y) : ea.c;
-      const b = eb.hw ? edgeOf(eb.c, eb.hw, eb.hh, ea.c.x, ea.c.y) : eb.c;
-      g = { a, b, mid: bowedMid(th.id, a, b), depth: Math.max(ea.depth, eb.depth) };
+      // bent by hand: it leaves each thought towards its bend, not straight at the other
+      const aim = bend ? { a: pt(bowedMid(th.id, ea.c, eb.c, bend)), b: pt(bowedMid(th.id, ea.c, eb.c, bend)) } : { a: eb.c, b: ea.c };
+      const a = ea.hw ? edgeOf(ea.c, ea.hw, ea.hh, aim.a.x, aim.a.y) : ea.c;
+      const b = eb.hw ? edgeOf(eb.c, eb.hw, eb.hh, aim.b.x, aim.b.y) : eb.c;
+      g = { a, b, mid: bowedMid(th.id, a, b, bend), depth: Math.max(ea.depth, eb.depth) };
     }
     geoms.set(id, g);
     return g;
   };
 
-  // a tap on free paper: write there (or stop tying)
-  const down = useRef<{ x: number; y: number } | null>(null);
-  const onPaperDown = (e: PointerEvent) => {
-    if (e.target !== e.currentTarget) return;
-    down.current = { x: e.clientX, y: e.clientY };
-  };
-  const onPaperUp = (e: PointerEvent) => {
-    const start = down.current;
-    down.current = null;
-    if (!start || e.target !== e.currentTarget || Math.hypot(e.clientX - start.x, e.clientY - start.y) > SLOP) return;
+  // a tap on free paper: write there (or stop tying, or let go of what is chosen);
+  // held and drawn (at once with a mouse or the frame tool): a frame, all in it chosen
+  const tapPaper = (clientX: number, clientY: number) => {
     setChosenThread(null);
     if (state.linking) {
       ideaUi.set({ linking: null });
       return;
     }
-    if (state.writing) return;
-    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = Math.floor((e.clientX - box.left) / SQ) - MID_X;
-    const y = Math.floor((e.clientY - box.top) / SQ) - MID_Y;
+    if (chosen.length) {
+      setSelected([]);
+      return;
+    }
+    if (state.writing || !canvas.current) return;
+    const box = canvas.current.getBoundingClientRect();
+    const x = Math.floor((clientX - box.left) / SQ) - MID_X;
+    const y = Math.floor((clientY - box.top) / SQ) - MID_Y;
     startWriting({ x, y, from: null });
+  };
+  const onPaperDown = (e: PointerEvent) => {
+    if (e.target !== e.currentTarget || !e.isPrimary) return;
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const sx = e.clientX;
+    const sy = e.clientY;
+    let mode: 'wait' | 'frame' | 'off' = e.pointerType === 'mouse' || selectTool ? 'frame' : 'wait';
+    if (mode === 'frame') e.preventDefault();
+    let drawn = false;
+    const timer = mode === 'wait'
+      ? window.setTimeout(() => {
+          mode = 'frame';
+          setFrame({ x0: sx - box.left, y0: sy - box.top, x1: sx - box.left, y1: sy - box.top });
+          navigator.vibrate?.(8);
+        }, HOLD_MS)
+      : 0;
+    const release = holdPage(() => mode === 'frame');
+    const done = () => {
+      window.clearTimeout(timer);
+      release();
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+    };
+    const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== e.pointerId) return;
+      const far = Math.hypot(ev.clientX - sx, ev.clientY - sy) > SLOP;
+      if (mode === 'wait' && far) { mode = 'off'; window.clearTimeout(timer); }
+      if (mode === 'frame' && (far || drawn)) {
+        drawn = true;
+        setFrame({ x0: sx - box.left, y0: sy - box.top, x1: ev.clientX - box.left, y1: ev.clientY - box.top });
+      }
+    };
+    const up = (ev: PointerEvent) => {
+      if (ev.pointerId !== e.pointerId) return;
+      done();
+      setFrame(null);
+      if (drawn) {
+        const l = Math.min(sx, ev.clientX) - box.left;
+        const r = Math.max(sx, ev.clientX) - box.left;
+        const t = Math.min(sy, ev.clientY) - box.top;
+        const b = Math.max(sy, ev.clientY) - box.top;
+        const inside = thoughts.filter((th) => {
+          const z = sizes[th.id] ?? { w: 80, h: SQ };
+          return px(th.x) < r && px(th.x) + z.w > l && py(th.y) < b && py(th.y) + z.h > t;
+        }).map((th) => th.id);
+        setSelected(inside);
+        setSelectTool(false);
+        setChosenThread(null);
+        return;
+      }
+      // a plain tap (a finger that rested and let go draws nothing and writes nothing)
+      const tap = mode === 'wait' || (mode === 'frame' && e.pointerType === 'mouse' && !selectTool);
+      if (tap && Math.hypot(ev.clientX - sx, ev.clientY - sy) <= SLOP) tapPaper(ev.clientX, ev.clientY);
+    };
+    const cancel = (ev: PointerEvent) => {
+      if (ev.pointerId !== e.pointerId) return;
+      done();
+      setFrame(null);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', cancel);
+  };
+
+  // a thread held a moment (with a mouse: just drawn) and moved: it bends where it was taken, under the finger
+  const onThreadDown = (th: Thread, g: ThreadGeom) => (e: PointerEvent) => {
+    e.stopPropagation();
+    if (state.linking || !e.isPrimary) return;
+    const sx = e.clientX;
+    const sy = e.clientY;
+    const mouse = e.pointerType === 'mouse';
+    if (mouse) e.preventDefault();
+    let mode: 'wait' | 'bend' | 'off' = 'wait';
+    // where along it it was taken (0 … 1), from the canvas point under the finger
+    const box = canvas.current!.getBoundingClientRect();
+    const at = { x: sx - box.left, y: sy - box.top };
+    const ctl = { x: 2 * g.mid[0] - (g.a.x + g.b.x) / 2, y: 2 * g.mid[1] - (g.a.y + g.b.y) / 2 };
+    let s0 = 0.5;
+    let best = Infinity;
+    for (let i = 1; i < 40; i++) {
+      const u = i / 40;
+      const qx = (1 - u) ** 2 * g.a.x + 2 * u * (1 - u) * ctl.x + u * u * g.b.x;
+      const qy = (1 - u) ** 2 * g.a.y + 2 * u * (1 - u) * ctl.y + u * u * g.b.y;
+      const d = Math.hypot(qx - at.x, qy - at.y);
+      if (d < best) { best = d; s0 = u; }
+    }
+    s0 = Math.max(0.2, Math.min(0.8, s0));
+    const pull = 1 / (4 * s0 * (1 - s0));
+    const timer = mouse ? 0 : window.setTimeout(() => {
+      mode = 'bend';
+      setChosenThread(null);
+      setBending({ id: th.id, bend: th.bend ?? null });
+      navigator.vibrate?.(8);
+    }, HOLD_MS);
+    const release = holdPage(() => mode === 'bend');
+    const done = () => {
+      window.clearTimeout(timer);
+      release();
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+    };
+    let last: { n: number; t: number } | null = null;
+    const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== e.pointerId) return;
+      const dx = ev.clientX - sx;
+      const dy = ev.clientY - sy;
+      const far = Math.hypot(dx, dy) > SLOP;
+      if (mode === 'wait' && far) {
+        if (mouse) { mode = 'bend'; setChosenThread(null); }
+        else { mode = 'off'; window.clearTimeout(timer); return; }
+      }
+      if (mode !== 'bend') return;
+      // the middle moves so that the point taken follows the finger
+      const mx = g.mid[0] + dx * pull;
+      const my = g.mid[1] + dy * pull;
+      last = bendOf(g.a, g.b, mx, my);
+      setBending({ id: th.id, bend: last });
+    };
+    const up = (ev: PointerEvent) => {
+      if (ev.pointerId !== e.pointerId) return;
+      done();
+      if (mode === 'bend') {
+        justBent.current = true;
+        window.setTimeout(() => { justBent.current = false; }, 400);
+        if (last) store.setBend(th.id, last);
+        setBending(null);
+      }
+    };
+    const cancel = (ev: PointerEvent) => {
+      if (ev.pointerId !== e.pointerId) return;
+      done();
+      setBending(null);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', cancel);
   };
 
   // a tap on a thought: tie to it (while tying), otherwise its note
@@ -229,6 +395,10 @@ export function IdeaSheet(props: { project: Project }) {
       // tied on purpose: from the one to the other, with an arrow (tapped, it can be turned or taken off)
       if (state.linking !== id) store.connect(p.id, state.linking, id, 'to');
       ideaUi.set({ linking: null });
+      return;
+    }
+    if (chosen.length && t !== 'root') {
+      setSelected(chosen.includes(t.id) ? chosen.filter((x) => x !== t.id) : [...chosen, t.id]);
       return;
     }
     if (t === 'root') {
@@ -249,11 +419,13 @@ export function IdeaSheet(props: { project: Project }) {
     const sx = e.clientX;
     const sy = e.clientY;
     let moving = false;
+    // one of those chosen: they all go along
+    const ids = chosen.includes(t.id) ? chosen : [t.id];
     const move = (ev: PointerEvent) => {
       const dx = ev.clientX - sx;
       const dy = ev.clientY - sy;
       if (!moving && Math.hypot(dx, dy) > SLOP) moving = true;
-      if (moving) setCarry({ id: t.id, dx, dy });
+      if (moving) setCarry({ ids, dx, dy });
     };
     const up = (ev: PointerEvent) => {
       el.removeEventListener('pointermove', move);
@@ -261,9 +433,12 @@ export function IdeaSheet(props: { project: Project }) {
       el.removeEventListener('pointercancel', cancel);
       setCarry(null);
       if (moving) {
-        const x = Math.max(-MID_X + 1, Math.min(MID_X - 6, t.x + Math.round((ev.clientX - sx) / SQ)));
-        const y = Math.max(-MID_Y + 1, Math.min(MID_Y - 2, t.y + Math.round((ev.clientY - sy) / SQ)));
-        if (x !== t.x || y !== t.y) store.updateThought(t.id, { x, y });
+        const dx = Math.round((ev.clientX - sx) / SQ);
+        const dy = Math.round((ev.clientY - sy) / SQ);
+        store.moveThoughts(ids.map((id) => {
+          const o = store.thought(id) ?? t;
+          return { id, x: Math.max(-MID_X + 1, Math.min(MID_X - 6, o.x + dx)), y: Math.max(-MID_Y + 1, Math.min(MID_Y - 2, o.y + dy)) };
+        }));
       } else {
         tapThought(t, el);
       }
@@ -280,12 +455,13 @@ export function IdeaSheet(props: { project: Project }) {
   };
 
   return (
+    <div class="idea-wrap">
     <div class="idea-sheet paper" data-paper="dots" ref={scroller} data-scroll>
       <div
-        class={`idea-canvas ${state.linking ? 'linking' : ''}`}
+        ref={canvas}
+        class={`idea-canvas ${state.linking ? 'linking' : ''} ${selectTool ? 'selecting' : ''}`}
         style={{ width: `${COLS * SQ}px`, height: `${ROWS * SQ}px` }}
         onPointerDown={onPaperDown}
-        onPointerUp={onPaperUp}
       >
         <svg class="idea-threads" width={COLS * SQ} height={ROWS * SQ} aria-hidden="false">
           {/* the threads tied to thoughts first, then those branching off a thread (a Y), over them */}
@@ -302,9 +478,12 @@ export function IdeaSheet(props: { project: Project }) {
                 mid={g.mid}
                 knots={[...(threadIds.has(th.from) ? [g.a] : []), ...(threadIds.has(th.to) ? [g.b] : [])]}
                 fresh={store.isFresh(th.id)}
-                chosen={chosenThread === th.id || state.linking === th.id}
+                chosen={chosenThread === th.id || state.linking === th.id || bending?.id === th.id}
                 menu={chosenThread === th.id && !state.linking}
+                onDown={onThreadDown(th, g)}
+                bent={!!(bending?.id === th.id ? bending.bend : th.bend)}
                 onChoose={() => {
+                  if (justBent.current) return;
                   if (state.linking) {
                     // while tying: tied to this thread, at its middle (two run into one)
                     if (state.linking !== th.id) store.connect(p.id, state.linking, th.id, 'to');
@@ -332,12 +511,12 @@ export function IdeaSheet(props: { project: Project }) {
 
         {thoughts.map((t) => {
           const task = t.taskId ? store.task(t.taskId) : undefined;
-          const off = carry?.id === t.id ? `translate(${carry.dx}px, ${carry.dy}px)` : undefined;
+          const off = carry?.ids.includes(t.id) ? `translate(${carry.dx}px, ${carry.dy}px)` : undefined;
           return (
             <div
               key={t.id}
               ref={measure(t.id)}
-              class={`idea ${frameOf(t)} ${markOf(t) ? `mark-${markOf(t)}` : ''} ${t.big ? 'big' : ''} ${t.color ? 'colored' : ''} ${carry?.id === t.id ? 'carried' : ''} ${state.linking === t.id ? 'source' : ''} ${task?.doneAt != null ? 'done' : ''} ${store.isFresh(t.id) ? 'ink-in' : ''}`}
+              class={`idea ${frameOf(t)} ${markOf(t) ? `mark-${markOf(t)}` : ''} ${t.big ? 'big' : ''} ${t.color ? 'colored' : ''} ${carry?.ids.includes(t.id) ? 'carried' : ''} ${chosen.includes(t.id) ? 'selected' : ''} ${state.linking === t.id ? 'source' : ''} ${task?.doneAt != null ? 'done' : ''} ${store.isFresh(t.id) ? 'ink-in' : ''}`}
               style={{ left: `${px(t.x)}px`, top: `${py(t.y)}px`, transform: off, '--pen': penColor(t.color) }}
               onPointerDown={onThoughtDown(t)}
               role="button"
@@ -367,15 +546,59 @@ export function IdeaSheet(props: { project: Project }) {
         })}
 
         <IdeaWriter project={p} at={state.writing} />
+        {frame && (
+          <div
+            class="idea-lasso"
+            style={{ left: `${Math.min(frame.x0, frame.x1)}px`, top: `${Math.min(frame.y0, frame.y1)}px`, width: `${Math.abs(frame.x1 - frame.x0)}px`, height: `${Math.abs(frame.y1 - frame.y0)}px` }}
+          />
+        )}
       </div>
-      {state.linking && (
+      {!thoughts.length && !state.writing && (
+        <p class="idea-empty">Tippe irgendwo aufs Papier und schreib, was dir einfällt. Den Namen in der Mitte antippen: ein Zweig.</p>
+      )}
+    </div>
+      {/* the frame to choose several: then drawn with one finger (without it: hold a moment, then draw) */}
+      <div class="idea-tools">
+        <button
+          type="button"
+          class={`idea-tool ${selectTool ? 'on' : ''}`}
+          onClick={() => { setSelectTool(!selectTool); setSelected([]); ideaUi.set({ linking: null }); }}
+          aria-pressed={selectTool}
+          aria-label="auswählen: einen Rahmen um mehrere ziehen"
+          title="auswählen: einen Rahmen um mehrere ziehen (oder aufs Papier drücken, kurz halten, ziehen)"
+        >
+          <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+            <rect x="3" y="4" width="15" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2.4" />
+            <path d="M14 13 L19.5 18.5 M16.6 18.8 L19.6 18.6 L19.4 15.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
+      {selectTool && !frame && (
+        <div class="idea-hint" role="status">
+          Einen Rahmen um die Gedanken ziehen
+          <button type="button" class="chip" onClick={() => setSelectTool(false)}>abbrechen</button>
+        </div>
+      )}
+      {chosen.length > 0 && !state.linking && (
+        <div class="idea-hint" role="status">
+          {chosen.length === 1 ? '1 Gedanke' : `${chosen.length} Gedanken`} ausgewählt · ziehen verschiebt alle
+          <button
+            type="button"
+            class={`chip danger ${sureErase ? 'sure' : ''}`}
+            onClick={() => {
+              if (!sureErase) { setSureErase(true); return; }
+              for (const id of chosen) store.deleteThought(id);
+              setSelected([]);
+            }}
+          >{sureErase ? 'wirklich wegradieren?' : 'wegradieren'}</button>
+          <button type="button" class="chip" onClick={() => setSelected([])}>fertig</button>
+        </div>
+      )}
+      {state.linking && !chosen.length && (
         <div class="idea-hint" role="status">
           {threadIds.has(state.linking) ? 'Antippen, wohin der Faden abzweigt' : 'Antippen, womit es verbunden werden soll (auch ein Faden)'}
           <button type="button" class="chip" onClick={() => ideaUi.set({ linking: null })}>abbrechen</button>
         </div>
-      )}
-      {!thoughts.length && !state.writing && (
-        <p class="idea-empty">Tippe irgendwo aufs Papier und schreib, was dir einfällt. Den Namen in der Mitte antippen: ein Zweig.</p>
       )}
     </div>
   );
@@ -387,13 +610,27 @@ type Pt = { x: number; y: number };
 type ThreadGeom = { a: Pt; b: Pt; mid: [number, number]; depth: number };
 
 /** The middle of a thread, bowed a little to one side (its own, from its id); it lies on the drawn curve, so a branch can start there. */
-function bowedMid(id: string, a: Pt, b: Pt): [number, number] {
+function bowedMid(id: string, a: Pt, b: Pt, bend?: { n: number; t: number } | null): [number, number] {
   const seed = seedOf(id);
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
+  // bent by hand: across the line by n, along it by t of its length
+  if (bend) return [(a.x + b.x) / 2 - (dy / len) * bend.n + (dx / len) * bend.t * len, (a.y + b.y) / 2 + (dx / len) * bend.n + (dy / len) * bend.t * len];
   const bow = (((seed % 7) - 3) / 3) * Math.min(26, len * 0.12);
   return [(a.x + b.x) / 2 - (dy / len) * bow, (a.y + b.y) / 2 + (dx / len) * bow];
+}
+
+const pt = (m: [number, number]): Pt => ({ x: m[0], y: m[1] });
+
+/** The bend that puts the middle of the line a → b at (mx, my). */
+function bendOf(a: Pt, b: Pt, mx: number, my: number) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const rx = mx - (a.x + b.x) / 2;
+  const ry = my - (a.y + b.y) / 2;
+  return { n: (rx * -dy + ry * dx) / len, t: Math.max(-0.45, Math.min(0.45, (rx * dx + ry * dy) / (len * len))) };
 }
 
 /** A thread between two, drawn by hand with a little bow and arrowheads if it has them; tapped, it offers them, a branch and the scissors. */
@@ -406,13 +643,24 @@ function ThreadLine(props: {
   fresh: boolean;
   chosen: boolean;
   menu: boolean;
+  bent: boolean;
+  onDown: (e: PointerEvent) => void;
   onChoose: () => void;
   onBranch: () => void;
 }) {
   const { a, b, thread, mid } = props;
   const seed = seedOf(thread.id);
   const opts = { roughness: 0.9, bowing: 0.6, stroke: INK, strokeWidth: 1.3, seed };
-  const drawn = gen.toPaths(gen.curve([[a.x, a.y], mid, [b.x, b.y]], opts));
+  // bent by hand: drawn along the smooth bow through its middle (three points alone would overshoot)
+  const ctl: [number, number] = [2 * mid[0] - (a.x + b.x) / 2, 2 * mid[1] - (a.y + b.y) / 2];
+  const along: [number, number][] = [];
+  if (props.bent) {
+    for (let i = 0; i <= 10; i++) {
+      const u = i / 10;
+      along.push([(1 - u) ** 2 * a.x + 2 * u * (1 - u) * ctl[0] + u * u * b.x, (1 - u) ** 2 * a.y + 2 * u * (1 - u) * ctl[1] + u * u * b.y]);
+    }
+  }
+  const drawn = gen.toPaths(gen.curve(props.bent ? along : [[a.x, a.y], mid, [b.x, b.y]], opts));
   // an arrowhead: two short strokes back from the tip, along the curve's last stretch
   const head = (tip: { x: number; y: number }, from: [number, number], s2: number) => {
     const ang = Math.atan2(tip.y - from[1], tip.x - from[0]);
@@ -421,8 +669,8 @@ function ThreadLine(props: {
   };
   const arrow = thread.arrow ?? null;
   const heads = [
-    ...(arrow === 'to' || arrow === 'both' ? head(b, mid, seed + 1) : []),
-    ...(arrow === 'from' || arrow === 'both' ? head(a, mid, seed + 2) : []),
+    ...(arrow === 'to' || arrow === 'both' ? head(b, props.bent ? ctl : mid, seed + 1) : []),
+    ...(arrow === 'from' || arrow === 'both' ? head(a, props.bent ? ctl : mid, seed + 2) : []),
   ];
   const smooth = `M ${a.x} ${a.y} Q ${2 * mid[0] - (a.x + b.x) / 2} ${2 * mid[1] - (a.y + b.y) / 2} ${b.x} ${b.y}`;
   const stop = (e: Event) => e.stopPropagation();
@@ -431,7 +679,7 @@ function ThreadLine(props: {
       {drawn.map((d, i) => <path key={i} class="thread-ink" d={d.d} pathLength={1} />)}
       {heads.map((d, i) => <path key={`h${i}`} class="thread-ink thread-head" d={d.d} />)}
       {/* a broad, invisible band to tap it */}
-      <path class="thread-hit" d={smooth} onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onChoose(); }} />
+      <path class="thread-hit" d={smooth} onPointerDown={props.onDown} onClick={(e) => { e.stopPropagation(); props.onChoose(); }} />
       {/* where it splits off another thread: a little knot */}
       {props.knots.map((k, i) => <circle key={`k${i}`} class="thread-knot" cx={k.x} cy={k.y} r="2.6" />)}
       {props.menu && (
@@ -451,6 +699,13 @@ function ThreadLine(props: {
             <circle r="14" />
             <text text-anchor="middle" dy="5">⑂</text>
           </g>
+          {thread.bend && (
+            <g class="thread-btn" transform="translate(64 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); store.setBend(thread.id, null); }}>
+              <title>wieder sanft gebogen</title>
+              <circle r="14" />
+              <text text-anchor="middle" dy="5">↺</text>
+            </g>
+          )}
           <g class="thread-btn" transform="translate(32 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); store.disconnect(thread.id); }}>
             <title>durchschneiden</title>
             <circle r="14" />
