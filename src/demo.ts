@@ -53,14 +53,18 @@ export function seedDemo(today: DayKey) {
   // the idea sheet of the garden shed: a few thoughts, tied
   const farbIdee = store.addThought(garten.id, 'Farbe', 8, -3, 'root')!;
   store.updateThought(farbIdee.id, { style: 'cloud' });
-  store.addThought(garten.id, 'Schwedenrot oder doch Grün?', 15, -6, farbIdee.id);
-  const fest = store.addThought(garten.id, 'Grillfest im Mai', -14, -4, 'root')!;
-  store.updateThought(fest.id, { style: 'box' });
-  store.addThought(garten.id, 'Lichterkette', -20, 1, fest.id);
+  const rot = store.addThought(garten.id, 'Schwedenrot oder doch Grün?', 15, -6, farbIdee.id)!;
+  store.updateThought(rot.id, { color: 'rot', doodle: 'question' });
+  const fest = store.addThought(garten.id, 'Grillfest im Mai', -16, -5, 'root')!;
+  store.updateThought(fest.id, { style: 'box', big: true, doodle: 'star' });
+  const licht = store.addThought(garten.id, 'Lichterkette', -20, 1)!;
+  store.connect(garten.id, fest.id, licht.id, 'to');
   const dach = store.addThought(garten.id, 'Dachpappe erneuern?', 6, 5, 'root')!;
-  store.updateThought(dach.id, { style: 'marker' });
+  store.updateThought(dach.id, { mark: 'wavy', color: 'ocker', doodle: 'bang' });
   store.thoughtToTask(dach.id);
-  store.addThought(garten.id, 'Regentonne an die Rinne', -6, 7);
+  const tonne = store.addThought(garten.id, 'Regentonne an die Rinne', -6, 7)!;
+  store.updateThought(tonne.id, { style: 'circle', color: 'blau', doodle: 'bulb' });
+  store.connect(garten.id, tonne.id, dach.id, 'both');
   const app = store.addProject('Bullet')!;
   store.updateProject(app.id, { icon: 'feder', color: '#3f6f8c' });
   const ideen = store.addArea(app.id, 'Ideen und Bugs')!;

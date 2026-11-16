@@ -94,11 +94,16 @@ Bedienung und Einrichtung: `README.md`.
   Projektfarbe. Freies Papier antippen → dort schreiben (Enter legt den Gedanken ab, Esc
   verwirft); den Namen antippen → ein Zweig (neuer Gedanke daneben, mit Faden verbunden).
   Gedanken sitzen auf den Punktreihen (Lage in Kästchen ab der Mitte), lassen sich mit dem Finger
-  tragen (rasten ein) und antippen → Zettel: Text, Aussehen (schlicht, Kasten, Wolke – mit
-  Fineliner gezeichnet –, Marker in Projektfarbe), „＋ Zweig“, „⌒ verbinden“ (dann antippen,
-  womit), „→ als Aufgabe“ (wird Aufgabe des Projekts; der Gedanke bleibt und trägt ihr Kästchen,
+  tragen (rasten ein) und antippen → Zettel: Text; Rahmen (ohne, Kasten, Wolke, eingekreist –
+  von Hand gezogen, über den Anfang hinaus); Strich (Marker, unterstrichen, doppelt, Welle);
+  GROSS; Farbe des Stifts (Tinte, rot, blau, grün, ocker, pflaume – gedeckt; färbt Schrift,
+  Rahmen, Strich, Kritzel; Marker dann in dieser Farbe, sonst in Projektfarbe); Kritzel an der
+  Ecke (Stern, !, ?, Glühbirne, Herz, Blitz, Blüte, Haken); „＋ Zweig“, „⌒ verbinden“ (dann
+  antippen, womit; so verbunden mit Pfeil hin), „→ als Aufgabe“ (wird Aufgabe des Projekts; der Gedanke bleibt und trägt ihr Kästchen,
   erledigt → dünn durchgestrichen), „wegradieren“ (Fäden gehen mit, die Aufgabe bleibt). Fäden
-  von Hand gezeichnet mit leichtem Bogen, beim Entstehen gezogen; antippen → ✂ schneidet.
+  von Hand gezeichnet mit leichtem Bogen von Rand zu Rand, beim Entstehen gezogen; Pfeilspitzen
+  (`thread.arrow`: hin, zurück, beide, keine); Faden antippen → zwei Knöpfe: Pfeil (keiner → hin →
+  zurück → beide) und ✂ (schneidet). Zweige vom Namen bzw. „＋ Zweig“ ohne Pfeil.
   Ein Faden hat eine feste id aus seinen beiden Enden (kein doppelter von zwei Geräten). Das
   Schreibfeld liegt bereit und bekommt den Fokus im Tippen selbst (sonst keine iPad-Tastatur).
   Projekt gelöscht → sein Ideenblatt geht mit.

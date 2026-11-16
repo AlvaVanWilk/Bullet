@@ -874,7 +874,7 @@ export class Store {
     return t;
   }
 
-  updateThought(id: string, patch: Partial<Pick<Thought, 'text' | 'x' | 'y' | 'style' | 'taskId'>>) {
+  updateThought(id: string, patch: Partial<Pick<Thought, 'text' | 'x' | 'y' | 'style' | 'mark' | 'big' | 'color' | 'doodle' | 'taskId'>>) {
     const t = this.thought(id);
     if (!t) return;
     const next = { ...t, ...patch };
@@ -906,16 +906,24 @@ export class Store {
   }
 
   /** Ties two thoughts (or a thought and "root", the name in the middle) together; again, it does nothing. */
-  connect(projectId: string, a: string, b: string): Thread | null {
+  connect(projectId: string, a: string, b: string, arrow: Thread['arrow'] = null): Thread | null {
     if (a === b || (a !== 'root' && !this.thought(a)) || (b !== 'root' && !this.thought(b))) return null;
     const id = this.threadId(projectId, a, b);
     const had = this.records.get(id);
     if (had?.type === 'thread' && !had.deleted) return had;
-    const th: Thread = { id, type: 'thread', updatedAt: 0, projectId, from: a, to: b, createdAt: this.now() };
+    const th: Thread = { id, type: 'thread', updatedAt: 0, projectId, from: a, to: b, arrow, createdAt: this.now() };
     this.put(th);
     this.markFresh(id);
     this.changed(true);
     return th;
+  }
+
+  /** Arrowheads on a thread: none, at its end, at its start, at both. */
+  setArrow(id: string, arrow: Thread['arrow']) {
+    const r = this.records.get(id);
+    if (r?.type !== 'thread' || r.deleted) return;
+    this.put({ ...r, arrow: arrow ?? null });
+    this.changed(true);
   }
 
   disconnect(id: string) {

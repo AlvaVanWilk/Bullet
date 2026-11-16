@@ -9,7 +9,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import rough from 'roughjs';
 import { seedOf } from './ink';
 import { Checkbox } from './ink';
-import type { Project, Thought, ThoughtStyle } from '../lib/model';
+import type { Project, Thought, ThoughtDoodle, ThoughtMark, ThoughtStyle, Thread } from '../lib/model';
 import { store } from '../store/store';
 import { observable, ui, useStore } from './state';
 
@@ -24,6 +24,52 @@ const SLOP = 6;
 
 const gen = rough.generator();
 const INK = '#2b2b30';
+
+/** The pens for thoughts: muted, like the rest of the journal (none: the ink of the page). */
+export const THOUGHT_COLORS: { key: string; label: string; color: string }[] = [
+  { key: 'rot', label: 'rot', color: '#a8463b' },
+  { key: 'blau', label: 'blau', color: '#3d6b8a' },
+  { key: 'gruen', label: 'grün', color: '#4f7349' },
+  { key: 'ocker', label: 'ocker', color: '#a97e2f' },
+  { key: 'pflaume', label: 'pflaume', color: '#76506f' },
+];
+const penColor = (key?: string | null) => THOUGHT_COLORS.find((c) => c.key === key)?.color;
+
+/** The little drawings beside a thought, on 24 × 24, drawn by hand when shown. */
+const DOODLES: Record<ThoughtDoodle, { label: string; d: string }> = {
+  star: { label: 'Stern', d: 'M12 3 L14.6 9.2 L21 9.6 L16 13.8 L17.6 20.4 L12 16.8 L6.4 20.4 L8 13.8 L3 9.6 L9.4 9.2 Z' },
+  bang: { label: 'Ausrufezeichen', d: 'M12 3 Q13.2 9.5 12.2 15.2 M12.2 19.6 L12.3 20.6' },
+  question: { label: 'Fragezeichen', d: 'M7.8 8 Q8 3.6 12.4 3.8 Q16.6 4.2 16.2 8 Q15.8 11 12.6 12.4 Q12 14 12.2 15.6 M12.2 19.6 L12.3 20.6' },
+  bulb: { label: 'Glühbirne', d: 'M9 17 Q9 14 7.5 12 Q5.6 9 7.4 6 Q9.4 3.2 12.4 3.4 Q16.6 3.8 17.2 7.8 Q17.6 10.4 15.6 12.6 Q14.6 14 14.8 17 Z M9.6 19.4 L14.4 19.4 M10.4 21.4 L13.6 21.4' },
+  heart: { label: 'Herz', d: 'M12 20 Q4 14 4.2 9.2 Q4.6 5 8.4 5 Q11 5.2 12 8 Q13 5.2 15.6 5 Q19.6 5 19.8 9.2 Q20 14 12 20 Z' },
+  bolt: { label: 'Blitz', d: 'M13.5 2.5 L6.5 13.2 L11.4 13.2 L10 21.5 L17.5 10.2 L12.4 10.2 Z' },
+  flower: { label: 'Blüte', d: 'M12 9.4 Q9.4 4 12 2.8 Q14.6 4 12 9.4 M14.6 11 Q19.8 8.8 21 11.6 Q19.6 14.2 14.6 12.6 M12 14.6 Q14.6 20 12 21.2 Q9.4 20 12 14.6 M9.4 12.6 Q4.2 14.2 3 11.6 Q4.4 8.8 9.4 11 M12 10 Q13.4 10.2 13.4 11.8 Q13.2 13.4 12 13.4 Q10.6 13.4 10.6 11.8 Q10.8 10.2 12 10' },
+  check: { label: 'Haken', d: 'M4.5 12.8 L9.6 18.2 L19.6 5.4' },
+};
+
+/** A doodle drawn with a pen, a little shaky. */
+export function DoodleMark(props: { doodle: ThoughtDoodle; seed: string; size?: number; class?: string }) {
+  const z = props.size ?? 24;
+  const drawn = gen.toPaths(gen.path(DOODLES[props.doodle].d, { roughness: 0.7, stroke: INK, strokeWidth: 1.5, seed: seedOf(props.seed) }));
+  return (
+    <svg class={`idea-doodle ${props.class ?? ''}`} width={z} height={z} viewBox="0 0 24 24" aria-hidden="true">
+      {drawn.map((d, i) => <path key={i} d={d.d} />)}
+    </svg>
+  );
+}
+
+/** The frame of a thought, and the stroke on its words ("marker" as a style is from before strokes were their own). */
+const frameOf = (t: Thought): ThoughtStyle => (t.style === 'marker' ? 'plain' : t.style);
+const markOf = (t: Thought): ThoughtMark | null => t.mark ?? (t.style === 'marker' ? 'marker' : null);
+
+/** Where a line from the middle of a box (half sizes hw, hh) towards (tx, ty) leaves it. */
+function edgeOf(c: { x: number; y: number }, hw: number, hh: number, tx: number, ty: number) {
+  const dx = tx - c.x;
+  const dy = ty - c.y;
+  if (!dx && !dy) return c;
+  const t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity, 1);
+  return { x: c.x + dx * t, y: c.y + dy * t };
+}
 
 /** What the sheet is doing besides showing: writing a new thought somewhere, or tying one to another. */
 interface IdeaUi {
@@ -138,7 +184,8 @@ export function IdeaSheet(props: { project: Project }) {
   const tapThought = (t: Thought | 'root', el: HTMLElement) => {
     const id = t === 'root' ? 'root' : t.id;
     if (state.linking) {
-      if (state.linking !== id) store.connect(p.id, state.linking, id);
+      // tied on purpose: from the one to the other, with an arrow (tapped, it can be turned or taken off)
+      if (state.linking !== id) store.connect(p.id, state.linking, id, 'to');
       ideaUi.set({ linking: null });
       return;
     }
@@ -200,13 +247,22 @@ export function IdeaSheet(props: { project: Project }) {
       >
         <svg class="idea-threads" width={COLS * SQ} height={ROWS * SQ} aria-hidden="false">
           {threads.map((th) => {
-            const a = centre(th.from);
-            const b = centre(th.to);
-            if (!a || !b) return null;
+            const ca = centre(th.from);
+            const cb = centre(th.to);
+            if (!ca || !cb) return null;
+            // from edge to edge (a little off them), so an arrowhead meets the thought
+            const half = (id: string) => {
+              const z = sizes[id] ?? { w: 80, h: SQ };
+              return [z.w / 2 + (id === 'root' ? 0 : 6), z.h / 2 + 6] as const;
+            };
+            const [aw, ah] = half(th.from);
+            const [bw, bh] = half(th.to);
+            const a = edgeOf(ca, aw, ah, cb.x, cb.y);
+            const b = edgeOf(cb, bw, bh, ca.x, ca.y);
             return (
               <ThreadLine
                 key={th.id}
-                id={th.id}
+                thread={th}
                 a={a}
                 b={b}
                 fresh={store.isFresh(th.id)}
@@ -236,15 +292,18 @@ export function IdeaSheet(props: { project: Project }) {
             <div
               key={t.id}
               ref={measure(t.id)}
-              class={`idea ${t.style} ${carry?.id === t.id ? 'carried' : ''} ${state.linking === t.id ? 'source' : ''} ${task?.doneAt != null ? 'done' : ''} ${store.isFresh(t.id) ? 'ink-in' : ''}`}
-              style={{ left: `${px(t.x)}px`, top: `${py(t.y)}px`, transform: off }}
+              class={`idea ${frameOf(t)} ${markOf(t) ? `mark-${markOf(t)}` : ''} ${t.big ? 'big' : ''} ${t.color ? 'colored' : ''} ${carry?.id === t.id ? 'carried' : ''} ${state.linking === t.id ? 'source' : ''} ${task?.doneAt != null ? 'done' : ''} ${store.isFresh(t.id) ? 'ink-in' : ''}`}
+              style={{ left: `${px(t.x)}px`, top: `${py(t.y)}px`, transform: off, '--pen': penColor(t.color) }}
               onPointerDown={onThoughtDown(t)}
               role="button"
               tabIndex={0}
               aria-label={`Gedanke: ${t.text}`}
               onKeyDown={(e) => { if (e.key === 'Enter') tapThought(t, e.currentTarget as HTMLElement); }}
             >
-              {t.style !== 'plain' && t.style !== 'marker' && <IdeaFrame style={t.style} seed={t.id} />}
+              {(frameOf(t) !== 'plain' || (markOf(t) && markOf(t) !== 'marker')) && (
+                <IdeaMarks key={`${frameOf(t)}${markOf(t)}${t.big}`} frame={frameOf(t)} mark={markOf(t)} seed={t.id} />
+              )}
+              {t.doodle && DOODLES[t.doodle] && <DoodleMark doodle={t.doodle} seed={t.id} class="on-idea" />}
               {task && (
                 <Checkbox
                   state={task.doneAt != null ? 'done' : 'open'}
@@ -274,34 +333,63 @@ export function IdeaSheet(props: { project: Project }) {
   );
 }
 
-/** A thread between two, drawn by hand with a little bow; tapped, it offers to be cut. */
-function ThreadLine(props: { id: string; a: { x: number; y: number }; b: { x: number; y: number }; fresh: boolean; chosen: boolean; onChoose: () => void }) {
-  const { a, b } = props;
-  const seed = seedOf(props.id);
+const ARROW_NEXT: Record<string, Thread['arrow']> = { none: 'to', to: 'from', from: 'both', both: null };
+
+/** A thread between two, drawn by hand with a little bow and arrowheads if it has them; tapped, it offers them and the scissors. */
+function ThreadLine(props: { thread: Thread; a: { x: number; y: number }; b: { x: number; y: number }; fresh: boolean; chosen: boolean; onChoose: () => void }) {
+  const { a, b, thread } = props;
+  const seed = seedOf(thread.id);
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
   const bow = (((seed % 7) - 3) / 3) * Math.min(26, len * 0.12);
   const mid: [number, number] = [(a.x + b.x) / 2 - (dy / len) * bow, (a.y + b.y) / 2 + (dx / len) * bow];
-  const drawn = gen.toPaths(gen.curve([[a.x, a.y], mid, [b.x, b.y]], { roughness: 0.9, bowing: 0.6, stroke: INK, strokeWidth: 1.3, seed }));
+  const opts = { roughness: 0.9, bowing: 0.6, stroke: INK, strokeWidth: 1.3, seed };
+  const drawn = gen.toPaths(gen.curve([[a.x, a.y], mid, [b.x, b.y]], opts));
+  // an arrowhead: two short strokes back from the tip, along the curve's last stretch
+  const head = (tip: { x: number; y: number }, from: [number, number], s2: number) => {
+    const ang = Math.atan2(tip.y - from[1], tip.x - from[0]);
+    const wing = (side: number): [number, number] => [tip.x - Math.cos(ang + side * 0.5) * 13, tip.y - Math.sin(ang + side * 0.5) * 13];
+    return gen.toPaths(gen.linearPath([wing(1), [tip.x, tip.y], wing(-1)], { ...opts, roughness: 0.6, strokeWidth: 1.5, seed: s2 }));
+  };
+  const arrow = thread.arrow ?? null;
+  const heads = [
+    ...(arrow === 'to' || arrow === 'both' ? head(b, mid, seed + 1) : []),
+    ...(arrow === 'from' || arrow === 'both' ? head(a, mid, seed + 2) : []),
+  ];
   const smooth = `M ${a.x} ${a.y} Q ${2 * mid[0] - (a.x + b.x) / 2} ${2 * mid[1] - (a.y + b.y) / 2} ${b.x} ${b.y}`;
+  const stop = (e: Event) => e.stopPropagation();
   return (
     <g class={`idea-thread ${props.fresh ? 'fresh' : ''} ${props.chosen ? 'chosen' : ''}`}>
       {drawn.map((d, i) => <path key={i} class="thread-ink" d={d.d} pathLength={1} />)}
+      {heads.map((d, i) => <path key={`h${i}`} class="thread-ink thread-head" d={d.d} />)}
       {/* a broad, invisible band to tap it */}
-      <path class="thread-hit" d={smooth} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); props.onChoose(); }} />
+      <path class="thread-hit" d={smooth} onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onChoose(); }} />
       {props.chosen && (
-        <g class="thread-cut" transform={`translate(${mid[0]} ${mid[1]})`} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); store.disconnect(props.id); }}>
-          <circle r="13" />
-          <text text-anchor="middle" dy="5">✂</text>
+        <g transform={`translate(${mid[0]} ${mid[1]})`}>
+          <g
+            class="thread-btn"
+            transform="translate(-17 0)"
+            onPointerDown={stop}
+            onClick={(e) => { e.stopPropagation(); store.setArrow(thread.id, ARROW_NEXT[arrow ?? 'none']); }}
+          >
+            <title>Pfeil: keiner → hin → zurück → beide</title>
+            <circle r="14" />
+            <text text-anchor="middle" dy="5">{arrow === 'to' ? '→' : arrow === 'from' ? '←' : arrow === 'both' ? '↔' : '—'}</text>
+          </g>
+          <g class="thread-btn" transform="translate(17 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); store.disconnect(thread.id); }}>
+            <title>durchschneiden</title>
+            <circle r="14" />
+            <text text-anchor="middle" dy="5">✂</text>
+          </g>
         </g>
       )}
     </g>
   );
 }
 
-/** A box or a cloud drawn around a thought, as big as it is. */
-function IdeaFrame(props: { style: ThoughtStyle; seed: string }) {
+/** What is drawn on a thought, as big as it is: its frame (box, cloud, a circle around it) and a stroke under its words. */
+function IdeaMarks(props: { frame: ThoughtStyle; mark: ThoughtMark | null; seed: string }) {
   const ref = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState<[number, number] | null>(null);
   useLayoutEffect(() => {
@@ -315,9 +403,35 @@ function IdeaFrame(props: { style: ThoughtStyle; seed: string }) {
   }, []);
   const seed = seedOf(props.seed);
   const [w, h] = size ?? [0, 0];
-  const drawn = !size ? [] : props.style === 'box'
-    ? gen.toPaths(gen.rectangle(2, 2, w - 4, h - 4, { roughness: 0.9, bowing: 1, stroke: INK, strokeWidth: 1.2, seed }))
-    : gen.toPaths(gen.ellipse(w / 2, h / 2, w + 18, h + 14, { roughness: 1.3, bowing: 1.4, stroke: INK, strokeWidth: 1.2, seed, curveStepCount: 14 }));
+  const pen = { stroke: INK, strokeWidth: 1.25, seed };
+  const drawn: { d: string }[] = [];
+  if (size) {
+    if (props.frame === 'box') drawn.push(...gen.toPaths(gen.rectangle(2, 2, w - 4, h - 4, { ...pen, roughness: 0.9, bowing: 1 })));
+    if (props.frame === 'cloud') drawn.push(...gen.toPaths(gen.ellipse(w / 2, h / 2, w + 18, h + 14, { ...pen, roughness: 1.3, bowing: 1.4, curveStepCount: 14 })));
+    if (props.frame === 'circle') {
+      // circled by hand: once round and a little beyond where it began
+      const rx = w / 2 + 14;
+      const ry = h / 2 + 10;
+      const pts: [number, number][] = [];
+      for (let i = 0; i <= 26; i++) {
+        const t = -0.6 + (i / 26) * (Math.PI * 2 + 0.9);
+        const r = 1 + Math.sin(i * 1.7 + seed) * 0.04;
+        pts.push([w / 2 + Math.cos(t) * rx * r, h / 2 + Math.sin(t) * ry * r * (1 + i * 0.004)]);
+      }
+      drawn.push(...gen.toPaths(gen.curve(pts, { ...pen, roughness: 0.8, strokeWidth: 1.6 })));
+    }
+    const y = h - 3;
+    if (props.mark === 'underline') drawn.push(...gen.toPaths(gen.line(6, y, w - 6, y - 1, { ...pen, roughness: 0.7, strokeWidth: 1.6 })));
+    if (props.mark === 'double') {
+      drawn.push(...gen.toPaths(gen.line(6, y - 2, w - 6, y - 3, { ...pen, roughness: 0.6, strokeWidth: 1.4 })));
+      drawn.push(...gen.toPaths(gen.line(10, y + 2, w - 4, y + 1, { ...pen, roughness: 0.6, strokeWidth: 1.4, seed: seed + 1 })));
+    }
+    if (props.mark === 'wavy') {
+      const pts: [number, number][] = [];
+      for (let x = 6, i = 0; x <= w - 6; x += 6, i++) pts.push([x, y + (i % 2 ? 2.5 : -2.5)]);
+      if (pts.length > 1) drawn.push(...gen.toPaths(gen.curve(pts, { ...pen, roughness: 0.4, strokeWidth: 1.5 })));
+    }
+  }
   return (
     <svg ref={ref} class="idea-frame" width={w} height={h} aria-hidden="true">
       {drawn.map((d, i) => <path key={i} d={d.d} />)}
@@ -371,11 +485,18 @@ function IdeaWriter(props: { project: Project; at: { x: number; y: number; from:
   );
 }
 
-const STYLES: { key: ThoughtStyle; label: string }[] = [
-  { key: 'plain', label: 'schlicht' },
+const FRAMES: { key: ThoughtStyle; label: string }[] = [
+  { key: 'plain', label: 'ohne' },
   { key: 'box', label: 'Kasten' },
   { key: 'cloud', label: 'Wolke' },
+  { key: 'circle', label: 'eingekreist' },
+];
+const MARKS: { key: ThoughtMark | null; label: string }[] = [
+  { key: null, label: 'nichts' },
   { key: 'marker', label: 'Marker' },
+  { key: 'underline', label: 'unterstrichen' },
+  { key: 'double', label: 'doppelt' },
+  { key: 'wavy', label: 'Welle' },
 ];
 
 /** The note of a thought: its words, how it looks, a branch, a thread, a task; or rub it out. */
@@ -403,9 +524,33 @@ export function ThoughtNote(props: { id: string; close: () => void }) {
         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } }}
         aria-label="Gedanke"
       />
+      <div class="note-label">Rahmen</div>
       <div class="chips">
-        {STYLES.map((s) => (
-          <button key={s.key} type="button" class={`chip ${t.style === s.key ? 'on' : ''}`} onClick={() => store.updateThought(t.id, { style: s.key })}>{s.label}</button>
+        {FRAMES.map((f) => (
+          <button key={f.key} type="button" class={`chip ${frameOf(t) === f.key ? 'on' : ''}`} onClick={() => store.updateThought(t.id, { style: f.key, mark: markOf(t) })}>{f.label}</button>
+        ))}
+      </div>
+      <div class="note-label">Strich</div>
+      <div class="chips">
+        {MARKS.map((m) => (
+          <button key={m.label} type="button" class={`chip ${markOf(t) === m.key ? 'on' : ''}`} onClick={() => store.updateThought(t.id, { mark: m.key, style: frameOf(t) })}>{m.label}</button>
+        ))}
+        <button type="button" class={`chip big-chip ${t.big ? 'on' : ''}`} onClick={() => store.updateThought(t.id, { big: !t.big })}>GROSS</button>
+      </div>
+      <div class="note-label">Farbe</div>
+      <div class="thought-colors">
+        <button type="button" class={`pen-swatch ${!t.color ? 'on' : ''}`} style={{ '--pen': INK }} onClick={() => store.updateThought(t.id, { color: null })} aria-label="Tinte" title="Tinte" />
+        {THOUGHT_COLORS.map((c) => (
+          <button key={c.key} type="button" class={`pen-swatch ${t.color === c.key ? 'on' : ''}`} style={{ '--pen': c.color }} onClick={() => store.updateThought(t.id, { color: c.key })} aria-label={c.label} title={c.label} />
+        ))}
+      </div>
+      <div class="note-label">Kritzel</div>
+      <div class="thought-doodles">
+        <button type="button" class={`doodle-pick ${!t.doodle ? 'on' : ''}`} onClick={() => store.updateThought(t.id, { doodle: null })} aria-label="kein Kritzel" title="keins">–</button>
+        {(Object.keys(DOODLES) as ThoughtDoodle[]).map((k) => (
+          <button key={k} type="button" class={`doodle-pick ${t.doodle === k ? 'on' : ''}`} style={{ '--pen': penColor(t.color) }} onClick={() => store.updateThought(t.id, { doodle: t.doodle === k ? null : k })} aria-label={DOODLES[k].label} title={DOODLES[k].label}>
+            <DoodleMark doodle={k} seed={`pick-${k}`} size={22} />
+          </button>
         ))}
       </div>
       <div class="note-actions">

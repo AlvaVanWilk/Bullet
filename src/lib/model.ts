@@ -284,7 +284,12 @@ export interface ChoreTick extends Base {
   before?: { lastDone: DayKey | null; lastShare: number } | null;
 }
 
-export type ThoughtStyle = 'plain' | 'box' | 'cloud' | 'marker';
+/** The frame drawn around a thought ('marker' is from before marks had their own field: a highlight, no frame). */
+export type ThoughtStyle = 'plain' | 'box' | 'cloud' | 'circle' | 'marker';
+/** A stroke under or behind the words. */
+export type ThoughtMark = 'marker' | 'underline' | 'double' | 'wavy';
+/** A little drawing beside a thought. */
+export type ThoughtDoodle = 'star' | 'bang' | 'question' | 'bulb' | 'heart' | 'bolt' | 'flower' | 'check';
 
 /**
  * A thought on the idea sheet of a project: written freely anywhere on the
@@ -298,6 +303,14 @@ export interface Thought extends Base {
   x: number;
   y: number;
   style: ThoughtStyle;
+  /** a stroke under or behind the words */
+  mark?: ThoughtMark | null;
+  /** written big, to stand out */
+  big?: boolean;
+  /** the colour of the pen: a key of THOUGHT_COLORS (none: ink) */
+  color?: string | null;
+  /** a little drawing beside it */
+  doodle?: ThoughtDoodle | null;
   /** the task it became (its box shows whether that is done) */
   taskId?: string | null;
   createdAt: number;
@@ -309,6 +322,8 @@ export interface Thread extends Base {
   projectId: string;
   from: string;
   to: string;
+  /** arrowheads: at the end it goes to, at its start, at both (none: a plain line) */
+  arrow?: 'to' | 'from' | 'both' | null;
   createdAt: number;
 }
 

@@ -37,4 +37,19 @@ describe('idea sheet', () => {
     s.deleteProject(p.id);
     expect(s.snapshot().thoughts.filter((t) => !t.deleted)).toHaveLength(0);
   });
+  it('gives threads arrowheads and thoughts pens, strokes, size and doodles', () => {
+    const s = makeStore();
+    const p = s.addProject('Umzug')!;
+    const a = s.addThought(p.id, 'Kisten', 4, 0)!;
+    const b = s.addThought(p.id, 'Packen', 10, 2)!;
+    // tied on purpose: with an arrow from the one to the other
+    const th = s.connect(p.id, a.id, b.id, 'to')!;
+    expect(th).toMatchObject({ from: a.id, to: b.id, arrow: 'to' });
+    s.setArrow(th.id, 'both');
+    expect(s.snapshot().threads.find((t) => t.id === th.id)!.arrow).toBe('both');
+    s.setArrow(th.id, null);
+    expect(s.snapshot().threads.find((t) => t.id === th.id)!.arrow).toBeNull();
+    s.updateThought(a.id, { style: 'circle', mark: 'wavy', big: true, color: 'rot', doodle: 'star' });
+    expect(s.thought(a.id)).toMatchObject({ style: 'circle', mark: 'wavy', big: true, color: 'rot', doodle: 'star' });
+  });
 });
