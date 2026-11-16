@@ -44,7 +44,9 @@ type Box = { x: number; y: number; w: number; h: number };
 export async function drawIdeaSheet(sheet: HTMLElement, opts: { dots: boolean }): Promise<HTMLCanvasElement> {
   await document.fonts?.ready;
   const origin = sheet.getBoundingClientRect();
-  const rel = (r: DOMRect): Box => ({ x: r.left - origin.left, y: r.top - origin.top, w: r.width, h: r.height });
+  // the sheet may be shown bigger or smaller: everything is drawn at its own size
+  const z = origin.width / (sheet.offsetWidth || 1) || 1;
+  const rel = (r: DOMRect): Box => ({ x: (r.left - origin.left) / z, y: (r.top - origin.top) / z, w: r.width / z, h: r.height / z });
   const colour = colourer(sheet);
 
   // where something is: the thoughts, the name, the threads
@@ -122,7 +124,7 @@ export async function drawIdeaSheet(sheet: HTMLElement, opts: { dots: boolean })
       } else continue;
       into.save();
       into.globalAlpha = alpha;
-      into.transform(m.a, m.b, m.c, m.d, m.e - origin.left, m.f - origin.top);
+      into.transform(m.a / z, m.b / z, m.c / z, m.d / z, (m.e - origin.left) / z, (m.f - origin.top) / z);
       if (cs.fill && cs.fill !== 'none') {
         into.fillStyle = colour.get(cs.fill);
         into.fill(shape);
@@ -156,7 +158,7 @@ export async function drawIdeaSheet(sheet: HTMLElement, opts: { dots: boolean })
     const size = parseFloat(cs.fontSize) || 16;
     const lift = -parseFloat(text.getAttribute('dy') ?? '0') || 6;
     c.save();
-    c.transform(m.a, m.b, m.c, m.d, m.e - origin.left, m.f - origin.top);
+    c.transform(m.a / z, m.b / z, m.c / z, m.d / z, (m.e - origin.left) / z, (m.f - origin.top) / z);
     c.font = `${cs.fontWeight} ${size}px ${cs.fontFamily}`;
     c.textBaseline = 'alphabetic';
     c.textAlign = 'center';

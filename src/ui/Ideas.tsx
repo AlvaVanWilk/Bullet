@@ -24,6 +24,19 @@ const MID_X = COLS / 2;
 const MID_Y = ROWS / 2;
 /** How far a finger must go before a thought is carried (less is a tap). */
 const SLOP = 6;
+/** How far the writing on the sheet can be made smaller and bigger (the paper stays as it is). */
+const ZOOM_MIN = 0.35;
+const ZOOM_MAX = 2.5;
+const zoomKey = (projectId: string) => `bullet.ideaZoom.${projectId}`;
+function savedZoom(projectId: string): number {
+  try {
+    const z = parseFloat(localStorage.getItem(zoomKey(projectId)) ?? '');
+    return z >= ZOOM_MIN && z <= ZOOM_MAX ? z : 1;
+  } catch {
+    return 1;
+  }
+}
+
 /** How long a finger rests before it draws a frame to choose, or bends a thread (a quick move scrolls). */
 const HOLD_MS = 380;
 
@@ -193,14 +206,107 @@ export function IdeaSheet(props: { project: Project }) {
     return () => window.removeEventListener('keydown', key);
   }, [chosen.length, selectTool]);
   const [chosenThread, setChosenThread] = useState<string | null>(null);
+  // how big what is written is shown (two fingers apart or together; the dotted paper keeps its size)
+  const [zoom, setZoomState] = useState(() => savedZoom(p.id));
+  const zoomNow = useRef(zoom);
+  zoomNow.current = zoom;
+  const pinching = useRef(false);
+  const sizer = useRef<HTMLDivElement>(null);
 
   // the middle in view when the sheet is opened
   useLayoutEffect(() => {
     const el = scroller.current;
     if (!el) return;
-    el.scrollLeft = px(0) - el.clientWidth / 2;
-    el.scrollTop = py(0) - el.clientHeight / 2.4;
+    el.scrollLeft = px(0) * zoom - el.clientWidth / 2;
+    el.scrollTop = py(0) * zoom - el.clientHeight / 2.4;
     return () => ideaUi.set({ writing: null, linking: null });
+  }, [p.id]);
+
+  // shows the sheet at z, keeping the point of it at (vx, vy) of the view where it was;
+  // straight onto the page while the fingers move, kept when they let go
+  const zoomTo = (z: number, at: { cx: number; cy: number; vx: number; vy: number }, keep: boolean) => {
+    const el = scroller.current;
+    if (!el || !canvas.current || !sizer.current) return;
+    const least = Math.max(ZOOM_MIN, el.clientWidth / (COLS * SQ), el.clientHeight / (ROWS * SQ));
+    const nz = Math.max(least, Math.min(ZOOM_MAX, z));
+    canvas.current.style.transform = `scale(${nz})`;
+    sizer.current.style.width = `${COLS * SQ * nz}px`;
+    sizer.current.style.height = `${ROWS * SQ * nz}px`;
+    el.scrollLeft = at.cx * nz - at.vx;
+    el.scrollTop = at.cy * nz - at.vy;
+    zoomNow.current = nz;
+    if (keep) {
+      setZoomState(nz);
+      try { localStorage.setItem(zoomKey(p.id), String(Math.round(nz * 100) / 100)); } catch { /* only a convenience */ }
+    }
+  };
+  // the point of the sheet under (clientX, clientY), and where that is in the view
+  const anchor = (clientX: number, clientY: number) => {
+    const el = scroller.current!;
+    const r = el.getBoundingClientRect();
+    const vx = clientX - r.left;
+    const vy = clientY - r.top;
+    return { cx: (el.scrollLeft + vx) / zoomNow.current, cy: (el.scrollTop + vy) / zoomNow.current, vx, vy };
+  };
+
+  // two fingers: bigger and smaller (and along, where they go); a trackpad pinch (ctrl + wheel) too
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    let start: { d: number; z: number; cx: number; cy: number } | null = null;
+    const two = (e: TouchEvent) => {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      return { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1, x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+    };
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 2) return;
+      const t = two(e);
+      const at = anchor(t.x, t.y);
+      start = { d: t.d, z: zoomNow.current, cx: at.cx, cy: at.cy };
+      pinching.current = true;
+      setCarry(null);
+      setFrame(null);
+      setBending(null);
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!start || e.touches.length < 2) return;
+      e.preventDefault();
+      const t = two(e);
+      const r = el.getBoundingClientRect();
+      zoomTo(start.z * (t.d / start.d), { cx: start.cx, cy: start.cy, vx: t.x - r.left, vy: t.y - r.top }, false);
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (start && e.touches.length < 2) {
+        const el2 = scroller.current!;
+        zoomTo(zoomNow.current, { cx: (el2.scrollLeft) / zoomNow.current, cy: el2.scrollTop / zoomNow.current, vx: 0, vy: 0 }, true);
+        start = null;
+      }
+      // the fingers are all gone: other gestures count again
+      if (!e.touches.length) setTimeout(() => { pinching.current = false; }, 0);
+    };
+    // Safari's own pinch (the whole page) stays off here
+    const noGesture = (e: Event) => e.preventDefault();
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      zoomTo(zoomNow.current * Math.exp(-e.deltaY * 0.01), anchor(e.clientX, e.clientY), true);
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    el.addEventListener('touchcancel', onEnd);
+    el.addEventListener('gesturestart', noGesture);
+    el.addEventListener('gesturechange', noGesture);
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onEnd);
+      el.removeEventListener('gesturestart', noGesture);
+      el.removeEventListener('gesturechange', noGesture);
+      el.removeEventListener('wheel', onWheel);
+    };
   }, [p.id]);
 
   const measure = (id: string) => (el: HTMLElement | null) => {
@@ -269,8 +375,8 @@ export function IdeaSheet(props: { project: Project }) {
     }
     if (state.writing || !canvas.current) return;
     const box = canvas.current.getBoundingClientRect();
-    const x = Math.floor((clientX - box.left) / SQ) - MID_X;
-    const y = Math.floor((clientY - box.top) / SQ) - MID_Y;
+    const x = Math.floor((clientX - box.left) / (SQ * zoom)) - MID_X;
+    const y = Math.floor((clientY - box.top) / (SQ * zoom)) - MID_Y;
     startWriting({ x, y, from: null });
   };
   const onPaperDown = (e: PointerEvent) => {
@@ -284,7 +390,7 @@ export function IdeaSheet(props: { project: Project }) {
     const timer = mode === 'wait'
       ? window.setTimeout(() => {
           mode = 'frame';
-          setFrame({ x0: sx - box.left, y0: sy - box.top, x1: sx - box.left, y1: sy - box.top });
+          setFrame({ x0: (sx - box.left) / zoom, y0: (sy - box.top) / zoom, x1: (sx - box.left) / zoom, y1: (sy - box.top) / zoom });
           navigator.vibrate?.(8);
         }, HOLD_MS)
       : 0;
@@ -299,10 +405,12 @@ export function IdeaSheet(props: { project: Project }) {
     const move = (ev: PointerEvent) => {
       if (ev.pointerId !== e.pointerId) return;
       const far = Math.hypot(ev.clientX - sx, ev.clientY - sy) > SLOP;
+      // a second finger came: it is a pinch, not a frame
+      if (pinching.current) { mode = 'off'; drawn = false; window.clearTimeout(timer); setFrame(null); return; }
       if (mode === 'wait' && far) { mode = 'off'; window.clearTimeout(timer); }
       if (mode === 'frame' && (far || drawn)) {
         drawn = true;
-        setFrame({ x0: sx - box.left, y0: sy - box.top, x1: ev.clientX - box.left, y1: ev.clientY - box.top });
+        setFrame({ x0: (sx - box.left) / zoom, y0: (sy - box.top) / zoom, x1: (ev.clientX - box.left) / zoom, y1: (ev.clientY - box.top) / zoom });
       }
     };
     const up = (ev: PointerEvent) => {
@@ -310,10 +418,10 @@ export function IdeaSheet(props: { project: Project }) {
       done();
       setFrame(null);
       if (drawn) {
-        const l = Math.min(sx, ev.clientX) - box.left;
-        const r = Math.max(sx, ev.clientX) - box.left;
-        const t = Math.min(sy, ev.clientY) - box.top;
-        const b = Math.max(sy, ev.clientY) - box.top;
+        const l = (Math.min(sx, ev.clientX) - box.left) / zoom;
+        const r = (Math.max(sx, ev.clientX) - box.left) / zoom;
+        const t = (Math.min(sy, ev.clientY) - box.top) / zoom;
+        const b = (Math.max(sy, ev.clientY) - box.top) / zoom;
         const inside = thoughts.filter((th) => {
           const z = sizes[th.id] ?? { w: 80, h: SQ };
           return px(th.x) < r && px(th.x) + z.w > l && py(th.y) < b && py(th.y) + z.h > t;
@@ -324,7 +432,7 @@ export function IdeaSheet(props: { project: Project }) {
         return;
       }
       // a plain tap (a finger that rested and let go draws nothing and writes nothing)
-      const tap = mode === 'wait' || (mode === 'frame' && e.pointerType === 'mouse' && !selectTool);
+      const tap = !pinching.current && (mode === 'wait' || (mode === 'frame' && e.pointerType === 'mouse' && !selectTool));
       if (tap && Math.hypot(ev.clientX - sx, ev.clientY - sy) <= SLOP) tapPaper(ev.clientX, ev.clientY);
     };
     const cancel = (ev: PointerEvent) => {
@@ -348,7 +456,7 @@ export function IdeaSheet(props: { project: Project }) {
     let mode: 'wait' | 'bend' | 'off' = 'wait';
     // where along it it was taken (0 … 1), from the canvas point under the finger
     const box = canvas.current!.getBoundingClientRect();
-    const at = { x: sx - box.left, y: sy - box.top };
+    const at = { x: (sx - box.left) / zoom, y: (sy - box.top) / zoom };
     const ctl = { x: 2 * g.mid[0] - (g.a.x + g.b.x) / 2, y: 2 * g.mid[1] - (g.a.y + g.b.y) / 2 };
     let s0 = 0.5;
     let best = Infinity;
@@ -378,9 +486,10 @@ export function IdeaSheet(props: { project: Project }) {
     let last: { n: number; t: number } | null = null;
     const move = (ev: PointerEvent) => {
       if (ev.pointerId !== e.pointerId) return;
-      const dx = ev.clientX - sx;
-      const dy = ev.clientY - sy;
-      const far = Math.hypot(dx, dy) > SLOP;
+      const dx = (ev.clientX - sx) / zoom;
+      const dy = (ev.clientY - sy) / zoom;
+      const far = Math.hypot(ev.clientX - sx, ev.clientY - sy) > SLOP;
+      if (pinching.current) { mode = 'off'; window.clearTimeout(timer); setBending(null); return; }
       if (mode === 'wait' && far) {
         if (mouse) { mode = 'bend'; setChosenThread(null); }
         else { mode = 'off'; window.clearTimeout(timer); return; }
@@ -446,19 +555,22 @@ export function IdeaSheet(props: { project: Project }) {
     // one of those chosen: they all go along
     const ids = chosen.includes(t.id) ? chosen : [t.id];
     const move = (ev: PointerEvent) => {
+      // a second finger came: it is a pinch, the thought stays where it was
+      if (pinching.current) { cancel(); return; }
       const dx = ev.clientX - sx;
       const dy = ev.clientY - sy;
       if (!moving && Math.hypot(dx, dy) > SLOP) moving = true;
-      if (moving) setCarry({ ids, dx, dy });
+      if (moving) setCarry({ ids, dx: dx / zoom, dy: dy / zoom });
     };
     const up = (ev: PointerEvent) => {
       el.removeEventListener('pointermove', move);
       el.removeEventListener('pointerup', up);
       el.removeEventListener('pointercancel', cancel);
       setCarry(null);
+      if (pinching.current) return;
       if (moving) {
-        const dx = Math.round((ev.clientX - sx) / SQ);
-        const dy = Math.round((ev.clientY - sy) / SQ);
+        const dx = Math.round((ev.clientX - sx) / (SQ * zoom));
+        const dy = Math.round((ev.clientY - sy) / (SQ * zoom));
         store.moveThoughts(ids.map((id) => {
           const o = store.thought(id) ?? t;
           return { id, x: Math.max(-MID_X + 1, Math.min(MID_X - 6, o.x + dx)), y: Math.max(-MID_Y + 1, Math.min(MID_Y - 2, o.y + dy)) };
@@ -481,10 +593,11 @@ export function IdeaSheet(props: { project: Project }) {
   return (
     <div class="idea-wrap">
     <div class="idea-sheet paper" data-paper="dots" ref={scroller} data-scroll>
+      <div class="idea-sizer" ref={sizer} style={{ width: `${COLS * SQ * zoom}px`, height: `${ROWS * SQ * zoom}px` }}>
       <div
         ref={canvas}
         class={`idea-canvas ${state.linking ? 'linking' : ''} ${selectTool ? 'selecting' : ''}`}
-        style={{ width: `${COLS * SQ}px`, height: `${ROWS * SQ}px` }}
+        style={{ width: `${COLS * SQ}px`, height: `${ROWS * SQ}px`, transform: `scale(${zoom})` }}
         onPointerDown={onPaperDown}
       >
         <svg class="idea-threads" width={COLS * SQ} height={ROWS * SQ} aria-hidden="false">
@@ -580,12 +693,26 @@ export function IdeaSheet(props: { project: Project }) {
           />
         )}
       </div>
+      </div>
       {!thoughts.length && !state.writing && (
         <p class="idea-empty">Tippe irgendwo aufs Papier und schreib, was dir einfällt. Den Namen in der Mitte antippen: ein Zweig.</p>
       )}
     </div>
       {/* the frame to choose several: then drawn with one finger (without it: hold a moment, then draw) */}
       <div class="idea-tools">
+        {Math.abs(zoom - 1) > 0.02 && (
+          <button
+            type="button"
+            class="idea-tool idea-zoom"
+            onClick={() => {
+              const el = scroller.current!;
+              const r = el.getBoundingClientRect();
+              zoomTo(1, anchor(r.left + el.clientWidth / 2, r.top + el.clientHeight / 2), true);
+            }}
+            aria-label="wieder normal groß"
+            title="wieder normal groß"
+          >{Math.round(zoom * 100)} %</button>
+        )}
         <button
           type="button"
           class="idea-tool"

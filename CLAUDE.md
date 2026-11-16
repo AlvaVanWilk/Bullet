@@ -129,6 +129,10 @@ Bedienung und Einrichtung: `README.md`.
   Ein Faden hat eine feste id aus seinen beiden Enden (kein doppelter von zwei Geräten). Das
   Schreibfeld liegt bereit und bekommt den Fokus im Tippen selbst (sonst keine iPad-Tastatur).
   Projekt gelöscht → sein Ideenblatt geht mit.
+  Zoomen: zwei Finger (Trackpad: Pinch bzw. Strg + Rad) machen nur das Geschriebene größer oder kleiner
+  (35–250 %, nie kleiner als die Seite), das gepunktete Papier bleibt, wie es ist; der Punkt unter den
+  Fingern bleibt dort. Pro Projekt auf dem Gerät gemerkt (localStorage); oben rechts dann „80 %“ →
+  wieder 100 %. Ein Pinch zieht, rahmt und tippt nichts.
 - Bereiche (`area`, `task.areaId`): Ein Projekt lässt sich in Bereiche teilen. Auf der
   Projektseite ist jeder Bereich eine Box, mit Marker in der Projektfarbe gezeichnet,
   Name in Kapitälchen oben im Rahmen (daneben klein die Zahl der offenen). Die Boxen

@@ -16,7 +16,8 @@
   overflow: auto;
   overscroll-behavior: contain;
 }
-.idea-canvas { position: relative; touch-action: pan-x pan-y; user-select: none; -webkit-user-select: none; }
+.idea-sizer { position: relative; overflow: hidden; }
+.idea-canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; touch-action: pan-x pan-y; user-select: none; -webkit-user-select: none; }
 .idea-canvas.linking, .idea-canvas.selecting { cursor: crosshair; }
 /* chosen together: a dashed pencil line around each */
 .idea.selected { outline: 1.5px dashed var(--proj-ink, var(--ink)); outline-offset: 5px; }
@@ -31,6 +32,7 @@
 }
 /* the tool for it, in the corner of the sheet */
 .idea-tools { position: absolute; top: 12px; right: 14px; z-index: 7; display: flex; gap: 8px; }
+.idea-tool.idea-zoom { width: auto; padding: 0 10px; font-size: 15px; font-family: var(--clean, sans-serif); }
 .idea-tool:disabled { opacity: 0.4; cursor: default; }
 .idea-tool svg path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .idea-tool {
