@@ -92,7 +92,7 @@ Bedienung und Einrichtung: `README.md`.
   über ein Eselsohr unten rechts („Ideen ↗“, zurück „Aufgaben ↗“; Papiergeräusch, die Seite legt
   sich über). Großes gepunktetes Blatt, in der Mitte der Projektname auf einem Klecks in der
   Projektfarbe. Freies Papier antippen → dort schreiben (Enter legt den Gedanken ab, Esc
-  verwirft); den Namen antippen → ein Zweig (neuer Gedanke daneben, mit Faden verbunden).
+  verwirft; ein Tipp daneben legt Geschriebenes ab bzw. schließt die leere Zeile und tut sonst nichts); den Namen antippen → ein Zweig (neuer Gedanke daneben, mit Faden verbunden).
   Gedanken sitzen auf den Punktreihen (Lage in Kästchen ab der Mitte), lassen sich mit dem Finger
   tragen (rasten ein) und antippen → Zettel: Text; Notiz (`thought.note`, wie bei Aufgaben: Enter beendet, Shift+Enter neue
   Zeile; kleines „i“ am Gedanken, mit der Maus Notiz-Zettel beim Darüberfahren); Rahmen (ohne, Kasten, Wolke – echte Wolkenbögen,
@@ -131,7 +131,7 @@ Bedienung und Einrichtung: `README.md`.
   Ein Faden hat eine feste id aus seinen beiden Enden (kein doppelter von zwei Geräten). Das
   Schreibfeld liegt bereit und bekommt den Fokus im Tippen selbst (sonst keine iPad-Tastatur).
   Projekt gelöscht → sein Ideenblatt geht mit.
-  Zoomen: zwei Finger (Trackpad: Pinch bzw. Strg + Rad) machen nur das Geschriebene größer oder kleiner
+  Zoomen: zwei Finger (Trackpad: Pinch – Safari schickt dafür gesture-Ereignisse, andere Strg + Rad) machen nur das Geschriebene größer oder kleiner
   (35–250 %, nie kleiner als die Seite), das gepunktete Papier bleibt, wie es ist; der Punkt unter den
   Fingern bleibt dort. Pro Projekt auf dem Gerät gemerkt (localStorage); oben rechts dann „80 %“ →
   wieder 100 %. Ein Pinch zieht, rahmt und tippt nichts.

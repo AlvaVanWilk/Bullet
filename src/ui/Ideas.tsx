@@ -181,6 +181,8 @@ export function startBranch(projectId: string, from: string) {
  * focus within the tap itself (the iPad opens its keyboard only then).
  */
 let writerInput: HTMLInputElement | null = null;
+/** Ends the line being written (kept if something is on it), from outside it: a tap anywhere else. */
+let writerFinish: ((keep: boolean) => void) | null = null;
 
 function startWriting(at: { x: number; y: number; from: string | null }) {
   ideaUi.set({ writing: at, linking: null });
@@ -206,6 +208,8 @@ export function IdeaSheet(props: { project: Project }) {
   // a thread being bent by hand, before it is let go
   const [bending, setBending] = useState<{ id: string; bend: { n: number; t: number } | null } | null>(null);
   const justBent = useRef(false);
+  // when a line being written was ended by a tap beside it (that tap opens nothing)
+  const closedWriter = useRef(0);
   const canvas = useRef<HTMLDivElement>(null);
   const live = new Set(thoughts.map((t) => t.id));
   const chosen = selected.filter((id) => live.has(id));
@@ -296,8 +300,26 @@ export function IdeaSheet(props: { project: Project }) {
       // the fingers are all gone: other gestures count again
       if (!e.touches.length) setTimeout(() => { pinching.current = false; }, 0);
     };
-    // Safari's own pinch (the whole page) stays off here
-    const noGesture = (e: Event) => e.preventDefault();
+    // Safari's own pinch (the whole page) stays off here; a pinch on a trackpad (Safari on the iPad
+    // and the Mac) comes only as these gesture events, with how far it has gone (scale)
+    type Gesture = Event & { scale: number; clientX: number; clientY: number };
+    let pad: { z: number; cx: number; cy: number } | null = null;
+    const noGesture = (e: Event) => {
+      e.preventDefault();
+      const g = e as Gesture;
+      // fingers on the glass are handled above
+      if (start || typeof g.scale !== 'number') return;
+      const r = el.getBoundingClientRect();
+      const x = g.clientX || r.left + el.clientWidth / 2;
+      const y = g.clientY || r.top + el.clientHeight / 2;
+      if (e.type === 'gesturestart' || !pad) {
+        const at = anchor(x, y);
+        pad = { z: zoomNow.current, cx: at.cx, cy: at.cy };
+        return;
+      }
+      zoomTo(pad.z * g.scale, { cx: pad.cx, cy: pad.cy, vx: x - r.left, vy: y - r.top }, e.type === 'gestureend');
+      if (e.type === 'gestureend') pad = null;
+    };
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
@@ -309,6 +331,7 @@ export function IdeaSheet(props: { project: Project }) {
     el.addEventListener('touchcancel', onEnd);
     el.addEventListener('gesturestart', noGesture);
     el.addEventListener('gesturechange', noGesture);
+    el.addEventListener('gestureend', noGesture);
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => {
       el.removeEventListener('touchstart', onStart);
@@ -317,6 +340,7 @@ export function IdeaSheet(props: { project: Project }) {
       el.removeEventListener('touchcancel', onEnd);
       el.removeEventListener('gesturestart', noGesture);
       el.removeEventListener('gesturechange', noGesture);
+      el.removeEventListener('gestureend', noGesture);
       el.removeEventListener('wheel', onWheel);
     };
   }, [p.id]);
@@ -399,6 +423,7 @@ export function IdeaSheet(props: { project: Project }) {
   // a tap on free paper: write there (or stop tying, or let go of what is chosen);
   // held and drawn (at once with a mouse or the frame tool): a frame, all in it chosen
   const tapPaper = (clientX: number, clientY: number) => {
+    if (Date.now() - closedWriter.current < 450) return;
     setChosenThread(null);
     if (state.linking) {
       ideaUi.set({ linking: null });
@@ -558,6 +583,7 @@ export function IdeaSheet(props: { project: Project }) {
 
   // a tap on a thought: tie to it (while tying), otherwise its note
   const tapThought = (t: Thought | 'root', el: HTMLElement) => {
+    if (Date.now() - closedWriter.current < 450) return;
     const id = t === 'root' ? 'root' : t.id;
     if (state.linking) {
       // tied on purpose: from the one to the other, with an arrow (tapped, it can be turned or taken off)
@@ -634,6 +660,15 @@ export function IdeaSheet(props: { project: Project }) {
         class={`idea-canvas ${state.linking ? 'linking' : ''} ${selectTool ? 'selecting' : ''}`}
         style={{ width: `${COLS * SQ}px`, height: `${ROWS * SQ}px`, transform: `scale(${zoom})` }}
         onPointerDown={onPaperDown}
+        onPointerDownCapture={(e) => {
+          // writing, and tapped anywhere else: what is written is laid down (an empty line just goes);
+          // the tap does nothing more
+          if (!ideaUi.get().writing || (e.target as Element).closest('.idea-writer')) return;
+          writerFinish?.(true);
+          closedWriter.current = Date.now();
+          e.stopPropagation();
+          e.preventDefault();
+        }}
       >
         <svg class="idea-threads" width={COLS * SQ} height={ROWS * SQ} aria-hidden="false">
           {/* the threads tied to thoughts first, then those branching off a thread (a Y), over them */}
@@ -654,7 +689,7 @@ export function IdeaSheet(props: { project: Project }) {
                 onDown={onThreadDown(th, g)}
                 bent={!!(bending?.id === th.id ? bending.bend : th.bend)}
                 onChoose={() => {
-                  if (justBent.current) return;
+                  if (justBent.current || Date.now() - closedWriter.current < 450) return;
                   if (state.linking) {
                     // while tying: tied to this thread, at its middle (two run into one)
                     if (state.linking !== th.id) store.connect(p.id, state.linking, th.id, 'to');
@@ -1203,6 +1238,7 @@ function IdeaWriter(props: { project: Project; at: { x: number; y: number; from:
     ideaUi.set({ writing: null });
     input.current?.blur();
   };
+  writerFinish = finish;
   const at = props.at;
   return (
     <div
