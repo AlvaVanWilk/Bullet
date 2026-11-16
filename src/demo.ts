@@ -54,7 +54,7 @@ export function seedDemo(today: DayKey) {
   const farbIdee = store.addThought(garten.id, 'Farbe', 8, -3, 'root')!;
   store.updateThought(farbIdee.id, { style: 'cloud' });
   const rot = store.addThought(garten.id, 'Schwedenrot oder doch Grün?', 15, -6, farbIdee.id)!;
-  store.updateThought(rot.id, { color: 'rot', doodle: 'question' });
+  store.updateThought(rot.id, { color: 'rot', doodle: 'question', style: 'burst' });
   const fest = store.addThought(garten.id, 'Grillfest im Mai', -16, -5, 'root')!;
   store.updateThought(fest.id, { style: 'box', big: true, doodle: 'star', fill: 'gelb' });
   const licht = store.addThought(garten.id, 'Lichterkette', -20, 1)!;
@@ -63,6 +63,8 @@ export function seedDemo(today: DayKey) {
   const lampions = store.addThought(garten.id, 'Lampions', -11, 2)!;
   store.connect(garten.id, kette.id, lampions.id, 'to');
   store.updateThread(kette.id, { label: 'Deko', color: 'pflaume' });
+  const lang = store.addThought(garten.id, 'Wer bringt den großen Grill mit?', -18, 6)!;
+  store.updateThought(lang.id, { style: 'cloud', fill: 'mint' });
   const dach = store.addThought(garten.id, 'Dachpappe erneuern?', 6, 5, 'root')!;
   store.updateThought(dach.id, { mark: 'wavy', color: 'ocker', doodle: 'bang' });
   store.thoughtToTask(dach.id);

@@ -968,6 +968,80 @@ function ThreadLine(props: {
   );
 }
 
+/** A small random number from a seed, the same every time (−1 … 1). */
+const wobble = (seed: number, i: number) => Math.sin(seed * 12.9898 + i * 78.233) * 0.5 + Math.sin(seed * 4.1 + i * 1.7) * 0.5;
+
+/**
+ * A cloud around a thought of w × h: bumps all round an ellipse, as many as fit
+ * (a small thought a few big puffs, a long one more), each bulging outwards.
+ */
+function cloudPath(w: number, h: number, seed: number): string {
+  const rx = w / 2 + 10;
+  const ry = h / 2 + 8;
+  const pts = alongEllipse(w / 2, h / 2, rx, ry, 30, 7, seed);
+  const n = pts.length;
+  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 1) % n];
+    const mx = (x0 + x1) / 2;
+    const my = (y0 + y1) / 2;
+    // outwards: across the stretch, away from the middle
+    let ox = y1 - y0;
+    let oy = -(x1 - x0);
+    if (ox * (mx - w / 2) + oy * (my - h / 2) < 0) { ox = -ox; oy = -oy; }
+    const ol = Math.hypot(ox, oy) || 1;
+    const bulge = Math.hypot(x1 - x0, y1 - y0) * (0.5 + wobble(seed, i + 40) * 0.12);
+    d += ` Q ${(mx + (ox / ol) * bulge).toFixed(1)} ${(my + (oy / ol) * bulge).toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+  }
+  return d;
+}
+
+/** Points round an ellipse, evenly apart along it (about every `step`, at least `least`), a little uneven. */
+function alongEllipse(cx: number, cy: number, rx: number, ry: number, step: number, least: number, seed: number): [number, number][] {
+  const fine: [number, number][] = [];
+  const len: number[] = [0];
+  for (let i = 0; i <= 240; i++) {
+    const a = (i / 240) * Math.PI * 2;
+    fine.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+    if (i) len.push(len[i - 1] + Math.hypot(fine[i][0] - fine[i - 1][0], fine[i][1] - fine[i - 1][1]));
+  }
+  const total = len[240];
+  const n = Math.max(least, Math.round(total / step));
+  const out: [number, number][] = [];
+  let j = 0;
+  for (let k = 0; k < n; k++) {
+    const want = ((k + wobble(seed, k) * 0.15 + n) % n) / n * total;
+    while (j < 239 && len[j + 1] < want) j++;
+    while (j > 0 && len[j] > want) j--;
+    const f = (want - len[j]) / ((len[j + 1] - len[j]) || 1);
+    out.push([fine[j][0] + (fine[j + 1][0] - fine[j][0]) * f, fine[j][1] + (fine[j + 1][1] - fine[j][1]) * f]);
+  }
+  return out;
+}
+
+/** Jagged all round, like a burst: points out, notches in, a little uneven. */
+function burstPoints(w: number, h: number, seed: number): [number, number][] {
+  const cx = w / 2;
+  const cy = h / 2;
+  const notches = alongEllipse(cx, cy, w / 2 + 10, h / 2 + 7, 16, 9, seed);
+  const pts: [number, number][] = [];
+  notches.forEach(([x, y], i) => {
+    const [nx, ny] = notches[(i + 1) % notches.length];
+    pts.push([x, y]);
+    // a point out between two notches, away from the middle
+    const mx = (x + nx) / 2;
+    const my = (y + ny) / 2;
+    let ox = ny - y;
+    let oy = -(nx - x);
+    if (ox * (mx - cx) + oy * (my - cy) < 0) { ox = -ox; oy = -oy; }
+    const ol = Math.hypot(ox, oy) || 1;
+    const out = 10 + wobble(seed, i + 90) * 3;
+    pts.push([mx + (ox / ol) * out, my + (oy / ol) * out]);
+  });
+  return pts;
+}
+
 /** The size of the thought this sits in, kept up to date. */
 function useHostSize(ref: { current: Element | null }) {
   const [size, setSize] = useState<[number, number] | null>(null);
@@ -993,7 +1067,8 @@ function IdeaFill(props: { frame: ThoughtStyle; color: string; seed: string }) {
   let drawn: { d: string; fill?: string }[] = [];
   if (size) {
     if (props.frame === 'box') drawn = gen.toPaths(gen.rectangle(5, 5, w - 10, h - 10, marker));
-    else if (props.frame === 'cloud') drawn = gen.toPaths(gen.ellipse(w / 2, h / 2, w + 6, h + 2, { ...marker, curveStepCount: 14 }));
+    else if (props.frame === 'cloud') drawn = gen.toPaths(gen.ellipse(w / 2, h / 2, w + 18, h + 14, { ...marker, curveStepCount: 14 }));
+    else if (props.frame === 'burst') drawn = gen.toPaths(gen.ellipse(w / 2, h / 2, w + 22, h + 16, marker));
     else drawn = gen.toPaths(gen.ellipse(w / 2, h / 2, w + 18, h + 10, marker));
   }
   return (
@@ -1022,7 +1097,8 @@ function IdeaMarks(props: { frame: ThoughtStyle; mark: ThoughtMark | null; seed:
   const drawn: { d: string }[] = [];
   if (size) {
     if (props.frame === 'box') drawn.push(...gen.toPaths(gen.rectangle(2, 2, w - 4, h - 4, { ...pen, roughness: 0.9, bowing: 1 })));
-    if (props.frame === 'cloud') drawn.push(...gen.toPaths(gen.ellipse(w / 2, h / 2, w + 18, h + 14, { ...pen, roughness: 1.3, bowing: 1.4, curveStepCount: 14 })));
+    if (props.frame === 'cloud') drawn.push(...gen.toPaths(gen.path(cloudPath(w, h, seed), { ...pen, roughness: 0.5, bowing: 0.4, strokeWidth: 1.35 })));
+    if (props.frame === 'burst') drawn.push(...gen.toPaths(gen.polygon(burstPoints(w, h, seed), { ...pen, roughness: 0.6, bowing: 0.3, strokeWidth: 1.35 })));
     if (props.frame === 'circle') {
       // circled by hand: once round and a little beyond where it began
       const rx = w / 2 + 14;
@@ -1105,6 +1181,7 @@ const FRAMES: { key: ThoughtStyle; label: string }[] = [
   { key: 'box', label: 'Kasten' },
   { key: 'cloud', label: 'Wolke' },
   { key: 'circle', label: 'eingekreist' },
+  { key: 'burst', label: 'zackig' },
 ];
 const MARKS: { key: ThoughtMark | null; label: string }[] = [
   { key: null, label: 'nichts' },

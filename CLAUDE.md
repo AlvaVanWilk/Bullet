@@ -95,8 +95,9 @@ Bedienung und Einrichtung: `README.md`.
   verwirft); den Namen antippen → ein Zweig (neuer Gedanke daneben, mit Faden verbunden).
   Gedanken sitzen auf den Punktreihen (Lage in Kästchen ab der Mitte), lassen sich mit dem Finger
   tragen (rasten ein) und antippen → Zettel: Text; Notiz (`thought.note`, wie bei Aufgaben: Enter beendet, Shift+Enter neue
-  Zeile; kleines „i“ am Gedanken, mit der Maus Notiz-Zettel beim Darüberfahren); Rahmen (ohne, Kasten, Wolke, eingekreist –
-  von Hand gezogen, über den Anfang hinaus); Füllung (nur mit Rahmen: mit Marker ausgemalt, breite
+  Zeile; kleines „i“ am Gedanken, mit der Maus Notiz-Zettel beim Darüberfahren); Rahmen (ohne, Kasten, Wolke – echte Wolkenbögen,
+  gleichmäßig über den Umfang verteilt –, eingekreist – von Hand gezogen, über den Anfang hinaus –,
+  zackig); Füllung (nur mit Rahmen: mit Marker ausgemalt, breite
   Striche unter der Schrift; Projektfarbe, gelb, rosa, mint, himmelblau, flieder – gedeckt, `thought.fill`); Strich (Marker, unterstrichen, doppelt, Welle);
   GROSS; Farbe des Stifts (Tinte, rot, blau, grün, ocker, pflaume – gedeckt; färbt Schrift,
   Rahmen, Strich, Kritzel; Marker dann in dieser Farbe, sonst in Projektfarbe); Kritzel an der

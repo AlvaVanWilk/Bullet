@@ -285,7 +285,7 @@ export interface ChoreTick extends Base {
 }
 
 /** The frame drawn around a thought ('marker' is from before marks had their own field: a highlight, no frame). */
-export type ThoughtStyle = 'plain' | 'box' | 'cloud' | 'circle' | 'marker';
+export type ThoughtStyle = 'plain' | 'box' | 'cloud' | 'circle' | 'burst' | 'marker';
 /** A stroke under or behind the words. */
 export type ThoughtMark = 'marker' | 'underline' | 'double' | 'wavy';
 /** A little drawing beside a thought. */

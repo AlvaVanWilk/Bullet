@@ -140,8 +140,9 @@
 }
 .idea.done .idea-text { color: var(--ink-soft); text-decoration: line-through; text-decoration-thickness: 1.5px; }
 .idea.box { padding: 4px 12px; border-radius: 3px; }
-.idea.cloud { padding: 6px 14px; border-radius: 50%; }
+.idea.cloud { padding: 6px 16px; border-radius: 50%; }
 .idea.circle { padding: 6px 16px; border-radius: 50%; }
+.idea.burst { padding: 8px 18px; border-radius: 50%; }
 /* in a coloured pen: the words, the frame, the stroke and the doodle */
 .idea.colored { color: var(--pen); }
 .idea.mark-marker .idea-text {
