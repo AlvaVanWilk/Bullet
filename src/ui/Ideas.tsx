@@ -890,7 +890,15 @@ function ThreadLine(props: {
   const labelPen = penColor(thread.labelColor) ?? pen;
   // the words along it, left to right whichever way it runs, a little above it
   const ltr = a.x <= b.x;
-  const textPath = ltr ? `M ${a.x} ${a.y} Q ${ctl[0]} ${ctl[1]} ${b.x} ${b.y}` : `M ${b.x} ${b.y} Q ${ctl[0]} ${ctl[1]} ${a.x} ${a.y}`;
+  // the line to write on runs on past both ends, so a word longer than the thread is not cut off
+  const past = (p: Pt): Pt => {
+    const dx = p.x - ctl[0];
+    const dy = p.y - ctl[1];
+    const l = Math.hypot(dx, dy) || 1;
+    return { x: p.x + (dx / l) * 120, y: p.y + (dy / l) * 120 };
+  };
+  const [ea, eb] = [past(a), past(b)];
+  const textPath = ltr ? `M ${ea.x} ${ea.y} L ${a.x} ${a.y} Q ${ctl[0]} ${ctl[1]} ${b.x} ${b.y} L ${eb.x} ${eb.y}` : `M ${eb.x} ${eb.y} L ${b.x} ${b.y} Q ${ctl[0]} ${ctl[1]} ${a.x} ${a.y} L ${ea.x} ${ea.y}`;
   const labelId = `tl-${thread.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
   // an arrowhead: two short strokes back from the tip, along the curve's last stretch
   const head = (tip: { x: number; y: number }, from: [number, number], s2: number) => {
@@ -913,6 +921,10 @@ function ThreadLine(props: {
       {thread.label && (
         <>
           <path id={labelId} d={textPath} fill="none" stroke="none" />
+          {/* first the paper around all the letters, then all the letters over it (else a narrow one is covered by its neighbour's) */}
+          <text class="thread-label halo" dy={-6} aria-hidden="true">
+            <textPath href={`#${labelId}`} startOffset="50%" text-anchor="middle">{thread.label}</textPath>
+          </text>
           <text class="thread-label" dy={-6}>
             <textPath href={`#${labelId}`} startOffset="50%" text-anchor="middle">{thread.label}</textPath>
           </text>

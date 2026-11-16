@@ -147,7 +147,8 @@ export async function drawIdeaSheet(sheet: HTMLElement, opts: { dots: boolean })
   if (threads) drawSvg(threads, c);
 
   // the words along the threads: letter by letter along their path, a little above it, with paper around them
-  for (const text of sheet.querySelectorAll<SVGTextElement>('.idea-threads text.thread-label')) {
+  // (the paper of all letters first, then the letters: as on the screen)
+  for (const halo of [true, false]) for (const text of sheet.querySelectorAll<SVGTextElement>(`.idea-threads text.thread-label${halo ? '.halo' : ':not(.halo)'}`)) {
     const tp = text.querySelector('textPath');
     const id = tp?.getAttribute('href')?.slice(1);
     const path = id ? sheet.querySelector<SVGPathElement>(`[id="${id}"]`) : null;
@@ -175,12 +176,15 @@ export async function drawIdeaSheet(sheet: HTMLElement, opts: { dots: boolean })
       c.save();
       c.translate(pt.x, pt.y);
       c.rotate(ang);
-      c.lineJoin = 'round';
-      c.lineWidth = parseFloat(cs.strokeWidth) || 4;
-      c.strokeStyle = colour.get(cs.stroke && cs.stroke !== 'none' ? cs.stroke : paper);
-      c.strokeText(ch, 0, -lift);
-      c.fillStyle = colour.get(cs.fill);
-      c.fillText(ch, 0, -lift);
+      if (halo) {
+        c.lineJoin = 'round';
+        c.lineWidth = parseFloat(cs.strokeWidth) || 4;
+        c.strokeStyle = colour.get(cs.stroke && cs.stroke !== 'none' ? cs.stroke : paper);
+        c.strokeText(ch, 0, -lift);
+      } else {
+        c.fillStyle = colour.get(cs.fill);
+        c.fillText(ch, 0, -lift);
+      }
       c.restore();
       at += cw;
     }

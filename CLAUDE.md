@@ -327,8 +327,8 @@ Bedienung und Einrichtung: `README.md`.
   Zusammenführen: pro Datensatz gewinnt der neuere.
 - Veröffentlichung wie bei Envoy: Arbeitszweig → Testordner `bullet-test` („Bullet
   Test“, oranges Icon, Schild „Test“, eigene Daten). `main` → echter Ordner. Auf
-  `main` kommt nur, was die Nutzerin im Testordner angesehen und mit „freigeben“
-  freigegeben hat.
+  `main` kommt nur, was die Nutzerin freigegeben hat. Sie hat erlaubt, immer sofort freizugeben:
+  nach den Prüfungen erst Testordner, dann gleich `main`.
 - UI-Texte auf Deutsch, Bezeichner und Kommentare im Code auf Englisch.
 - Robustheit: Einträge im Tag haben eine feste id aus Aufgabe und Tag (`entryId`), damit
   zwei Geräte nicht zwei Zeilen erzeugen. Die Daten auf dem Gerät gehören dem zuletzt
