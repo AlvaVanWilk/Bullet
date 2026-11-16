@@ -98,7 +98,7 @@ Bedienung und Einrichtung: `README.md`.
   Zeile; kleines „i“ am Gedanken, mit der Maus Notiz-Zettel beim Darüberfahren); Rahmen (ohne, Kasten, Wolke – echte Wolkenbögen,
   gleichmäßig über den Umfang verteilt –, eingekreist – von Hand gezogen, über den Anfang hinaus –,
   zackig); Füllung (nur mit Rahmen: mit Marker ausgemalt, breite
-  Striche unter der Schrift; Projektfarbe, gelb, rosa, mint, himmelblau, flieder – gedeckt, `thought.fill`); Strich (Marker, unterstrichen, doppelt, Welle);
+  Striche unter der Schrift; Projektfarbe und 17 gedeckte Marker rund um den Farbkreis, gelb bis grau, `thought.fill`); Strich (Marker, unterstrichen, doppelt, Welle);
   GROSS; Farbe des Stifts (Tinte, rot, blau, grün, ocker, pflaume – gedeckt; färbt Schrift,
   Rahmen, Strich, Kritzel; Marker dann in dieser Farbe, sonst in Projektfarbe); Kritzel an der
   Ecke (Stern, ! (kräftig), ?, Haken, Herz, Glühbirne, Blitz, Blüte, Ziel, Können (Hantel), Geld,

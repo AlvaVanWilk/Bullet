@@ -64,10 +64,22 @@ const penColor = (key?: string | null) => (key === 'tinte' ? INK : THOUGHT_COLOR
 export const FILL_COLORS: { key: string; label: string; color: string }[] = [
   { key: 'projekt', label: 'Projektfarbe', color: 'var(--proj-mark, #d9cfa3)' },
   { key: 'gelb', label: 'gelb', color: '#e6cd62' },
+  { key: 'sand', label: 'sand', color: '#e2d2a4' },
+  { key: 'pfirsich', label: 'pfirsich', color: '#efb98f' },
+  { key: 'koralle', label: 'koralle', color: '#e59a85' },
+  { key: 'terrakotta', label: 'terrakotta', color: '#cf8e6c' },
   { key: 'rosa', label: 'rosa', color: '#e2a29b' },
-  { key: 'mint', label: 'mint', color: '#9ccbb0' },
-  { key: 'himmel', label: 'himmelblau', color: '#9fbcd8' },
+  { key: 'altrosa', label: 'altrosa', color: '#d6a5b0' },
   { key: 'flieder', label: 'flieder', color: '#bba5cf' },
+  { key: 'lavendel', label: 'lavendel', color: '#c8bde3' },
+  { key: 'taube', label: 'taubenblau', color: '#a9b6cc' },
+  { key: 'himmel', label: 'himmelblau', color: '#9fbcd8' },
+  { key: 'petrol', label: 'petrol', color: '#8fb3b8' },
+  { key: 'tuerkis', label: 'türkis', color: '#96cec6' },
+  { key: 'mint', label: 'mint', color: '#9ccbb0' },
+  { key: 'salbei', label: 'salbei', color: '#b5c79f' },
+  { key: 'limette', label: 'limette', color: '#cfd88b' },
+  { key: 'grau', label: 'grau', color: '#c6c2ba' },
 ];
 const fillColor = (key?: string | null) => FILL_COLORS.find((c) => c.key === key)?.color;
 
