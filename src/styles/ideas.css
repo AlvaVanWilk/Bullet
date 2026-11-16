@@ -30,7 +30,9 @@
   background: color-mix(in srgb, var(--proj-mark, #cfc8b9) 14%, transparent);
 }
 /* the tool for it, in the corner of the sheet */
-.idea-tools { position: absolute; top: 12px; right: 14px; z-index: 7; }
+.idea-tools { position: absolute; top: 12px; right: 14px; z-index: 7; display: flex; gap: 8px; }
+.idea-tool:disabled { opacity: 0.4; cursor: default; }
+.idea-tool svg path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .idea-tool {
   width: 40px;
   height: 40px;

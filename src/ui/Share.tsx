@@ -53,7 +53,7 @@ function ctx(): CanvasRenderingContext2D {
 }
 
 /** Small caps: capitals full size, the other letters as smaller capitals. */
-function smallCaps(c: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, family: string, draw: boolean): number {
+export function smallCaps(c: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, family: string, draw: boolean): number {
   let at = x;
   for (const ch of text) {
     const lower = ch !== ch.toUpperCase();
@@ -88,7 +88,7 @@ function wrap(text: string, width: number, measure: (s: string) => number): stri
   return out;
 }
 
-function longDay(day: string): string {
+export function longDay(day: string): string {
   const d = parseDay(day);
   return `${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
@@ -289,11 +289,11 @@ function box(c: CanvasRenderingContext2D, x: number, y: number, state: 'open' | 
   c.stroke();
 }
 
-function toBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
+export function toBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error(type))), type, quality));
 }
 
-function fileName(text: string): string {
+export function fileName(text: string): string {
   return text.replace(/[\\/:*?"<>|\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'Aufgabe';
 }
 
@@ -324,7 +324,7 @@ async function make(task: Task, opts: Options, photos: Map<string, ImageBitmap |
 }
 
 /** Into the share menu of the device; where there is none, as downloads. */
-function send(files: File[], title: string) {
+export function send(files: File[], title: string) {
   if (navigator.canShare?.({ files })) {
     navigator.share({ files, title }).catch(() => { /* closed, or not possible */ });
     return;

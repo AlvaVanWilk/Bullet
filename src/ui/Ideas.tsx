@@ -12,6 +12,9 @@ import { Checkbox } from './ink';
 import type { Project, Thought, ThoughtDoodle, ThoughtMark, ThoughtStyle, Thread } from '../lib/model';
 import { store } from '../store/store';
 import { observable, ui, useStore } from './state';
+import { exportIdeaSheet, type IdeaExport } from './ideaExport';
+import { ShareIcon } from './PostIt';
+import { send } from './Share';
 
 const SQ = 28;
 /** The paper: so many squares wide and high, the middle where the name stands. */
@@ -154,6 +157,7 @@ export function IdeaSheet(props: { project: Project }) {
   const [selectTool, setSelectTool] = useState(false);
   const [frame, setFrame] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const [sureErase, setSureErase] = useState(false);
+  const [sharing, setSharing] = useState(false);
   // a thread being bent by hand, before it is let go
   const [bending, setBending] = useState<{ id: string; bend: { n: number; t: number } | null } | null>(null);
   const justBent = useRef(false);
@@ -561,6 +565,16 @@ export function IdeaSheet(props: { project: Project }) {
       <div class="idea-tools">
         <button
           type="button"
+          class="idea-tool"
+          onClick={() => { setSelected([]); setSelectTool(false); setChosenThread(null); ideaUi.set({ linking: null, writing: null }); setSharing(true); }}
+          aria-label="als Bild oder PDF teilen"
+          title="als Bild oder PDF teilen"
+          disabled={!thoughts.length}
+        >
+          <ShareIcon />
+        </button>
+        <button
+          type="button"
           class={`idea-tool ${selectTool ? 'on' : ''}`}
           onClick={() => { setSelectTool(!selectTool); setSelected([]); ideaUi.set({ linking: null }); }}
           aria-pressed={selectTool}
@@ -573,6 +587,7 @@ export function IdeaSheet(props: { project: Project }) {
           </svg>
         </button>
       </div>
+      {sharing && canvas.current && <IdeaShare sheet={canvas.current} project={p} close={() => setSharing(false)} />}
       {selectTool && !frame && (
         <div class="idea-hint" role="status">
           Einen Rahmen um die Gedanken ziehen
@@ -600,6 +615,55 @@ export function IdeaSheet(props: { project: Project }) {
           <button type="button" class="chip" onClick={() => ideaUi.set({ linking: null })}>abbrechen</button>
         </div>
       )}
+    </div>
+  );
+}
+
+/** The sheet to share: a picture of it (cut to what is written), "als Bild" or "als PDF". */
+function IdeaShare(props: { sheet: HTMLElement; project: Project; close: () => void }) {
+  const [dots, setDots] = useState(true);
+  const [made, setMade] = useState<IdeaExport | null>(null);
+  const [busy, setBusy] = useState(true);
+  useEffect(() => {
+    let stale = false;
+    setBusy(true);
+    // after the chosen marks and menus are gone from the sheet
+    const timer = setTimeout(() => {
+      exportIdeaSheet(props.sheet, props.project.name, { dots })
+        .then((m) => {
+          if (stale) { URL.revokeObjectURL(m.preview); return; }
+          setMade((old) => { if (old) URL.revokeObjectURL(old.preview); return m; });
+          setBusy(false);
+        })
+        .catch(() => { if (!stale) setBusy(false); });
+    }, 120);
+    return () => { stale = true; clearTimeout(timer); };
+  }, [dots]);
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') props.close(); };
+    addEventListener('keydown', esc);
+    return () => removeEventListener('keydown', esc);
+  }, []);
+  return (
+    <div class="share-layer" onPointerDown={(e) => { if (e.target === e.currentTarget) props.close(); }}>
+      <div class="share-window" role="dialog" aria-label="Ideen teilen">
+        <header class="share-head">
+          <h2>Ideen teilen</h2>
+          <button type="button" class="ghost-btn close-x" onClick={props.close} aria-label="schließen">✕</button>
+        </header>
+        <div class="share-options">
+          <button type="button" class={`chip ${dots ? 'on' : ''}`} aria-pressed={dots} onClick={() => setDots(!dots)}>mit Punkten</button>
+        </div>
+        <div class={`share-preview ${busy ? 'busy' : ''}`} data-scroll>
+          {made && <img src={made.preview} alt="Vorschau" />}
+          {!made && <p class="share-wait">wird gezeichnet …</p>}
+        </div>
+        <footer class="share-foot">
+          <span class="share-count">{props.project.name}</span>
+          <button type="button" class="note-btn" disabled={busy || !made} onClick={() => made && send([made.image], props.project.name)}>als Bild</button>
+          <button type="button" class="note-btn save" disabled={busy || !made} onClick={() => made && send([made.pdf], props.project.name)}>als PDF</button>
+        </footer>
+      </div>
     </div>
   );
 }

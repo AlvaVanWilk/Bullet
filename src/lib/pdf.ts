@@ -7,6 +7,8 @@ export interface PdfPage {
   /** size of the picture in pixels */
   width: number;
   height: number;
+  /** A4 turned on its side */
+  landscape?: boolean;
 }
 
 /** A4 in points */
@@ -37,9 +39,10 @@ export function makePdf(pages: PdfPage[]): Uint8Array<ArrayBuffer> {
     const page = 3 + i * 3;
     const image = page + 1;
     const content = page + 2;
-    const draw = `q ${A4[0]} 0 0 ${A4[1]} 0 0 cm /Im0 Do Q`;
+    const [pw, ph] = p.landscape ? [A4[1], A4[0]] : A4;
+    const draw = `q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`;
     object(page, () => push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${A4[0]} ${A4[1]}] /Resources << /XObject << /Im0 ${image} 0 R >> >> /Contents ${content} 0 R >>`,
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 ${image} 0 R >> >> /Contents ${content} 0 R >>`,
     ));
     object(image, () => {
       push(`<< /Type /XObject /Subtype /Image /Width ${p.width} /Height ${p.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.jpeg.length} >>\nstream\n`);

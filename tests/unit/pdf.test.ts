@@ -16,4 +16,9 @@ describe('pdf', () => {
     expect(entries).toHaveLength(8);
     entries.forEach((offset, i) => expect(text.startsWith(`${i + 1} 0 obj`, offset)).toBe(true));
   });
+  it('turns a page on its side when asked', () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+    const text = new TextDecoder('latin1').decode(makePdf([{ jpeg, width: 1754, height: 1240, landscape: true }]));
+    expect(text).toContain('/MediaBox [0 0 841.89 595.28]');
+  });
 });

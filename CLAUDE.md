@@ -115,6 +115,10 @@ Bedienung und Einrichtung: `README.md`.
   der Knopf mit dem gestrichelten Rahmen oben rechts); Ausgewählte gestrichelt umrandet, einen davon
   ziehen trägt alle (`moveThoughts`), antippen nimmt einen dazu oder heraus, Papier antippen / „fertig“ /
   Esc lässt los, „wegradieren“ (zweimal tippen) radiert alle. Schnelles Wischen scrollt wie immer.
+  Teilen (Knopf mit dem Teilen-Zeichen oben rechts, `src/ui/ideaExport.ts`): das Blatt so, wie es
+  dasteht, von Hand auf ein Canvas gezeichnet (kein Foto des DOM, damit es auf dem iPad geht),
+  zugeschnitten auf das Beschriebene; „mit Punkten“ wählbar; „als Bild“ (PNG) oder „als PDF“ (eine
+  A4-Seite, quer wenn breiter, Projektname oben, „Ideen · aus Bullet · Datum“ unten).
   Ein Faden hat eine feste id aus seinen beiden Enden (kein doppelter von zwei Geräten). Das
   Schreibfeld liegt bereit und bekommt den Fokus im Tippen selbst (sonst keine iPad-Tastatur).
   Projekt gelöscht → sein Ideenblatt geht mit.
