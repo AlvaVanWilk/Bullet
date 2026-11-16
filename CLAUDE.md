@@ -102,8 +102,12 @@ Bedienung und Einrichtung: `README.md`.
   antippen, womit; so verbunden mit Pfeil hin), „→ als Aufgabe“ (wird Aufgabe des Projekts; der Gedanke bleibt und trägt ihr Kästchen,
   erledigt → dünn durchgestrichen), „wegradieren“ (Fäden gehen mit, die Aufgabe bleibt). Fäden
   von Hand gezeichnet mit leichtem Bogen von Rand zu Rand, beim Entstehen gezogen; Pfeilspitzen
-  (`thread.arrow`: hin, zurück, beide, keine); Faden antippen → zwei Knöpfe: Pfeil (keiner → hin →
-  zurück → beide) und ✂ (schneidet). Zweige vom Namen bzw. „＋ Zweig“ ohne Pfeil.
+  (`thread.arrow`: hin, zurück, beide, keine); Faden antippen → drei Knöpfe: Pfeil (keiner → hin →
+  zurück → beide), ⑂ (abzweigen: Y) und ✂ (schneidet). Zweige vom Namen bzw. „＋ Zweig“ ohne Pfeil.
+  Y-Verbindungen: Ein Faden kann an der Mitte eines anderen Fadens beginnen oder enden (Ende = Faden-id;
+  kleiner Knoten an der Stelle). ⑂ → Gedanken antippen = teilt sich; beim „⌒ verbinden“ einen Faden
+  antippen = laufen zusammen. Wird ein Faden geschnitten (oder sein Gedanke wegradiert), gehen die
+  Zweige an ihm mit.
   Ein Faden hat eine feste id aus seinen beiden Enden (kein doppelter von zwei Geräten). Das
   Schreibfeld liegt bereit und bekommt den Fokus im Tippen selbst (sonst keine iPad-Tastatur).
   Projekt gelöscht → sein Ideenblatt geht mit.

@@ -894,9 +894,26 @@ export class Store {
     if (!t) return;
     this.put({ ...t, deleted: true });
     for (const r of [...this.records.values()]) {
-      if (r.type === 'thread' && !r.deleted && (r.from === id || r.to === id)) this.put({ ...r, deleted: true });
+      if (r.type === 'thread' && !r.deleted && (r.from === id || r.to === id)) this.cutThread(r.id);
     }
     this.changed(true);
+  }
+
+  /** A thread cut, and the branches that grew from it (a Y loses its arm with its stem). */
+  private cutThread(id: string, depth = 0) {
+    const r = this.records.get(id);
+    if (r?.type !== 'thread' || r.deleted || depth > 20) return;
+    this.put({ ...r, deleted: true });
+    for (const x of [...this.records.values()]) {
+      if (x.type === 'thread' && !x.deleted && (x.from === id || x.to === id)) this.cutThread(x.id, depth + 1);
+    }
+  }
+
+  /** What a thread can end at: a thought, the name in the middle ("root"), or another thread (a branch from its middle: a Y). */
+  private threadEnd(id: string): boolean {
+    if (id === 'root' || this.thought(id)) return true;
+    const r = this.records.get(id);
+    return r?.type === 'thread' && !r.deleted;
   }
 
   /** The thread between two (the same on every device, whichever end was first). */
@@ -907,7 +924,10 @@ export class Store {
 
   /** Ties two thoughts (or a thought and "root", the name in the middle) together; again, it does nothing. */
   connect(projectId: string, a: string, b: string, arrow: Thread['arrow'] = null): Thread | null {
-    if (a === b || (a !== 'root' && !this.thought(a)) || (b !== 'root' && !this.thought(b))) return null;
+    if (a === b || !this.threadEnd(a) || !this.threadEnd(b)) return null;
+    // a branch does not grow from a thread that ends at the other end itself
+    const ends = (x: string, y: string) => { const r = this.records.get(x); return r?.type === 'thread' && (r.from === y || r.to === y); };
+    if (ends(a, b) || ends(b, a)) return null;
     const id = this.threadId(projectId, a, b);
     const had = this.records.get(id);
     if (had?.type === 'thread' && !had.deleted) return had;
@@ -929,7 +949,7 @@ export class Store {
   disconnect(id: string) {
     const r = this.records.get(id);
     if (r?.type !== 'thread' || r.deleted) return;
-    this.put({ ...r, deleted: true });
+    this.cutThread(id);
     this.changed(true);
   }
 

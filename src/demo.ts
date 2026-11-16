@@ -58,7 +58,10 @@ export function seedDemo(today: DayKey) {
   const fest = store.addThought(garten.id, 'Grillfest im Mai', -16, -5, 'root')!;
   store.updateThought(fest.id, { style: 'box', big: true, doodle: 'star' });
   const licht = store.addThought(garten.id, 'Lichterkette', -20, 1)!;
-  store.connect(garten.id, fest.id, licht.id, 'to');
+  const kette = store.connect(garten.id, fest.id, licht.id, 'to')!;
+  // a Y: from the thread to the party, a second arm to the garlands' twin
+  const lampions = store.addThought(garten.id, 'Lampions', -11, 2)!;
+  store.connect(garten.id, kette.id, lampions.id, 'to');
   const dach = store.addThought(garten.id, 'Dachpappe erneuern?', 6, 5, 'root')!;
   store.updateThought(dach.id, { mark: 'wavy', color: 'ocker', doodle: 'bang' });
   store.thoughtToTask(dach.id);

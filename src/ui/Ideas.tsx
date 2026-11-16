@@ -158,6 +158,37 @@ export function IdeaSheet(props: { project: Project }) {
     return { x: px(t.x) + off.x + size.w / 2, y: py(t.y) + off.y + size.h / 2 };
   };
 
+  // where each thread runs: from edge to edge (a little off them, so an arrowhead meets the thought);
+  // a thread can also start or end at the middle of another thread: there it splits (a Y)
+  const threadIds = new Set(threads.map((t) => t.id));
+  const geoms = new Map<string, ThreadGeom | null>();
+  const geom = (id: string, depth = 0): ThreadGeom | null => {
+    if (geoms.has(id)) return geoms.get(id)!;
+    const th = threads.find((t) => t.id === id);
+    if (!th || depth > 12) return null;
+    geoms.set(id, null); // a guard against a ring
+    const end = (e: string) => {
+      if (threadIds.has(e)) {
+        const g = geom(e, depth + 1);
+        return g ? { c: { x: g.mid[0], y: g.mid[1] }, hw: 0, hh: 0, depth: g.depth + 1 } : null;
+      }
+      const c = centre(e);
+      if (!c) return null;
+      const z = sizes[e] ?? { w: 80, h: SQ };
+      return { c, hw: z.w / 2 + (e === 'root' ? 0 : 6), hh: z.h / 2 + 6, depth: 0 };
+    };
+    const ea = end(th.from);
+    const eb = end(th.to);
+    let g: ThreadGeom | null = null;
+    if (ea && eb) {
+      const a = ea.hw ? edgeOf(ea.c, ea.hw, ea.hh, eb.c.x, eb.c.y) : ea.c;
+      const b = eb.hw ? edgeOf(eb.c, eb.hw, eb.hh, ea.c.x, ea.c.y) : eb.c;
+      g = { a, b, mid: bowedMid(th.id, a, b), depth: Math.max(ea.depth, eb.depth) };
+    }
+    geoms.set(id, g);
+    return g;
+  };
+
   // a tap on free paper: write there (or stop tying)
   const down = useRef<{ x: number; y: number } | null>(null);
   const onPaperDown = (e: PointerEvent) => {
@@ -246,31 +277,34 @@ export function IdeaSheet(props: { project: Project }) {
         onPointerUp={onPaperUp}
       >
         <svg class="idea-threads" width={COLS * SQ} height={ROWS * SQ} aria-hidden="false">
-          {threads.map((th) => {
-            const ca = centre(th.from);
-            const cb = centre(th.to);
-            if (!ca || !cb) return null;
-            // from edge to edge (a little off them), so an arrowhead meets the thought
-            const half = (id: string) => {
-              const z = sizes[id] ?? { w: 80, h: SQ };
-              return [z.w / 2 + (id === 'root' ? 0 : 6), z.h / 2 + 6] as const;
-            };
-            const [aw, ah] = half(th.from);
-            const [bw, bh] = half(th.to);
-            const a = edgeOf(ca, aw, ah, cb.x, cb.y);
-            const b = edgeOf(cb, bw, bh, ca.x, ca.y);
-            return (
+          {/* the threads tied to thoughts first, then those branching off a thread (a Y), over them */}
+          {threads
+            .map((th) => ({ th, g: geom(th.id) }))
+            .filter((x): x is { th: Thread; g: ThreadGeom } => !!x.g)
+            .sort((x, y) => x.g.depth - y.g.depth)
+            .map(({ th, g }) => (
               <ThreadLine
                 key={th.id}
                 thread={th}
-                a={a}
-                b={b}
+                a={g.a}
+                b={g.b}
+                mid={g.mid}
+                knots={[...(threadIds.has(th.from) ? [g.a] : []), ...(threadIds.has(th.to) ? [g.b] : [])]}
                 fresh={store.isFresh(th.id)}
-                chosen={chosenThread === th.id}
-                onChoose={() => setChosenThread(chosenThread === th.id ? null : th.id)}
+                chosen={chosenThread === th.id || state.linking === th.id}
+                menu={chosenThread === th.id && !state.linking}
+                onChoose={() => {
+                  if (state.linking) {
+                    // while tying: tied to this thread, at its middle (two run into one)
+                    if (state.linking !== th.id) store.connect(p.id, state.linking, th.id, 'to');
+                    ideaUi.set({ linking: null });
+                    return;
+                  }
+                  setChosenThread(chosenThread === th.id ? null : th.id);
+                }}
+                onBranch={() => { setChosenThread(null); ideaUi.set({ linking: th.id, writing: null }); }}
               />
-            );
-          })}
+            ))}
         </svg>
 
         {/* the name of the project in the middle, on a blot of its colour: tapped, a branch grows from it */}
@@ -322,7 +356,7 @@ export function IdeaSheet(props: { project: Project }) {
       </div>
       {state.linking && (
         <div class="idea-hint" role="status">
-          Antippen, womit es verbunden werden soll
+          {threadIds.has(state.linking) ? 'Antippen, wohin der Faden abzweigt' : 'Antippen, womit es verbunden werden soll (auch ein Faden)'}
           <button type="button" class="chip" onClick={() => ideaUi.set({ linking: null })}>abbrechen</button>
         </div>
       )}
@@ -335,15 +369,34 @@ export function IdeaSheet(props: { project: Project }) {
 
 const ARROW_NEXT: Record<string, Thread['arrow']> = { none: 'to', to: 'from', from: 'both', both: null };
 
-/** A thread between two, drawn by hand with a little bow and arrowheads if it has them; tapped, it offers them and the scissors. */
-function ThreadLine(props: { thread: Thread; a: { x: number; y: number }; b: { x: number; y: number }; fresh: boolean; chosen: boolean; onChoose: () => void }) {
-  const { a, b, thread } = props;
-  const seed = seedOf(thread.id);
+type Pt = { x: number; y: number };
+type ThreadGeom = { a: Pt; b: Pt; mid: [number, number]; depth: number };
+
+/** The middle of a thread, bowed a little to one side (its own, from its id); it lies on the drawn curve, so a branch can start there. */
+function bowedMid(id: string, a: Pt, b: Pt): [number, number] {
+  const seed = seedOf(id);
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
   const bow = (((seed % 7) - 3) / 3) * Math.min(26, len * 0.12);
-  const mid: [number, number] = [(a.x + b.x) / 2 - (dy / len) * bow, (a.y + b.y) / 2 + (dx / len) * bow];
+  return [(a.x + b.x) / 2 - (dy / len) * bow, (a.y + b.y) / 2 + (dx / len) * bow];
+}
+
+/** A thread between two, drawn by hand with a little bow and arrowheads if it has them; tapped, it offers them, a branch and the scissors. */
+function ThreadLine(props: {
+  thread: Thread;
+  a: Pt;
+  b: Pt;
+  mid: [number, number];
+  knots: Pt[];
+  fresh: boolean;
+  chosen: boolean;
+  menu: boolean;
+  onChoose: () => void;
+  onBranch: () => void;
+}) {
+  const { a, b, thread, mid } = props;
+  const seed = seedOf(thread.id);
   const opts = { roughness: 0.9, bowing: 0.6, stroke: INK, strokeWidth: 1.3, seed };
   const drawn = gen.toPaths(gen.curve([[a.x, a.y], mid, [b.x, b.y]], opts));
   // an arrowhead: two short strokes back from the tip, along the curve's last stretch
@@ -365,11 +418,13 @@ function ThreadLine(props: { thread: Thread; a: { x: number; y: number }; b: { x
       {heads.map((d, i) => <path key={`h${i}`} class="thread-ink thread-head" d={d.d} />)}
       {/* a broad, invisible band to tap it */}
       <path class="thread-hit" d={smooth} onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onChoose(); }} />
-      {props.chosen && (
+      {/* where it splits off another thread: a little knot */}
+      {props.knots.map((k, i) => <circle key={`k${i}`} class="thread-knot" cx={k.x} cy={k.y} r="2.6" />)}
+      {props.menu && (
         <g transform={`translate(${mid[0]} ${mid[1]})`}>
           <g
             class="thread-btn"
-            transform="translate(-17 0)"
+            transform="translate(-32 0)"
             onPointerDown={stop}
             onClick={(e) => { e.stopPropagation(); store.setArrow(thread.id, ARROW_NEXT[arrow ?? 'none']); }}
           >
@@ -377,7 +432,12 @@ function ThreadLine(props: { thread: Thread; a: { x: number; y: number }; b: { x
             <circle r="14" />
             <text text-anchor="middle" dy="5">{arrow === 'to' ? '→' : arrow === 'from' ? '←' : arrow === 'both' ? '↔' : '—'}</text>
           </g>
-          <g class="thread-btn" transform="translate(17 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); store.disconnect(thread.id); }}>
+          <g class="thread-btn" transform="translate(0 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onBranch(); }}>
+            <title>abzweigen: von hier ein Faden zu einem weiteren Gedanken (ein Y)</title>
+            <circle r="14" />
+            <text text-anchor="middle" dy="5">⑂</text>
+          </g>
+          <g class="thread-btn" transform="translate(32 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); store.disconnect(thread.id); }}>
             <title>durchschneiden</title>
             <circle r="14" />
             <text text-anchor="middle" dy="5">✂</text>
