@@ -373,6 +373,29 @@ export function IdeaSheet(props: { project: Project }) {
     return g;
   };
 
+  // where the buttons of a thread go: at its middle if nothing is there, else beside the line
+  const menuPlace = (g: ThreadGeom): Pt => {
+    const dx = g.b.x - g.a.x;
+    const dy = g.b.y - g.a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    let nx = -dy / len;
+    let ny = dx / len;
+    // to the side it bows to, first
+    if (nx * (g.mid[0] - (g.a.x + g.b.x) / 2) + ny * (g.mid[1] - (g.a.y + g.b.y) / 2) < 0) { nx = -nx; ny = -ny; }
+    const boxes = [
+      ...thoughts.map((t) => {
+        const z = sizes[t.id] ?? { w: 80, h: SQ };
+        return { x: px(t.x), y: py(t.y), w: z.w, h: z.h };
+      }),
+      (() => { const z = sizes.root ?? { w: 200, h: 50 }; return { x: px(0) - z.w / 2, y: py(0) - z.h / 2, w: z.w, h: z.h }; })(),
+    ];
+    // (the buttons keep their size however the sheet is shown)
+    const k = 1 / zoom;
+    const free = (c: Pt) => !boxes.some((r) => c.x + 66 * k > r.x && c.x - 66 * k < r.x + r.w && c.y + 17 * k > r.y && c.y - 17 * k < r.y + r.h);
+    const tries = [0, 38, -38, 70, -70, 104, -104].map((o) => ({ x: g.mid[0] + nx * o * k, y: g.mid[1] + ny * o * k }));
+    return tries.find(free) ?? tries[1];
+  };
+
   // a tap on free paper: write there (or stop tying, or let go of what is chosen);
   // held and drawn (at once with a mouse or the frame tool): a frame, all in it chosen
   const tapPaper = (clientX: number, clientY: number) => {
@@ -628,7 +651,6 @@ export function IdeaSheet(props: { project: Project }) {
                 knots={[...(threadIds.has(th.from) ? [g.a] : []), ...(threadIds.has(th.to) ? [g.b] : [])]}
                 fresh={store.isFresh(th.id)}
                 chosen={chosenThread === th.id || state.linking === th.id || bending?.id === th.id}
-                menu={chosenThread === th.id && !state.linking}
                 onDown={onThreadDown(th, g)}
                 bent={!!(bending?.id === th.id ? bending.bend : th.bend)}
                 onChoose={() => {
@@ -641,8 +663,6 @@ export function IdeaSheet(props: { project: Project }) {
                   }
                   setChosenThread(chosenThread === th.id ? null : th.id);
                 }}
-                onBranch={() => { setChosenThread(null); ideaUi.set({ linking: th.id, writing: null }); }}
-                onNote={(rect) => { setChosenThread(null); ui.set({ postIt: { kind: 'thread', id: th.id, rect } }); }}
               />
             ))}
         </svg>
@@ -698,6 +718,23 @@ export function IdeaSheet(props: { project: Project }) {
         })}
 
         <IdeaWriter project={p} at={state.writing} />
+        {/* the buttons of the chosen thread: over the thoughts, beside the line where it is short or covered */}
+        {chosenThread && !state.linking && (() => {
+          const th = threads.find((t) => t.id === chosenThread);
+          const g = th ? geom(th.id) : null;
+          if (!th || !g) return null;
+          return (
+            <svg class="idea-threads idea-thread-menu" width={COLS * SQ} height={ROWS * SQ}>
+              <ThreadMenu
+                thread={th}
+                at={menuPlace(g)}
+                zoom={zoom}
+                onBranch={() => { setChosenThread(null); ideaUi.set({ linking: th.id, writing: null }); }}
+                onNote={(rect) => { setChosenThread(null); ui.set({ postIt: { kind: 'thread', id: th.id, rect } }); }}
+              />
+            </svg>
+          );
+        })()}
         {frame && (
           <div
             class="idea-lasso"
@@ -868,12 +905,9 @@ function ThreadLine(props: {
   knots: Pt[];
   fresh: boolean;
   chosen: boolean;
-  menu: boolean;
   bent: boolean;
   onDown: (e: PointerEvent) => void;
   onChoose: () => void;
-  onBranch: () => void;
-  onNote: (rect: DOMRect) => void;
 }) {
   const { a, b, thread, mid } = props;
   const seed = seedOf(thread.id);
@@ -924,8 +958,7 @@ function ThreadLine(props: {
     ...(arrow === 'from' || arrow === 'both' ? head(a, props.bent ? ctl : mid, seed + 2) : []),
   ];
   const smooth = `M ${a.x} ${a.y} Q ${2 * mid[0] - (a.x + b.x) / 2} ${2 * mid[1] - (a.y + b.y) / 2} ${b.x} ${b.y}`;
-  const stop = (e: Event) => e.stopPropagation();
-  return (
+    return (
     <g class={`idea-thread line-${line} ${props.fresh ? 'fresh' : ''} ${props.chosen ? 'chosen' : ''}`} style={{ '--thread-pen': pen, '--label-pen': labelPen }}>
       {drawn.map((d, i) => dash
         ? <path key={i} class="thread-ink" d={d.d} style={{ strokeDasharray: dash }} />
@@ -947,35 +980,43 @@ function ThreadLine(props: {
       <path class="thread-hit" d={smooth} onPointerDown={props.onDown} onClick={(e) => { e.stopPropagation(); props.onChoose(); }} />
       {/* where it splits off another thread: a little knot */}
       {props.knots.map((k, i) => <circle key={`k${i}`} class="thread-knot" cx={k.x} cy={k.y} r="2.6" />)}
-      {props.menu && (
-        <g transform={`translate(${mid[0]} ${mid[1]})`}>
-          <g
-            class="thread-btn"
-            transform="translate(-48 0)"
-            onPointerDown={stop}
-            onClick={(e) => { e.stopPropagation(); store.setArrow(thread.id, ARROW_NEXT[arrow ?? 'none']); }}
-          >
-            <title>Pfeil: keiner → hin → zurück → beide</title>
-            <circle r="14" />
-            <text text-anchor="middle" dy="5">{arrow === 'to' ? '→' : arrow === 'from' ? '←' : arrow === 'both' ? '↔' : '—'}</text>
-          </g>
-          <g class="thread-btn" transform="translate(-16 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onBranch(); }}>
-            <title>abzweigen: von hier ein Faden zu einem weiteren Gedanken (ein Y)</title>
-            <circle r="14" />
-            <text text-anchor="middle" dy="5">⑂</text>
-          </g>
-          <g class="thread-btn" transform="translate(16 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onNote((e.currentTarget as SVGGElement).getBoundingClientRect()); }}>
-            <title>beschriften, Farbe, Linie …</title>
-            <circle r="14" />
-            <text text-anchor="middle" dy="5">✎</text>
-          </g>
-          <g class="thread-btn" transform="translate(48 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); store.disconnect(thread.id); }}>
-            <title>durchschneiden</title>
-            <circle r="14" />
-            <text text-anchor="middle" dy="5">✂</text>
-          </g>
-        </g>
-      )}
+    </g>
+  );
+}
+
+/** The buttons of a chosen thread, over everything on the sheet (a thought never covers them). */
+function ThreadMenu(props: { thread: Thread; at: Pt; zoom: number; onBranch: () => void; onNote: (rect: DOMRect) => void }) {
+  const { thread } = props;
+  const arrow = thread.arrow ?? null;
+  const stop = (e: Event) => e.stopPropagation();
+  return (
+    // as big as ever, however small or big the sheet is shown
+    <g transform={`translate(${props.at.x} ${props.at.y}) scale(${1 / props.zoom})`}>
+    <g
+      class="thread-btn"
+      transform="translate(-48 0)"
+      onPointerDown={stop}
+      onClick={(e) => { e.stopPropagation(); store.setArrow(thread.id, ARROW_NEXT[arrow ?? 'none']); }}
+    >
+      <title>Pfeil: keiner → hin → zurück → beide</title>
+      <circle r="14" />
+      <text text-anchor="middle" dy="5">{arrow === 'to' ? '→' : arrow === 'from' ? '←' : arrow === 'both' ? '↔' : '—'}</text>
+    </g>
+    <g class="thread-btn" transform="translate(-16 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onBranch(); }}>
+      <title>abzweigen: von hier ein Faden zu einem weiteren Gedanken (ein Y)</title>
+      <circle r="14" />
+      <text text-anchor="middle" dy="5">⑂</text>
+    </g>
+    <g class="thread-btn" transform="translate(16 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onNote((e.currentTarget as SVGGElement).getBoundingClientRect()); }}>
+      <title>beschriften, Farbe, Linie …</title>
+      <circle r="14" />
+      <text text-anchor="middle" dy="5">✎</text>
+    </g>
+    <g class="thread-btn" transform="translate(48 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); store.disconnect(thread.id); }}>
+      <title>durchschneiden</title>
+      <circle r="14" />
+      <text text-anchor="middle" dy="5">✂</text>
+    </g>
     </g>
   );
 }

@@ -84,6 +84,7 @@
 .thread-knot { fill: var(--thread-pen, var(--ink)); opacity: 0.8; }
 .idea-thread.fresh .thread-knot { opacity: 0; animation: thread-head-in 0.2s ease-out 0.4s forwards; }
 .idea-canvas.linking .thread-hit { cursor: crosshair; }
+.idea-thread-menu { z-index: 5; }
 .thread-btn { pointer-events: all; cursor: pointer; }
 .thread-btn circle { fill: var(--paper); stroke: var(--proj-ink, var(--ink)); stroke-width: 1.3; }
 .thread-btn text { font-size: 15px; fill: var(--ink); }

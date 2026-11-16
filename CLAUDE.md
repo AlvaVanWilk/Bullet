@@ -107,7 +107,8 @@ Bedienung und Einrichtung: `README.md`.
   erledigt → dünn durchgestrichen), „wegradieren“ (Fäden gehen mit, die Aufgabe bleibt). Fäden
   von Hand gezeichnet mit leichtem Bogen von Rand zu Rand, beim Entstehen gezogen; Pfeilspitzen
   (`thread.arrow`: hin, zurück, beide, keine); Faden antippen → vier Knöpfe: Pfeil (keiner → hin →
-  zurück → beide), ⑂ (abzweigen: Y), ✎ (Faden-Zettel) und ✂ (schneidet). Faden-Zettel: Beschriftung
+  zurück → beide), ⑂ (abzweigen: Y), ✎ (Faden-Zettel) und ✂ (schneidet). Die Knöpfe liegen über allem
+  (kein Gedanke deckt sie zu), immer gleich groß; ist an der Mitte kein Platz, rücken sie neben die Linie. Faden-Zettel: Beschriftung
   (`thread.label`, klein entlang des Fadens, immer von links lesbar, etwas darüber, mit Papier um die
   Buchstaben; biegt sich mit), Linie (`thread.line`: durchgezogen, gestrichelt, gepunktet, dick,
   doppelt), Pfeil, Farbe des Fadens (`thread.color`, Stiftfarben der Gedanken) und der Schrift
