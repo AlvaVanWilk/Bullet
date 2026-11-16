@@ -8,7 +8,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import rough from 'roughjs';
 import { seedOf } from './ink';
-import { Checkbox } from './ink';
+import { Checkbox, NoteMark } from './ink';
 import type { Project, Thought, ThoughtDoodle, ThoughtMark, ThoughtStyle, Thread, ThreadLineStyle } from '../lib/model';
 import { store } from '../store/store';
 import { observable, ui, useStore } from './state';
@@ -544,6 +544,7 @@ export function IdeaSheet(props: { project: Project }) {
               class={`idea ${frameOf(t)} ${markOf(t) ? `mark-${markOf(t)}` : ''} ${t.big ? 'big' : ''} ${t.color ? 'colored' : ''} ${carry?.ids.includes(t.id) ? 'carried' : ''} ${chosen.includes(t.id) ? 'selected' : ''} ${state.linking === t.id ? 'source' : ''} ${task?.doneAt != null ? 'done' : ''} ${store.isFresh(t.id) ? 'ink-in' : ''}`}
               style={{ left: `${px(t.x)}px`, top: `${py(t.y)}px`, transform: off, '--pen': penColor(t.color) }}
               onPointerDown={onThoughtDown(t)}
+              data-note={t.note ? t.id : undefined}
               role="button"
               tabIndex={0}
               aria-label={`Gedanke: ${t.text}`}
@@ -566,6 +567,7 @@ export function IdeaSheet(props: { project: Project }) {
                 />
               )}
               <span class="idea-text">{t.text}</span>
+              {t.note && <NoteMark />}
             </div>
           );
         })}
@@ -1079,12 +1081,20 @@ export function ThoughtNote(props: { id: string; close: () => void }) {
   useStore();
   const t = store.thought(props.id);
   const [text, setText] = useState(t?.text ?? '');
+  const [memo, setMemo] = useState(t?.note ?? '');
   const [sure, setSure] = useState(false);
   const latest = useRef(text);
   latest.current = text;
+  const latestMemo = useRef(memo);
+  latestMemo.current = memo;
+  const saveMemo = () => {
+    const now = store.thought(props.id);
+    if (now && (latestMemo.current.trim() ? latestMemo.current.trimEnd() : null) !== (now.note ?? null)) store.updateThought(props.id, { note: latestMemo.current });
+  };
   useEffect(() => () => {
     const now = store.thought(props.id);
     if (now && latest.current.trim() && latest.current.trim() !== now.text) store.updateThought(props.id, { text: latest.current });
+    saveMemo();
   }, []);
   if (!t) return null;
   const task = t.taskId ? store.task(t.taskId) : undefined;
@@ -1098,6 +1108,18 @@ export function ThoughtNote(props: { id: string; close: () => void }) {
         onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } }}
         aria-label="Gedanke"
+      />
+      <textarea
+        maxLength={6000}
+        class="note-memo"
+        value={memo}
+        onBlur={saveMemo}
+        rows={Math.min(6, Math.max(2, memo.split('\n').length + 1))}
+        placeholder="Notiz …"
+        onInput={(e) => setMemo((e.target as HTMLTextAreaElement).value)}
+        // Enter ends the note, Shift+Enter starts a new line
+        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } }}
+        aria-label="Notiz"
       />
       <div class="note-label">Rahmen</div>
       <div class="chips">

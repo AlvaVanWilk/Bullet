@@ -874,10 +874,11 @@ export class Store {
     return t;
   }
 
-  updateThought(id: string, patch: Partial<Pick<Thought, 'text' | 'x' | 'y' | 'style' | 'mark' | 'big' | 'color' | 'doodle' | 'fill' | 'taskId'>>) {
+  updateThought(id: string, patch: Partial<Pick<Thought, 'text' | 'x' | 'y' | 'style' | 'mark' | 'big' | 'color' | 'doodle' | 'fill' | 'note' | 'taskId'>>) {
     const t = this.thought(id);
     if (!t) return;
     const next = { ...t, ...patch };
+    if (patch.note !== undefined) next.note = patch.note?.trim() ? patch.note.trimEnd().slice(0, 6000) : null;
     if (patch.text !== undefined) {
       next.text = patch.text.trim();
       if (!next.text) return;

@@ -130,6 +130,7 @@
   z-index: 1;
 }
 .idea-text { overflow-wrap: anywhere; }
+.idea .note-mark { flex: none; align-self: center; margin-left: 3px; }
 .idea .cb { margin-left: -8px; }
 .idea.carried {
   z-index: 5;

@@ -87,6 +87,15 @@ describe('idea sheet', () => {
     s.updateThread(th.id, { label: 'x'.repeat(200) });
     expect((s.records.get(th.id) as { label: string }).label).toHaveLength(80);
   });
+  it('keeps a note to a thought, as a task has', () => {
+    const s = makeStore();
+    const p = s.addProject('Garten')!;
+    const a = s.addThought(p.id, 'Hochbeet', 3, 0)!;
+    s.updateThought(a.id, { note: 'Lärche, 2 × 1 m\n' });
+    expect(s.thought(a.id)!.note).toBe('Lärche, 2 × 1 m');
+    s.updateThought(a.id, { note: '  ' });
+    expect(s.thought(a.id)!.note).toBeNull();
+  });
   it('lets a thread split off the middle of another (a Y), and cuts the branch with its stem', () => {
     const s = makeStore();
     const p = s.addProject('Garten')!;

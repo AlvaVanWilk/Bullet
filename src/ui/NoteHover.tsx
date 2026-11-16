@@ -65,7 +65,7 @@ export function NoteHover() {
     };
   }, []);
 
-  const note = shown ? store.task(shown.id)?.note : null;
+  const note = shown ? store.task(shown.id)?.note ?? store.thought(shown.id)?.note : null;
   if (!shown || !note) return null;
   return (
     <div class={`note-hover ${shown.above ? 'above' : ''}`} style={{ left: `${shown.left}px`, top: `${shown.top}px`, width: `${WIDTH}px` }} role="tooltip">

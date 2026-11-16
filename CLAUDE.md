@@ -94,7 +94,8 @@ Bedienung und Einrichtung: `README.md`.
   Projektfarbe. Freies Papier antippen → dort schreiben (Enter legt den Gedanken ab, Esc
   verwirft); den Namen antippen → ein Zweig (neuer Gedanke daneben, mit Faden verbunden).
   Gedanken sitzen auf den Punktreihen (Lage in Kästchen ab der Mitte), lassen sich mit dem Finger
-  tragen (rasten ein) und antippen → Zettel: Text; Rahmen (ohne, Kasten, Wolke, eingekreist –
+  tragen (rasten ein) und antippen → Zettel: Text; Notiz (`thought.note`, wie bei Aufgaben: Enter beendet, Shift+Enter neue
+  Zeile; kleines „i“ am Gedanken, mit der Maus Notiz-Zettel beim Darüberfahren); Rahmen (ohne, Kasten, Wolke, eingekreist –
   von Hand gezogen, über den Anfang hinaus); Füllung (nur mit Rahmen: mit Marker ausgemalt, breite
   Striche unter der Schrift; Projektfarbe, gelb, rosa, mint, himmelblau, flieder – gedeckt, `thought.fill`); Strich (Marker, unterstrichen, doppelt, Welle);
   GROSS; Farbe des Stifts (Tinte, rot, blau, grün, ocker, pflaume – gedeckt; färbt Schrift,
