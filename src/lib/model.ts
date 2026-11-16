@@ -311,6 +311,8 @@ export interface Thought extends Base {
   color?: string | null;
   /** a little drawing beside it */
   doodle?: ThoughtDoodle | null;
+  /** its frame filled in with a marker: 'projekt' or a key of the marker colours (none: empty) */
+  fill?: string | null;
   /** the task it became (its box shows whether that is done) */
   taskId?: string | null;
   createdAt: number;

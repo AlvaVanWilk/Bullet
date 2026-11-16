@@ -35,6 +35,17 @@ export const THOUGHT_COLORS: { key: string; label: string; color: string }[] = [
 ];
 const penColor = (key?: string | null) => THOUGHT_COLORS.find((c) => c.key === key)?.color;
 
+/** The markers a frame can be filled with: soft, muted, like the highlighters of the list. */
+export const FILL_COLORS: { key: string; label: string; color: string }[] = [
+  { key: 'projekt', label: 'Projektfarbe', color: 'var(--proj-mark, #d9cfa3)' },
+  { key: 'gelb', label: 'gelb', color: '#e6cd62' },
+  { key: 'rosa', label: 'rosa', color: '#e2a29b' },
+  { key: 'mint', label: 'mint', color: '#9ccbb0' },
+  { key: 'himmel', label: 'himmelblau', color: '#9fbcd8' },
+  { key: 'flieder', label: 'flieder', color: '#bba5cf' },
+];
+const fillColor = (key?: string | null) => FILL_COLORS.find((c) => c.key === key)?.color;
+
 /** The little drawings beside a thought, on 24 × 24, drawn by hand when shown. */
 const DOODLES: Record<ThoughtDoodle, { label: string; d: string }> = {
   star: { label: 'Stern', d: 'M12 3 L14.6 9.2 L21 9.6 L16 13.8 L17.6 20.4 L12 16.8 L6.4 20.4 L8 13.8 L3 9.6 L9.4 9.2 Z' },
@@ -337,6 +348,9 @@ export function IdeaSheet(props: { project: Project }) {
               {(frameOf(t) !== 'plain' || (markOf(t) && markOf(t) !== 'marker')) && (
                 <IdeaMarks key={`${frameOf(t)}${markOf(t)}${t.big}`} frame={frameOf(t)} mark={markOf(t)} seed={t.id} />
               )}
+              {frameOf(t) !== 'plain' && fillColor(t.fill) && (
+                <IdeaFill key={`f${frameOf(t)}${t.big}`} frame={frameOf(t)} color={fillColor(t.fill)!} seed={t.id} />
+              )}
               {t.doodle && DOODLES[t.doodle] && <DoodleMark doodle={t.doodle} seed={t.id} class="on-idea" />}
               {task && (
                 <Checkbox
@@ -445,6 +459,41 @@ function ThreadLine(props: {
         </g>
       )}
     </g>
+  );
+}
+
+/** The size of the thought this sits in, kept up to date. */
+function useHostSize(ref: { current: Element | null }) {
+  const [size, setSize] = useState<[number, number] | null>(null);
+  useLayoutEffect(() => {
+    const host = ref.current?.parentElement;
+    if (!host) return;
+    const read = () => setSize([host.offsetWidth, host.offsetHeight]);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(host);
+    return () => ro.disconnect();
+  }, []);
+  return size;
+}
+
+/** Its frame filled in with a marker: broad, overlapping strokes, a little over the edge as by hand, under the words. */
+function IdeaFill(props: { frame: ThoughtStyle; color: string; seed: string }) {
+  const ref = useRef<SVGSVGElement>(null);
+  const size = useHostSize(ref);
+  const seed = seedOf(props.seed) + 7;
+  const [w, h] = size ?? [0, 0];
+  const marker = { stroke: 'none', fill: '#000', fillStyle: 'hachure', hachureAngle: -32, hachureGap: 5, fillWeight: 7, roughness: 1.1, seed };
+  let drawn: { d: string; fill?: string }[] = [];
+  if (size) {
+    if (props.frame === 'box') drawn = gen.toPaths(gen.rectangle(5, 5, w - 10, h - 10, marker));
+    else if (props.frame === 'cloud') drawn = gen.toPaths(gen.ellipse(w / 2, h / 2, w + 6, h + 2, { ...marker, curveStepCount: 14 }));
+    else drawn = gen.toPaths(gen.ellipse(w / 2, h / 2, w + 18, h + 10, marker));
+  }
+  return (
+    <svg ref={ref} class="idea-fill" width={w} height={h} aria-hidden="true" style={{ '--fill': props.color }}>
+      <g>{drawn.map((d, i) => <path key={i} d={d.d} stroke-width={7} />)}</g>
+    </svg>
   );
 }
 
@@ -590,6 +639,17 @@ export function ThoughtNote(props: { id: string; close: () => void }) {
           <button key={f.key} type="button" class={`chip ${frameOf(t) === f.key ? 'on' : ''}`} onClick={() => store.updateThought(t.id, { style: f.key, mark: markOf(t) })}>{f.label}</button>
         ))}
       </div>
+      {frameOf(t) !== 'plain' && (
+        <>
+          <div class="note-label">Füllung</div>
+          <div class="thought-colors">
+            <button type="button" class={`pen-swatch fill-swatch none ${!fillColor(t.fill) ? 'on' : ''}`} onClick={() => store.updateThought(t.id, { fill: null })} aria-label="ohne Füllung" title="ohne" />
+            {FILL_COLORS.map((c) => (
+              <button key={c.key} type="button" class={`pen-swatch fill-swatch ${t.fill === c.key ? 'on' : ''}`} style={{ '--pen': c.color }} onClick={() => store.updateThought(t.id, { fill: c.key })} aria-label={`mit ${c.label} ausgemalt`} title={c.label} />
+            ))}
+          </div>
+        </>
+      )}
       <div class="note-label">Strich</div>
       <div class="chips">
         {MARKS.map((m) => (

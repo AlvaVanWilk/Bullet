@@ -52,6 +52,15 @@ describe('idea sheet', () => {
     s.updateThought(a.id, { style: 'circle', mark: 'wavy', big: true, color: 'rot', doodle: 'star' });
     expect(s.thought(a.id)).toMatchObject({ style: 'circle', mark: 'wavy', big: true, color: 'rot', doodle: 'star' });
   });
+  it('fills a frame with a marker and empties it again', () => {
+    const s = makeStore();
+    const p = s.addProject('Garten')!;
+    const a = s.addThought(p.id, 'Hochbeet', 3, 0)!;
+    s.updateThought(a.id, { style: 'box', fill: 'gelb' });
+    expect(s.thought(a.id)).toMatchObject({ style: 'box', fill: 'gelb' });
+    s.updateThought(a.id, { fill: null });
+    expect(s.thought(a.id)!.fill).toBeNull();
+  });
   it('lets a thread split off the middle of another (a Y), and cuts the branch with its stem', () => {
     const s = makeStore();
     const p = s.addProject('Garten')!;

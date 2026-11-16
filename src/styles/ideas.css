@@ -101,6 +101,14 @@
 /* written big: it stands out */
 .idea.big { font-size: 34px; line-height: 44px; letter-spacing: 0.01em; max-width: 420px; padding: 2px 12px; }
 .idea.big .idea-text { font-weight: 600; }
+/* filled in with a marker: under the words (the thought keeps its own layer), even where strokes overlap */
+.idea-fill { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: -1; }
+.idea-fill g { opacity: 0.5; }
+.idea-fill path { fill: none; stroke: var(--fill); stroke-linecap: round; }
+.idea:has(.idea-fill) { background: transparent; }
+.fill-swatch { opacity: 0.75; }
+.fill-swatch.none { background: var(--paper); border: 1.5px dashed rgba(43, 43, 48, 0.35); }
+.fill-swatch.none.on { box-shadow: 0 0 0 2px rgba(43, 43, 48, 0.55); }
 .idea-frame { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 .idea-frame path { fill: none; stroke: currentColor; stroke-width: 1.25; stroke-linecap: round; }
 /* a little drawing at its corner */

@@ -874,7 +874,7 @@ export class Store {
     return t;
   }
 
-  updateThought(id: string, patch: Partial<Pick<Thought, 'text' | 'x' | 'y' | 'style' | 'mark' | 'big' | 'color' | 'doodle' | 'taskId'>>) {
+  updateThought(id: string, patch: Partial<Pick<Thought, 'text' | 'x' | 'y' | 'style' | 'mark' | 'big' | 'color' | 'doodle' | 'fill' | 'taskId'>>) {
     const t = this.thought(id);
     if (!t) return;
     const next = { ...t, ...patch };

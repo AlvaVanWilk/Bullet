@@ -56,7 +56,7 @@ export function seedDemo(today: DayKey) {
   const rot = store.addThought(garten.id, 'Schwedenrot oder doch Grün?', 15, -6, farbIdee.id)!;
   store.updateThought(rot.id, { color: 'rot', doodle: 'question' });
   const fest = store.addThought(garten.id, 'Grillfest im Mai', -16, -5, 'root')!;
-  store.updateThought(fest.id, { style: 'box', big: true, doodle: 'star' });
+  store.updateThought(fest.id, { style: 'box', big: true, doodle: 'star', fill: 'gelb' });
   const licht = store.addThought(garten.id, 'Lichterkette', -20, 1)!;
   const kette = store.connect(garten.id, fest.id, licht.id, 'to')!;
   // a Y: from the thread to the party, a second arm to the garlands' twin
@@ -66,7 +66,7 @@ export function seedDemo(today: DayKey) {
   store.updateThought(dach.id, { mark: 'wavy', color: 'ocker', doodle: 'bang' });
   store.thoughtToTask(dach.id);
   const tonne = store.addThought(garten.id, 'Regentonne an die Rinne', -6, 7)!;
-  store.updateThought(tonne.id, { style: 'circle', color: 'blau', doodle: 'bulb' });
+  store.updateThought(tonne.id, { style: 'circle', color: 'blau', doodle: 'bulb', fill: 'himmel' });
   store.connect(garten.id, tonne.id, dach.id, 'both');
   const app = store.addProject('Bullet')!;
   store.updateProject(app.id, { icon: 'feder', color: '#3f6f8c' });
