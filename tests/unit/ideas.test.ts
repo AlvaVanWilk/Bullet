@@ -75,6 +75,18 @@ describe('idea sheet', () => {
     s.setBend(th.id, null);
     expect((s.records.get(th.id) as { bend?: unknown }).bend).toBeNull();
   });
+  it('writes along a thread, gives it pens and another line', () => {
+    const s = makeStore();
+    const p = s.addProject('Garten')!;
+    const a = s.addThought(p.id, 'Hochbeet', 3, 0)!;
+    const th = s.connect(p.id, 'root', a.id)!;
+    s.updateThread(th.id, { label: '  erst   planen ', color: 'rot', labelColor: 'blau', line: 'dashed' });
+    expect(s.records.get(th.id)).toMatchObject({ label: 'erst planen', color: 'rot', labelColor: 'blau', line: 'dashed' });
+    s.updateThread(th.id, { label: '   ', line: null });
+    expect(s.records.get(th.id)).toMatchObject({ label: null, line: null, color: 'rot' });
+    s.updateThread(th.id, { label: 'x'.repeat(200) });
+    expect((s.records.get(th.id) as { label: string }).label).toHaveLength(80);
+  });
   it('lets a thread split off the middle of another (a Y), and cuts the branch with its stem', () => {
     const s = makeStore();
     const p = s.addProject('Garten')!;

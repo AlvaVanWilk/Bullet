@@ -103,14 +103,19 @@ Bedienung und Einrichtung: `README.md`.
   antippen, womit; so verbunden mit Pfeil hin), „→ als Aufgabe“ (wird Aufgabe des Projekts; der Gedanke bleibt und trägt ihr Kästchen,
   erledigt → dünn durchgestrichen), „wegradieren“ (Fäden gehen mit, die Aufgabe bleibt). Fäden
   von Hand gezeichnet mit leichtem Bogen von Rand zu Rand, beim Entstehen gezogen; Pfeilspitzen
-  (`thread.arrow`: hin, zurück, beide, keine); Faden antippen → drei Knöpfe: Pfeil (keiner → hin →
-  zurück → beide), ⑂ (abzweigen: Y) und ✂ (schneidet). Zweige vom Namen bzw. „＋ Zweig“ ohne Pfeil.
+  (`thread.arrow`: hin, zurück, beide, keine); Faden antippen → vier Knöpfe: Pfeil (keiner → hin →
+  zurück → beide), ⑂ (abzweigen: Y), ✎ (Faden-Zettel) und ✂ (schneidet). Faden-Zettel: Beschriftung
+  (`thread.label`, klein entlang des Fadens, immer von links lesbar, etwas darüber, mit Papier um die
+  Buchstaben; biegt sich mit), Linie (`thread.line`: durchgezogen, gestrichelt, gepunktet, dick,
+  doppelt), Pfeil, Farbe des Fadens (`thread.color`, Stiftfarben der Gedanken) und der Schrift
+  (`thread.labelColor`, „wie der Faden“ oder eigene), ⑂ abzweigen, ↺ wieder sanft (wenn gebogen),
+  ✂ durchschneiden (zweimal tippen). Zweige vom Namen bzw. „＋ Zweig“ ohne Pfeil.
   Y-Verbindungen: Ein Faden kann an der Mitte eines anderen Fadens beginnen oder enden (Ende = Faden-id;
   kleiner Knoten an der Stelle). ⑂ → Gedanken antippen = teilt sich; beim „⌒ verbinden“ einen Faden
   antippen = laufen zusammen. Wird ein Faden geschnitten (oder sein Gedanke wegradiert), gehen die
   Zweige an ihm mit.
   Biegen (`thread.bend`: Mitte quer in px, längs als Anteil): Faden gedrückt halten (Maus: gleich ziehen)
-  und ziehen, die gegriffene Stelle folgt dem Finger; ↺ im Faden-Menü macht ihn wieder sanft.
+  und ziehen, die gegriffene Stelle folgt dem Finger; ↺ im Faden-Zettel macht ihn wieder sanft.
   Mehrere auswählen: aufs freie Papier drücken, kurz halten, Rahmen ziehen (Maus: gleich ziehen; oder
   der Knopf mit dem gestrichelten Rahmen oben rechts); Ausgewählte gestrichelt umrandet, einen davon
   ziehen trägt alle (`moveThoughts`), antippen nimmt einen dazu oder heraus, Papier antippen / „fertig“ /

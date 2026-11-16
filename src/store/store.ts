@@ -946,6 +946,16 @@ export class Store {
     this.changed(true);
   }
 
+  /** A thread written on, coloured, drawn otherwise. */
+  updateThread(id: string, patch: Partial<Pick<Thread, 'label' | 'color' | 'labelColor' | 'line'>>) {
+    const r = this.records.get(id);
+    if (r?.type !== 'thread' || r.deleted) return;
+    const next = { ...r, ...patch };
+    if (patch.label !== undefined) next.label = patch.label?.replace(/\s+/g, ' ').trim().slice(0, 80) || null;
+    this.put(next);
+    this.changed(true);
+  }
+
   /** A thread bent by hand (null: back to its own little bow). */
   setBend(id: string, bend: Thread['bend']) {
     const r = this.records.get(id);

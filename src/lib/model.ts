@@ -319,6 +319,8 @@ export interface Thought extends Base {
 }
 
 /** A thread drawn between two thoughts (or a thought and the name in the middle: "root"); the id comes from the pair. */
+export type ThreadLineStyle = 'solid' | 'dashed' | 'dotted' | 'thick' | 'double';
+
 export interface Thread extends Base {
   type: 'thread';
   projectId: string;
@@ -328,6 +330,13 @@ export interface Thread extends Base {
   arrow?: 'to' | 'from' | 'both' | null;
   /** bent by hand: where its middle lies, across the line (px) and along it (share of its length); none: its own little bow */
   bend?: { n: number; t: number } | null;
+  /** written small along it */
+  label?: string | null;
+  /** the pen of the line (a key of the thought colours; none: ink) and of its writing (none: as the line) */
+  color?: string | null;
+  labelColor?: string | null;
+  /** how it is drawn (none: a plain line) */
+  line?: ThreadLineStyle | null;
   createdAt: number;
 }
 

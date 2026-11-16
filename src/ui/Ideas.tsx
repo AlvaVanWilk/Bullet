@@ -9,7 +9,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import rough from 'roughjs';
 import { seedOf } from './ink';
 import { Checkbox } from './ink';
-import type { Project, Thought, ThoughtDoodle, ThoughtMark, ThoughtStyle, Thread } from '../lib/model';
+import type { Project, Thought, ThoughtDoodle, ThoughtMark, ThoughtStyle, Thread, ThreadLineStyle } from '../lib/model';
 import { store } from '../store/store';
 import { observable, ui, useStore } from './state';
 import { exportIdeaSheet, type IdeaExport } from './ideaExport';
@@ -45,7 +45,7 @@ export const THOUGHT_COLORS: { key: string; label: string; color: string }[] = [
   { key: 'ocker', label: 'ocker', color: '#a97e2f' },
   { key: 'pflaume', label: 'pflaume', color: '#76506f' },
 ];
-const penColor = (key?: string | null) => THOUGHT_COLORS.find((c) => c.key === key)?.color;
+const penColor = (key?: string | null) => (key === 'tinte' ? INK : THOUGHT_COLORS.find((c) => c.key === key)?.color);
 
 /** The markers a frame can be filled with: soft, muted, like the highlighters of the list. */
 export const FILL_COLORS: { key: string; label: string; color: string }[] = [
@@ -497,6 +497,7 @@ export function IdeaSheet(props: { project: Project }) {
                   setChosenThread(chosenThread === th.id ? null : th.id);
                 }}
                 onBranch={() => { setChosenThread(null); ideaUi.set({ linking: th.id, writing: null }); }}
+                onNote={(rect) => { setChosenThread(null); ui.set({ postIt: { kind: 'thread', id: th.id, rect } }); }}
               />
             ))}
         </svg>
@@ -711,20 +712,37 @@ function ThreadLine(props: {
   onDown: (e: PointerEvent) => void;
   onChoose: () => void;
   onBranch: () => void;
+  onNote: (rect: DOMRect) => void;
 }) {
   const { a, b, thread, mid } = props;
   const seed = seedOf(thread.id);
-  const opts = { roughness: 0.9, bowing: 0.6, stroke: INK, strokeWidth: 1.3, seed };
+  const line = thread.line ?? 'solid';
+  const opts = { roughness: 0.9, bowing: 0.6, stroke: INK, strokeWidth: line === 'thick' ? 2.6 : line === 'dotted' ? 1.9 : 1.3, seed };
   // bent by hand: drawn along the smooth bow through its middle (three points alone would overshoot)
   const ctl: [number, number] = [2 * mid[0] - (a.x + b.x) / 2, 2 * mid[1] - (a.y + b.y) / 2];
   const along: [number, number][] = [];
-  if (props.bent) {
-    for (let i = 0; i <= 10; i++) {
-      const u = i / 10;
-      along.push([(1 - u) ** 2 * a.x + 2 * u * (1 - u) * ctl[0] + u * u * b.x, (1 - u) ** 2 * a.y + 2 * u * (1 - u) * ctl[1] + u * u * b.y]);
-    }
+  const normals: [number, number][] = [];
+  for (let i = 0; i <= 10; i++) {
+    const u = i / 10;
+    along.push([(1 - u) ** 2 * a.x + 2 * u * (1 - u) * ctl[0] + u * u * b.x, (1 - u) ** 2 * a.y + 2 * u * (1 - u) * ctl[1] + u * u * b.y]);
+    // the way it runs there, turned across
+    const tx = 2 * (1 - u) * (ctl[0] - a.x) + 2 * u * (b.x - ctl[0]);
+    const ty = 2 * (1 - u) * (ctl[1] - a.y) + 2 * u * (b.y - ctl[1]);
+    const tl = Math.hypot(tx, ty) || 1;
+    normals.push([-ty / tl, tx / tl]);
   }
-  const drawn = gen.toPaths(gen.curve(props.bent ? along : [[a.x, a.y], mid, [b.x, b.y]], opts));
+  const drawn = line === 'double'
+    // two lines side by side, a little apart
+    ? [-1.9, 1.9].flatMap((o, k) => gen.toPaths(gen.curve(along.map(([x, y], i) => [x + normals[i][0] * o, y + normals[i][1] * o] as [number, number]), { ...opts, strokeWidth: 1.1, roughness: 0.6, seed: seed + k })))
+    : gen.toPaths(gen.curve(props.bent ? along : [[a.x, a.y], mid, [b.x, b.y]], opts));
+  // dashes and dots are laid along the line in pixels (not drawn in from one end)
+  const dash = line === 'dashed' ? '8 6' : line === 'dotted' ? '0.5 6' : undefined;
+  const pen = penColor(thread.color);
+  const labelPen = penColor(thread.labelColor) ?? pen;
+  // the words along it, left to right whichever way it runs, a little above it
+  const ltr = a.x <= b.x;
+  const textPath = ltr ? `M ${a.x} ${a.y} Q ${ctl[0]} ${ctl[1]} ${b.x} ${b.y}` : `M ${b.x} ${b.y} Q ${ctl[0]} ${ctl[1]} ${a.x} ${a.y}`;
+  const labelId = `tl-${thread.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
   // an arrowhead: two short strokes back from the tip, along the curve's last stretch
   const head = (tip: { x: number; y: number }, from: [number, number], s2: number) => {
     const ang = Math.atan2(tip.y - from[1], tip.x - from[0]);
@@ -739,8 +757,18 @@ function ThreadLine(props: {
   const smooth = `M ${a.x} ${a.y} Q ${2 * mid[0] - (a.x + b.x) / 2} ${2 * mid[1] - (a.y + b.y) / 2} ${b.x} ${b.y}`;
   const stop = (e: Event) => e.stopPropagation();
   return (
-    <g class={`idea-thread ${props.fresh ? 'fresh' : ''} ${props.chosen ? 'chosen' : ''}`}>
-      {drawn.map((d, i) => <path key={i} class="thread-ink" d={d.d} pathLength={1} />)}
+    <g class={`idea-thread line-${line} ${props.fresh ? 'fresh' : ''} ${props.chosen ? 'chosen' : ''}`} style={{ '--thread-pen': pen, '--label-pen': labelPen }}>
+      {drawn.map((d, i) => dash
+        ? <path key={i} class="thread-ink" d={d.d} style={{ strokeDasharray: dash }} />
+        : <path key={i} class="thread-ink" d={d.d} pathLength={1} />)}
+      {thread.label && (
+        <>
+          <path id={labelId} d={textPath} fill="none" stroke="none" />
+          <text class="thread-label" dy={-6}>
+            <textPath href={`#${labelId}`} startOffset="50%" text-anchor="middle">{thread.label}</textPath>
+          </text>
+        </>
+      )}
       {heads.map((d, i) => <path key={`h${i}`} class="thread-ink thread-head" d={d.d} />)}
       {/* a broad, invisible band to tap it */}
       <path class="thread-hit" d={smooth} onPointerDown={props.onDown} onClick={(e) => { e.stopPropagation(); props.onChoose(); }} />
@@ -750,7 +778,7 @@ function ThreadLine(props: {
         <g transform={`translate(${mid[0]} ${mid[1]})`}>
           <g
             class="thread-btn"
-            transform="translate(-32 0)"
+            transform="translate(-48 0)"
             onPointerDown={stop}
             onClick={(e) => { e.stopPropagation(); store.setArrow(thread.id, ARROW_NEXT[arrow ?? 'none']); }}
           >
@@ -758,19 +786,17 @@ function ThreadLine(props: {
             <circle r="14" />
             <text text-anchor="middle" dy="5">{arrow === 'to' ? '→' : arrow === 'from' ? '←' : arrow === 'both' ? '↔' : '—'}</text>
           </g>
-          <g class="thread-btn" transform="translate(0 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onBranch(); }}>
+          <g class="thread-btn" transform="translate(-16 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onBranch(); }}>
             <title>abzweigen: von hier ein Faden zu einem weiteren Gedanken (ein Y)</title>
             <circle r="14" />
             <text text-anchor="middle" dy="5">⑂</text>
           </g>
-          {thread.bend && (
-            <g class="thread-btn" transform="translate(64 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); store.setBend(thread.id, null); }}>
-              <title>wieder sanft gebogen</title>
-              <circle r="14" />
-              <text text-anchor="middle" dy="5">↺</text>
-            </g>
-          )}
-          <g class="thread-btn" transform="translate(32 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); store.disconnect(thread.id); }}>
+          <g class="thread-btn" transform="translate(16 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); props.onNote((e.currentTarget as SVGGElement).getBoundingClientRect()); }}>
+            <title>beschriften, Farbe, Linie …</title>
+            <circle r="14" />
+            <text text-anchor="middle" dy="5">✎</text>
+          </g>
+          <g class="thread-btn" transform="translate(48 0)" onPointerDown={stop} onClick={(e) => { e.stopPropagation(); store.disconnect(thread.id); }}>
             <title>durchschneiden</title>
             <circle r="14" />
             <text text-anchor="middle" dy="5">✂</text>
@@ -928,6 +954,107 @@ const MARKS: { key: ThoughtMark | null; label: string }[] = [
 ];
 
 /** The note of a thought: its words, how it looks, a branch, a thread, a task; or rub it out. */
+const LINES: { key: ThreadLineStyle; label: string }[] = [
+  { key: 'solid', label: 'durchgezogen' },
+  { key: 'dashed', label: 'gestrichelt' },
+  { key: 'dotted', label: 'gepunktet' },
+  { key: 'thick', label: 'dick' },
+  { key: 'double', label: 'doppelt' },
+];
+const ARROWS: { key: Thread['arrow']; label: string }[] = [
+  { key: null, label: 'keiner' },
+  { key: 'to', label: 'hin →' },
+  { key: 'from', label: '← zurück' },
+  { key: 'both', label: '↔ beide' },
+];
+
+/** The note of a thread: words along it, its line, arrows, pens; a branch, smooth again, cut. */
+export function ThreadNote(props: { id: string; close: () => void }) {
+  useStore();
+  const r = store.records.get(props.id);
+  const th = r?.type === 'thread' && !r.deleted ? r : null;
+  const [label, setLabel] = useState(th?.label ?? '');
+  const [sure, setSure] = useState(false);
+  const latest = useRef(label);
+  latest.current = label;
+  const save = () => {
+    const now = store.records.get(props.id);
+    if (now?.type === 'thread' && !now.deleted && (latest.current.trim() || null) !== (now.label ?? null)) store.updateThread(props.id, { label: latest.current });
+  };
+  useEffect(() => () => save(), []);
+  if (!th) return null;
+  const line = th.line ?? 'solid';
+  return (
+    <div class="note thread-note">
+      <div class="note-label">Beschriftung</div>
+      <input
+        class="note-text thread-label-input"
+        value={label}
+        maxLength={80}
+        placeholder="was am Faden steht …"
+        onInput={(e) => setLabel((e.target as HTMLInputElement).value)}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
+        aria-label="Beschriftung des Fadens"
+      />
+      <div class="note-label">Linie</div>
+      <div class="chips">
+        {LINES.map((l) => (
+          <button key={l.key} type="button" class={`chip ${line === l.key ? 'on' : ''}`} onClick={() => store.updateThread(th.id, { line: l.key === 'solid' ? null : l.key })}>
+            <LineSample line={l.key} />
+            {l.label}
+          </button>
+        ))}
+      </div>
+      <div class="note-label">Pfeil</div>
+      <div class="chips">
+        {ARROWS.map((x) => (
+          <button key={x.label} type="button" class={`chip ${(th.arrow ?? null) === x.key ? 'on' : ''}`} onClick={() => store.setArrow(th.id, x.key)}>{x.label}</button>
+        ))}
+      </div>
+      <div class="note-label">Farbe des Fadens</div>
+      <div class="thought-colors">
+        <button type="button" class={`pen-swatch ${!th.color ? 'on' : ''}`} style={{ '--pen': INK }} onClick={() => store.updateThread(th.id, { color: null })} aria-label="Tinte" title="Tinte" />
+        {THOUGHT_COLORS.map((c) => (
+          <button key={c.key} type="button" class={`pen-swatch ${th.color === c.key ? 'on' : ''}`} style={{ '--pen': c.color }} onClick={() => store.updateThread(th.id, { color: c.key })} aria-label={c.label} title={c.label} />
+        ))}
+      </div>
+      <div class="note-label">Farbe der Schrift</div>
+      <div class="thought-colors">
+        <button type="button" class={`chip same-pen ${!th.labelColor ? 'on' : ''}`} onClick={() => store.updateThread(th.id, { labelColor: null })}>wie der Faden</button>
+        <button type="button" class={`pen-swatch ${th.labelColor === 'tinte' ? 'on' : ''}`} style={{ '--pen': INK }} onClick={() => store.updateThread(th.id, { labelColor: 'tinte' })} aria-label="Tinte" title="Tinte" />
+        {THOUGHT_COLORS.map((c) => (
+          <button key={c.key} type="button" class={`pen-swatch ${th.labelColor === c.key ? 'on' : ''}`} style={{ '--pen': c.color }} onClick={() => store.updateThread(th.id, { labelColor: c.key })} aria-label={c.label} title={c.label} />
+        ))}
+      </div>
+      <div class="note-row note-actions">
+        <button type="button" class="note-btn" onClick={() => { props.close(); ideaUi.set({ linking: th.id, writing: null }); }}>⑂ abzweigen</button>
+        {th.bend && <button type="button" class="note-btn" onClick={() => store.setBend(th.id, null)}>↺ wieder sanft</button>}
+      </div>
+      <div class="note-row note-actions">
+        <button type="button" class="note-btn save" onClick={props.close}>fertig</button>
+        <button
+          type="button"
+          class={`note-btn danger ${sure ? 'sure' : ''}`}
+          onClick={() => { if (!sure) { setSure(true); return; } props.close(); store.disconnect(th.id); }}
+        >{sure ? 'wirklich durchschneiden?' : '✂ durchschneiden'}</button>
+      </div>
+    </div>
+  );
+}
+
+/** A short piece of each kind of line, for its chip. */
+function LineSample(props: { line: ThreadLineStyle }) {
+  const l = props.line;
+  return (
+    <svg class="line-sample" width="26" height="10" viewBox="0 0 26 10" aria-hidden="true">
+      {l === 'double'
+        ? <><path d="M2 3.2 Q13 1.8 24 3.2" /><path d="M2 6.8 Q13 5.4 24 6.8" /></>
+        : <path d="M2 5.5 Q13 3.5 24 5.5" style={{ strokeWidth: l === 'thick' ? 2.6 : l === 'dotted' ? 2 : 1.3, strokeDasharray: l === 'dashed' ? '5 3.5' : l === 'dotted' ? '0.5 4' : undefined }} />}
+    </svg>
+  );
+}
+
 export function ThoughtNote(props: { id: string; close: () => void }) {
   useStore();
   const t = store.thought(props.id);

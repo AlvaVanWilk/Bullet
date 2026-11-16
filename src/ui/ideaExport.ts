@@ -144,6 +144,47 @@ export async function drawIdeaSheet(sheet: HTMLElement, opts: { dots: boolean })
   const threads = sheet.querySelector<SVGSVGElement>('.idea-threads');
   if (threads) drawSvg(threads, c);
 
+  // the words along the threads: letter by letter along their path, a little above it, with paper around them
+  for (const text of sheet.querySelectorAll<SVGTextElement>('.idea-threads text.thread-label')) {
+    const tp = text.querySelector('textPath');
+    const id = tp?.getAttribute('href')?.slice(1);
+    const path = id ? sheet.querySelector<SVGPathElement>(`[id="${id}"]`) : null;
+    const m = path?.getScreenCTM();
+    if (!tp || !path || !m) continue;
+    const cs = getComputedStyle(text);
+    const words = tp.textContent ?? '';
+    const size = parseFloat(cs.fontSize) || 16;
+    const lift = -parseFloat(text.getAttribute('dy') ?? '0') || 6;
+    c.save();
+    c.transform(m.a, m.b, m.c, m.d, m.e - origin.left, m.f - origin.top);
+    c.font = `${cs.fontWeight} ${size}px ${cs.fontFamily}`;
+    c.textBaseline = 'alphabetic';
+    c.textAlign = 'center';
+    const total = path.getTotalLength();
+    const width = c.measureText(words).width;
+    let at = total / 2 - width / 2;
+    for (const ch of words) {
+      const cw = c.measureText(ch).width;
+      const d = Math.max(0, Math.min(total, at + cw / 2));
+      const p0 = path.getPointAtLength(Math.max(0, d - 0.5));
+      const p1 = path.getPointAtLength(Math.min(total, d + 0.5));
+      const ang = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+      const pt = path.getPointAtLength(d);
+      c.save();
+      c.translate(pt.x, pt.y);
+      c.rotate(ang);
+      c.lineJoin = 'round';
+      c.lineWidth = parseFloat(cs.strokeWidth) || 4;
+      c.strokeStyle = colour.get(cs.stroke && cs.stroke !== 'none' ? cs.stroke : paper);
+      c.strokeText(ch, 0, -lift);
+      c.fillStyle = colour.get(cs.fill);
+      c.fillText(ch, 0, -lift);
+      c.restore();
+      at += cw;
+    }
+    c.restore();
+  }
+
   // words as they are set on the screen: line by line where the browser broke them
   const drawWords = (span: HTMLElement) => {
     const node = span.firstChild;

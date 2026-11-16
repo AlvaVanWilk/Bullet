@@ -24,7 +24,9 @@ export type PostItTarget =
   /** the minutes for the household on a weekday */
   | { kind: 'choreMinutes'; weekday: number; rect: DOMRect }
   /** a thought on the idea sheet of a project */
-  | { kind: 'thought'; id: string; rect: DOMRect };
+  | { kind: 'thought'; id: string; rect: DOMRect }
+  /** a thread there: its writing, pen, line */
+  | { kind: 'thread'; id: string; rect: DOMRect };
 
 export interface UiState {
   view: { kind: 'week' } | { kind: 'category'; id: string } | { kind: 'project'; id: string; page?: 'ideas' } | { kind: 'archive' } | { kind: 'waiting' } | { kind: 'household' };

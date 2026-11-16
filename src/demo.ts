@@ -62,12 +62,14 @@ export function seedDemo(today: DayKey) {
   // a Y: from the thread to the party, a second arm to the garlands' twin
   const lampions = store.addThought(garten.id, 'Lampions', -11, 2)!;
   store.connect(garten.id, kette.id, lampions.id, 'to');
+  store.updateThread(kette.id, { label: 'Deko', color: 'pflaume' });
   const dach = store.addThought(garten.id, 'Dachpappe erneuern?', 6, 5, 'root')!;
   store.updateThought(dach.id, { mark: 'wavy', color: 'ocker', doodle: 'bang' });
   store.thoughtToTask(dach.id);
   const tonne = store.addThought(garten.id, 'Regentonne an die Rinne', -6, 7)!;
   store.updateThought(tonne.id, { style: 'circle', color: 'blau', doodle: 'bulb', fill: 'himmel' });
-  store.connect(garten.id, tonne.id, dach.id, 'both');
+  const wasser = store.connect(garten.id, tonne.id, dach.id, 'both')!;
+  store.updateThread(wasser.id, { line: 'dashed', label: 'Wasser vom Dach', labelColor: 'blau' });
   const app = store.addProject('Bullet')!;
   store.updateProject(app.id, { icon: 'feder', color: '#3f6f8c' });
   const ideen = store.addArea(app.id, 'Ideen und Bugs')!;

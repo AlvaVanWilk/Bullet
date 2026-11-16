@@ -52,7 +52,28 @@
 
 /* threads: a fineliner between the thoughts, drawn in when new */
 .idea-threads { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
-.thread-ink { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; opacity: 0.75; }
+.thread-ink { fill: none; stroke: var(--thread-pen, var(--ink)); stroke-width: 1.3; stroke-linecap: round; opacity: 0.75; }
+.idea-thread.line-thick .thread-ink:not(.thread-head) { stroke-width: 2.6; }
+.idea-thread.line-dotted .thread-ink:not(.thread-head) { stroke-width: 1.9; }
+/* dashed and dotted ones come in softly instead of being drawn from one end */
+.idea-thread.fresh.line-dashed .thread-ink, .idea-thread.fresh.line-dotted .thread-ink { animation: thread-head-in 0.35s ease-out forwards; opacity: 0; }
+/* written along it, small, with paper around the letters */
+.thread-label {
+  font-family: var(--hand);
+  font-size: 16px;
+  fill: var(--label-pen, var(--ink));
+  stroke: var(--paper);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  pointer-events: none;
+}
+.idea-thread.fresh .thread-label { opacity: 0; animation: thread-head-in 0.25s ease-out 0.35s forwards; }
+.line-sample { margin-right: 6px; vertical-align: middle; overflow: visible; }
+.line-sample path { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; }
+.thread-note .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.thread-label-input { width: 100%; font-size: 19px; }
+.same-pen { font-size: 15px; padding: 0 10px; }
 .idea-thread.fresh .thread-ink { stroke-dasharray: 1; stroke-dashoffset: 1; animation: thread-draw 0.45s ease-out forwards; }
 @keyframes thread-draw { to { stroke-dashoffset: 0; } }
 .thread-hit { fill: none; stroke: transparent; stroke-width: 22; pointer-events: stroke; cursor: pointer; }
@@ -60,7 +81,7 @@
 .thread-head { stroke-width: 1.5; }
 .idea-thread.fresh .thread-head { stroke-dasharray: none; animation: none; opacity: 0; animation: thread-head-in 0.2s ease-out 0.4s forwards; }
 @keyframes thread-head-in { to { opacity: 0.75; } }
-.thread-knot { fill: var(--ink); opacity: 0.8; }
+.thread-knot { fill: var(--thread-pen, var(--ink)); opacity: 0.8; }
 .idea-thread.fresh .thread-knot { opacity: 0; animation: thread-head-in 0.2s ease-out 0.4s forwards; }
 .idea-canvas.linking .thread-hit { cursor: crosshair; }
 .thread-btn { pointer-events: all; cursor: pointer; }
