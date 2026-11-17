@@ -17,11 +17,17 @@ import { ShareIcon } from './PostIt';
 import { send } from './Share';
 
 const SQ = 28;
-/** The paper: so many squares wide and high, the middle where the name stands. */
-const COLS = 120;
-const ROWS = 80;
-const MID_X = COLS / 2;
-const MID_Y = ROWS / 2;
+/**
+ * The paper: at least so many squares wide and high, the name in the middle; it grows with what is
+ * written (there is always plenty of free paper beyond the outermost thought, on every side: an
+ * endless sheet).
+ */
+const MIN_HALF_X = 60;
+const MIN_HALF_Y = 40;
+const ROOM_X = 40;
+const ROOM_Y = 28;
+/** The sheet as it is now: where the middle lies (in squares from the top left) and how big it is. */
+let sheet = { ox: MIN_HALF_X, oy: MIN_HALF_Y, cols: 2 * MIN_HALF_X, rows: 2 * MIN_HALF_Y };
 /** How far a finger must go before a thought is carried (less is a tap). */
 const SLOP = 6;
 /** How far the writing on the sheet can be made smaller and bigger (the paper stays as it is). */
@@ -152,8 +158,24 @@ function useIdeaUi(): IdeaUi {
   return ideaUi.get();
 }
 
-const px = (x: number) => (MID_X + x) * SQ;
-const py = (y: number) => (MID_Y + y) * SQ;
+const px = (x: number) => (sheet.ox + x) * SQ;
+const py = (y: number) => (sheet.oy + y) * SQ;
+
+/** How big the sheet must be for these thoughts: the least, or what they need with room around. */
+function sheetFor(thoughts: { x: number; y: number }[]) {
+  let minX = 0, maxX = 0, minY = 0, maxY = 0;
+  for (const t of thoughts) {
+    minX = Math.min(minX, t.x);
+    maxX = Math.max(maxX, t.x + 12);
+    minY = Math.min(minY, t.y);
+    maxY = Math.max(maxY, t.y + 2);
+  }
+  const left = Math.max(MIN_HALF_X, -minX + ROOM_X);
+  const right = Math.max(MIN_HALF_X, maxX + ROOM_X);
+  const top = Math.max(MIN_HALF_Y, -minY + ROOM_Y);
+  const bottom = Math.max(MIN_HALF_Y, maxY + ROOM_Y);
+  return { ox: left, oy: top, cols: left + right, rows: top + bottom };
+}
 
 /** A free square near a thought (or the middle), for a branch: around it, first to the right, not on another. */
 function freeSquareNear(projectId: string, from: string): { x: number; y: number } {
@@ -164,7 +186,7 @@ function freeSquareNear(projectId: string, from: string): { x: number; y: number
     for (const [dx, dy] of [[1, 0], [1, 1], [1, -1], [0, 1], [0, -1], [-1, 1], [-1, -1], [-1, 0]]) {
       const x = Math.round(at.x + dx * r);
       const y = Math.round(at.y + dy * Math.ceil(r / 3));
-      if (Math.abs(x) < MID_X - 8 && Math.abs(y) < MID_Y - 2 && !taken(x, y)) return { x, y };
+      if (!taken(x, y)) return { x, y };
     }
   }
   return { x: at.x + 6, y: at.y + 3 };
@@ -196,6 +218,9 @@ export function IdeaSheet(props: { project: Project }) {
   const scroller = useRef<HTMLDivElement>(null);
   const thoughts = snap.thoughts.filter((t) => !t.deleted && t.projectId === p.id).sort((a, b) => a.createdAt - b.createdAt);
   const threads = snap.threads.filter((t) => !t.deleted && t.projectId === p.id);
+  // the paper as big as these thoughts need (set before anything below places itself on it)
+  sheet = sheetFor(thoughts);
+  const { ox, oy } = sheet;
   // the measured size of each thought (and of the name in the middle), for the threads to meet them
   const [sizes, setSizes] = useState<Record<string, { w: number; h: number }>>({});
   const [carry, setCarry] = useState<{ ids: string[]; dx: number; dy: number } | null>(null);
@@ -238,16 +263,27 @@ export function IdeaSheet(props: { project: Project }) {
     return () => ideaUi.set({ writing: null, linking: null });
   }, [p.id]);
 
+  // the paper grew (or shrank) to the left or top: the view moves along, so nothing jumps
+  const placed = useRef({ ox, oy });
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    const was = placed.current;
+    placed.current = { ox, oy };
+    if (!el || (was.ox === ox && was.oy === oy)) return;
+    el.scrollLeft += (ox - was.ox) * SQ * zoomNow.current;
+    el.scrollTop += (oy - was.oy) * SQ * zoomNow.current;
+  }, [ox, oy]);
+
   // shows the sheet at z, keeping the point of it at (vx, vy) of the view where it was;
   // straight onto the page while the fingers move, kept when they let go
   const zoomTo = (z: number, at: { cx: number; cy: number; vx: number; vy: number }, keep: boolean) => {
     const el = scroller.current;
     if (!el || !canvas.current || !sizer.current) return;
-    const least = Math.max(ZOOM_MIN, el.clientWidth / (COLS * SQ), el.clientHeight / (ROWS * SQ));
+    const least = Math.max(ZOOM_MIN, el.clientWidth / (sheet.cols * SQ), el.clientHeight / (sheet.rows * SQ));
     const nz = Math.max(least, Math.min(ZOOM_MAX, z));
     canvas.current.style.transform = `scale(${nz})`;
-    sizer.current.style.width = `${COLS * SQ * nz}px`;
-    sizer.current.style.height = `${ROWS * SQ * nz}px`;
+    sizer.current.style.width = `${sheet.cols * SQ * nz}px`;
+    sizer.current.style.height = `${sheet.rows * SQ * nz}px`;
     el.scrollLeft = at.cx * nz - at.vx;
     el.scrollTop = at.cy * nz - at.vy;
     zoomNow.current = nz;
@@ -435,8 +471,8 @@ export function IdeaSheet(props: { project: Project }) {
     }
     if (state.writing || !canvas.current) return;
     const box = canvas.current.getBoundingClientRect();
-    const x = Math.floor((clientX - box.left) / (SQ * zoom)) - MID_X;
-    const y = Math.floor((clientY - box.top) / (SQ * zoom)) - MID_Y;
+    const x = Math.floor((clientX - box.left) / (SQ * zoom)) - sheet.ox;
+    const y = Math.floor((clientY - box.top) / (SQ * zoom)) - sheet.oy;
     startWriting({ x, y, from: null });
   };
   const onPaperDown = (e: PointerEvent) => {
@@ -634,7 +670,8 @@ export function IdeaSheet(props: { project: Project }) {
         const dy = Math.round((ev.clientY - sy) / (SQ * zoom));
         store.moveThoughts(ids.map((id) => {
           const o = store.thought(id) ?? t;
-          return { id, x: Math.max(-MID_X + 1, Math.min(MID_X - 6, o.x + dx)), y: Math.max(-MID_Y + 1, Math.min(MID_Y - 2, o.y + dy)) };
+          // within the paper there is now (it grows on beyond it)
+          return { id, x: Math.max(-sheet.ox + 1, Math.min(sheet.cols - sheet.ox - 6, o.x + dx)), y: Math.max(-sheet.oy + 1, Math.min(sheet.rows - sheet.oy - 2, o.y + dy)) };
         }));
       } else {
         tapThought(t, el);
@@ -654,11 +691,11 @@ export function IdeaSheet(props: { project: Project }) {
   return (
     <div class="idea-wrap">
     <div class="idea-sheet paper" data-paper="dots" ref={scroller} data-scroll>
-      <div class="idea-sizer" ref={sizer} style={{ width: `${COLS * SQ * zoom}px`, height: `${ROWS * SQ * zoom}px` }}>
+      <div class="idea-sizer" ref={sizer} style={{ width: `${sheet.cols * SQ * zoom}px`, height: `${sheet.rows * SQ * zoom}px` }}>
       <div
         ref={canvas}
         class={`idea-canvas ${state.linking ? 'linking' : ''} ${selectTool ? 'selecting' : ''}`}
-        style={{ width: `${COLS * SQ}px`, height: `${ROWS * SQ}px`, transform: `scale(${zoom})` }}
+        style={{ width: `${sheet.cols * SQ}px`, height: `${sheet.rows * SQ}px`, transform: `scale(${zoom})` }}
         onPointerDown={onPaperDown}
         onPointerDownCapture={(e) => {
           // writing, and tapped anywhere else: what is written is laid down (an empty line just goes);
@@ -670,7 +707,7 @@ export function IdeaSheet(props: { project: Project }) {
           e.preventDefault();
         }}
       >
-        <svg class="idea-threads" width={COLS * SQ} height={ROWS * SQ} aria-hidden="false">
+        <svg class="idea-threads" width={sheet.cols * SQ} height={sheet.rows * SQ} aria-hidden="false">
           {/* the threads tied to thoughts first, then those branching off a thread (a Y), over them */}
           {threads
             .map((th) => ({ th, g: geom(th.id) }))
@@ -759,7 +796,7 @@ export function IdeaSheet(props: { project: Project }) {
           const g = th ? geom(th.id) : null;
           if (!th || !g) return null;
           return (
-            <svg class="idea-threads idea-thread-menu" width={COLS * SQ} height={ROWS * SQ}>
+            <svg class="idea-threads idea-thread-menu" width={sheet.cols * SQ} height={sheet.rows * SQ}>
               <ThreadMenu
                 thread={th}
                 at={menuPlace(g)}
@@ -1493,24 +1530,35 @@ export function ThoughtNote(props: { id: string; close: () => void }) {
 }
 
 /** The corner of the page turned up: to the other page of the project. */
-export function DogEar(props: { label: string; onTurn: () => void }) {
-  const fold = gen.toPaths(gen.line(26, 64, 64, 26, { roughness: 0.5, stroke: INK, strokeWidth: 1, seed: 7 }));
+export function DogEar(props: { label: string; count?: number; onTurn: () => void }) {
+  const fold = gen.toPaths(gen.line(36, 92, 92, 36, { roughness: 0.5, stroke: INK, strokeWidth: 1.1, seed: 7 }));
+  const ideas = props.label === 'Ideen';
   return (
-    <button type="button" class="dog-ear" onClick={props.onTurn} aria-label={`Umblättern: ${props.label}`} title={`umblättern: ${props.label}`}>
-      <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
+    <button
+      type="button"
+      class={`dog-ear ${ideas ? 'to-ideas' : 'to-tasks'}`}
+      onClick={props.onTurn}
+      aria-label={`Umblättern: ${props.label}`}
+      title={ideas ? 'umblättern: das Ideenblatt des Projekts' : 'umblättern: zurück zu den Aufgaben'}
+    >
+      <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true">
         <defs>
           <linearGradient id="dog-ear-paper" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0" stop-color="#efe7d6" />
-            <stop offset="1" stop-color="#d9cfb9" />
+            <stop offset="0" stop-color="#f3ecdc" />
+            <stop offset="1" stop-color="#d6cbb2" />
           </linearGradient>
         </defs>
         {/* where the corner was: what lies beneath shows */}
-        <path class="dog-ear-under" d="M26 64 L64 26 L64 64 Z" />
+        <path class="dog-ear-under" d="M36 92 L92 36 L92 92 Z" />
         {/* the corner turned over onto the page: the back of the paper, its tip curling up a little */}
-        <path class="dog-ear-flap" d="M26 64 L64 26 Q50 30 34 33 Q31 47 26 64 Z" fill="url(#dog-ear-paper)" />
+        <path class="dog-ear-flap" d="M36 92 L92 36 Q72 42 49 46 Q44 66 36 92 Z" fill="url(#dog-ear-paper)" />
         {fold.map((d, i) => <path key={i} class="dog-ear-line" d={d.d} />)}
       </svg>
-      <span class="dog-ear-label">{props.label}</span>
+      <span class="dog-ear-label">
+        {ideas && <DoodleMark doodle="bulb" seed="dog-ear" size={22} />}
+        {props.label}
+        {ideas && props.count ? <span class="dog-ear-count">{props.count}</span> : null}
+      </span>
     </button>
   );
 }

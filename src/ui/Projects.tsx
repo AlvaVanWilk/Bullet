@@ -386,6 +386,7 @@ export function ProjectView(props: { id: string; page?: 'ideas' }) {
       {/* the corner of the page: turned, the other page of the project (tasks, or the idea sheet) */}
       <DogEar
         label={props.page === 'ideas' ? 'Aufgaben' : 'Ideen'}
+        count={snap.thoughts.filter((t) => !t.deleted && t.projectId === p.id).length}
         onTurn={() => { playPaperSlide(0.3); ui.set({ view: { kind: 'project', id: p.id, page: props.page === 'ideas' ? undefined : 'ideas' } }); }}
       />
     </div>

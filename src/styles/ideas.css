@@ -254,13 +254,14 @@
 }
 .thought-note .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
-/* the corner of the page, turned up a little: to the other page of the project */
+/* the corner of the page, turned up: to the other page of the project (big enough to be seen;
+   it lifts once when the page opens, so one notices it is there) */
 .dog-ear {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 64px;
-  height: 64px;
+  width: 92px;
+  height: 92px;
   padding: 0;
   border: 0;
   background: none;
@@ -268,23 +269,41 @@
   z-index: 8;
   transition: transform 0.2s cubic-bezier(0.3, 0.7, 0.4, 1.2);
   transform-origin: 100% 100%;
+  animation: dog-ear-peek 1.1s cubic-bezier(0.3, 0.7, 0.4, 1.2) 0.7s both;
 }
-.dog-ear svg { position: absolute; inset: 0; overflow: visible; filter: drop-shadow(-3px -2px 4px rgba(60, 45, 20, 0.18)); }
+@keyframes dog-ear-peek {
+  0%, 100% { transform: none; }
+  30% { transform: scale(1.22) rotate(-2deg); }
+  55% { transform: scale(0.98); }
+  75% { transform: scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) { .dog-ear { animation: none; } }
+.dog-ear > svg { position: absolute; inset: 0; overflow: visible; filter: drop-shadow(-4px -3px 5px rgba(60, 45, 20, 0.22)); }
 .dog-ear-under { fill: #3a4256; }
-.dog-ear-flap { stroke: rgba(43, 43, 48, 0.25); stroke-width: 0.8; }
-.dog-ear-line { fill: none; stroke: rgba(43, 43, 48, 0.35); stroke-width: 1; }
+.dog-ear-flap { stroke: rgba(43, 43, 48, 0.3); stroke-width: 0.9; }
+.dog-ear-line { fill: none; stroke: rgba(43, 43, 48, 0.4); stroke-width: 1.1; }
 .dog-ear-label {
   position: absolute;
-  right: 50px;
-  bottom: 8px;
-  font-size: 18px;
-  color: var(--proj-ink, var(--ink-soft));
+  right: 72px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 6px;
+  font-size: 21px;
+  line-height: 28px;
+  color: var(--ink);
   white-space: nowrap;
+  background: color-mix(in srgb, var(--proj-mark, #e6d99a) 45%, var(--paper));
+  border-radius: 12px 4px 14px 6px;
+  box-shadow: 0 1px 3px rgba(60, 45, 20, 0.18);
   transform: rotate(-4deg);
 }
-.dog-ear-label::after { content: ' ↗'; }
-.dog-ear:hover, .dog-ear:focus-visible { transform: scale(1.12); }
-.dog-ear:active { transform: scale(1.22); }
+.dog-ear-label::after { content: ' ↗'; color: var(--proj-ink, var(--ink-soft)); }
+.dog-ear-label .idea-doodle { flex: none; width: 22px; height: 22px; color: var(--proj-ink, var(--ink)); }
+.dog-ear-count { font-size: 15px; color: var(--ink-soft); margin-left: 2px; }
+.dog-ear:hover, .dog-ear:focus-visible { transform: scale(1.1); animation: none; }
+.dog-ear:active { transform: scale(1.18); }
 
 @media (max-width: 760px) {
   .idea { max-width: 200px; }

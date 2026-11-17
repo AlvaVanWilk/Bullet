@@ -89,8 +89,10 @@ Bedienung und Einrichtung: `README.md`.
   sie, gehen die mit, die die alte hatten. Die Projektzeile der Masterliste steht in der
   Farbe der Kategorie.
 - Ideenblatt (`thought`, `thread`, `src/ui/Ideas.tsx`): die zweite Seite eines Projekts, erreicht
-  über ein Eselsohr unten rechts („Ideen ↗“, zurück „Aufgaben ↗“; Papiergeräusch, die Seite legt
-  sich über). Großes gepunktetes Blatt, in der Mitte der Projektname auf einem Klecks in der
+  über ein Eselsohr unten rechts (groß, mit Fähnchen „💡 Ideen n ↗“ in der Projektfarbe, n = Zahl der
+  Gedanken; hebt sich beim Öffnen einmal kurz an; zurück „Aufgaben ↗“; Papiergeräusch, die Seite legt
+  sich über). Endloses gepunktetes Blatt (wächst mit: um das Äußerste bleibt immer viel freies Papier,
+  nach jeder Seite; wächst es nach links/oben, rückt die Ansicht mit), in der Mitte der Projektname auf einem Klecks in der
   Projektfarbe. Freies Papier antippen → dort schreiben (Enter legt den Gedanken ab, Esc
   verwirft; ein Tipp daneben legt Geschriebenes ab bzw. schließt die leere Zeile und tut sonst nichts); den Namen antippen → ein Zweig (neuer Gedanke daneben, mit Faden verbunden).
   Gedanken sitzen auf den Punktreihen (Lage in Kästchen ab der Mitte), lassen sich mit dem Finger
