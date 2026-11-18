@@ -886,3 +886,11 @@
 .note-hover.above { transform: translateY(-100%) rotate(-0.8deg); }
 @keyframes note-hover-in { from { opacity: 0; } }
 .icon-opt.no-symbol { font-family: var(--clean); font-size: 12px; color: var(--ink-soft); }
+
+/* sharing a whole list: a day's note, the button with a word, the small one in a box title */
+.day-head-tap { cursor: pointer; border-radius: 8px; }
+@media (hover: hover) { .day-head-tap:hover { background: rgba(43, 43, 48, 0.04); } }
+.day-note .note-title { font-size: 22px; font-variant-caps: small-caps; letter-spacing: 0.04em; }
+.share-with-label { display: inline-flex; align-items: center; gap: 6px; }
+.share-open svg path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.handbox-head > .share-open { min-height: 0; height: 30px; width: 30px; padding: 0; border: 0; border-radius: 50%; background: var(--paper); color: var(--ink-soft); display: grid; place-items: center; }

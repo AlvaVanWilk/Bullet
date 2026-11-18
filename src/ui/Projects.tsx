@@ -27,6 +27,7 @@ import { blotLayers, boxInk, nameMark, NameDecor, ProjectDecor, ProjectDecorEnd,
 import { ICONS, OWN, ProjectIcon } from './ProjectIcon';
 import { ui, useNow, useStore, useToday, useUi } from './state';
 import { AddLine } from './Suggest';
+import { ShareButton } from './Share';
 
 const rectOf = (el: EventTarget | null) => (el as HTMLElement).getBoundingClientRect();
 
@@ -651,6 +652,7 @@ export function AreaNote(props: { id: string; close: () => void }) {
             props.close();
           }}
         >{sure ? 'Bereich wirklich löschen?' : 'löschen'}</button>
+        <ShareButton what={{ kind: 'area', id: area.id }} close={props.close} />
       </div>
       {sure && <p class="note-hint">Die Aufgaben bleiben im Projekt, unter den Boxen.</p>}
     </div>
@@ -797,6 +799,7 @@ export function ProjectEditNote(props: { id: string; close: () => void }) {
             props.close();
           }}
         >{confirmDelete ? 'löschen? Aufgaben bleiben' : 'löschen'}</button>
+        <ShareButton what={{ kind: 'project', id: p.id }} close={props.close} />
       </div>
     </div>
   );

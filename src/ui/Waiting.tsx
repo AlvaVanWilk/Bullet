@@ -12,6 +12,7 @@ import { store } from '../store/store';
 import { useGridRows } from './gridRows';
 import { ClipMark, HandBox, hasClip, NoteMark, TaskText } from './ink';
 import { Lead } from './Projects';
+import { ShareButton } from './Share';
 import { ui, useStore, useToday } from './state';
 
 /** "seit heute", "seit gestern", "seit 3 Tagen" */
@@ -40,6 +41,7 @@ export function WaitingView() {
               class="waiting-box"
               seed={g.who.toLowerCase()}
               title={<span class="waiting-who">{g.who}<span class="area-count">{g.tasks.length}</span></span>}
+              action={<ShareButton what={{ kind: 'waiting', who: g.who }} />}
             >
               <WaitingList tasks={g.tasks} today={today} />
             </HandBox>

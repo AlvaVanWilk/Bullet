@@ -1,18 +1,18 @@
-// Sharing a task: a small window with what goes along (its subtasks, done
-// ones too, notes, photos), a preview of how it looks, and below "als Bild"
-// or "als PDF". The pictures are drawn on a canvas like a page of the
+// Sharing a task, or a whole list (an area, a project, a day, a category, what
+// waits on someone): a small window with what goes along (subtasks, done ones
+// too, notes, photos), a preview of how it looks, and below "als Bild" or "als PDF". The pictures are drawn on a canvas like a page of the
 // journal; the PDF holds one A4 page per picture (lib/pdf.ts). The iPad's
 // share menu then sends them on (to Claude, by mail, to Files, to print).
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { dayKey, MONTHS, parseDay } from '../lib/dates';
+import { dayKey, MONTHS, parseDay, weekdayName, type DayKey } from '../lib/dates';
 import { handFont } from '../lib/fonts';
-import { isSubtask, projectAreas, type Snapshot } from '../lib/logic';
+import { categoryTasks, dayItems, isSubtask, nestDayItems, pendingGroups, projectAreas, type BoxState, type Snapshot } from '../lib/logic';
 import { makePdf } from '../lib/pdf';
 import type { Task } from '../lib/model';
 import { photoBlob } from '../photos';
 import { store } from '../store/store';
-import { ui, useStore, useUi } from './state';
+import { currentDay, ui, useStore, useUi } from './state';
 
 const W = 1240; // A4 at 150 dpi
 const PAGE_H = 1754;
@@ -30,7 +30,8 @@ interface Options { subtasks: boolean; done: boolean; notes: boolean; photos: bo
 type Block =
   | { kind: 'title'; lines: string[]; h: number }
   | { kind: 'meta'; text: string; h: number }
-  | { kind: 'task'; task: Task; lines: string[]; indent: number; h: number }
+  | { kind: 'heading'; text: string; h: number }
+  | { kind: 'task'; task: Task; state: Mark; lines: string[]; indent: number; h: number }
   | { kind: 'note'; lines: string[]; indent: number; h: number }
   | { kind: 'photo'; imgs: { img: ImageBitmap; w: number; h: number }[]; h: number; indent: number }
   | { kind: 'gap'; h: number };
@@ -43,6 +44,34 @@ const NOTE = 25;
 const NOTE_LINE = 37;
 const BOX = 44; // room for the box before a task
 const SUB = 56; // a subtask stands further in
+const HEADING = 34;
+
+/** What is shared: one task, or a list of them under a heading. */
+export type ShareWhat =
+  | { kind: 'task'; id: string }
+  | { kind: 'area'; id: string }
+  | { kind: 'project'; id: string }
+  | { kind: 'day'; day: DayKey }
+  | { kind: 'category'; id: string }
+  | { kind: 'waiting'; who: string };
+
+/** How the box before a task looks. */
+type Mark = 'open' | 'done' | 'pending' | 'dropped' | 'migrated';
+const markOf = (t: Task, state?: BoxState): Mark =>
+  state === 'done' || state === 'doneBefore' ? 'done'
+    : state === 'dropped' || state === 'migrated' || state === 'pending' ? state
+    : t.doneAt != null ? 'done' : t.pending ? 'pending' : 'open';
+
+interface Row { task: Task; mark: Mark; indent: number; row: boolean }
+interface Spec {
+  title: string;
+  meta: string;
+  /** a note under the heading (a project's) */
+  note?: string;
+  sections: { heading?: string; rows: Row[] }[];
+  /** for the file name */
+  name: string;
+}
 
 // --- measuring and writing -------------------------------------------------------------
 
@@ -96,67 +125,152 @@ export function longDay(day: string): string {
 // --- what goes along -----------------------------------------------------------------------
 
 /** All parts of a task for sharing, in the order written: also those waiting for another, and those done long ago. */
-function allSubtasks(s: Snapshot, parentId: string): Task[] {
+export function allSubtasks(s: Snapshot, parentId: string): Task[] {
   const sub = isSubtask(s);
   return s.tasks.filter((t) => !t.deleted && t.parentId === parentId && sub(t)).sort((a, b) => a.createdAt - b.createdAt);
 }
 
-function tasksOf(task: Task, opts: Options): { task: Task; sub: boolean }[] {
-  const subs = opts.subtasks
-    ? allSubtasks(store.snapshot(), task.id).filter((t) => opts.done || t.doneAt == null)
-    : [];
-  return [{ task, sub: false }, ...subs.map((t) => ({ task: t, sub: true }))];
+/** Tasks as rows, each with its subtasks under it (as chosen). */
+function rowsOf(tasks: Task[], opts: Options): Row[] {
+  const s = store.snapshot();
+  return tasks.flatMap((t) => [
+    { task: t, mark: markOf(t), indent: 0, row: true },
+    ...(opts.subtasks ? allSubtasks(s, t.id).filter((x) => opts.done || x.doneAt == null) : []).map((x) => ({ task: x, mark: markOf(x), indent: SUB, row: true })),
+  ]);
 }
 
-async function layout(task: Task, opts: Options, photos: Map<string, ImageBitmap | null>, maxPhoto: number): Promise<Block[]> {
+const byMade = (a: Task, b: Task) => a.createdAt - b.createdAt;
+
+/** What a share holds, as it is chosen now. */
+function specOf(what: ShareWhat, opts: Options): Spec | null {
+  const s = store.snapshot();
+  const sub = isSubtask(s);
+  const today = currentDay();
+  const when = longDay(today);
+  const keep = (t: Task) => !t.deleted && !t.smart && !sub(t) && (opts.done || t.doneAt == null);
+  if (what.kind === 'task') {
+    const task = store.task(what.id);
+    if (!task) return null;
+    const project = store.project(task.projectId);
+    const area = project && task.areaId ? projectAreas(s, project.id).find((a) => a.id === task.areaId) : undefined;
+    const subs = opts.subtasks ? allSubtasks(s, task.id).filter((t) => opts.done || t.doneAt == null) : [];
+    return {
+      title: task.text,
+      meta: [project ? `Projekt ${project.name}` : '', area ? `Bereich ${area.name}` : '', when].filter(Boolean).join(' · '),
+      // the task itself is the heading: its note and photos come first, then its parts
+      sections: [{ rows: [{ task, mark: markOf(task), indent: 0, row: false }, ...subs.map((t) => ({ task: t, mark: markOf(t), indent: SUB, row: true }))] }],
+      name: task.text,
+    };
+  }
+  if (what.kind === 'area') {
+    const r = store.records.get(what.id);
+    if (r?.type !== 'area' || r.deleted) return null;
+    const project = store.project(r.projectId);
+    const tasks = s.tasks.filter((t) => t.projectId === r.projectId && t.areaId === r.id && keep(t)).sort(byMade);
+    return { title: r.name, meta: [project ? `Projekt ${project.name}` : '', when].filter(Boolean).join(' · '), sections: [{ rows: rowsOf(tasks, opts) }], name: `${project?.name ?? ''} ${r.name}` };
+  }
+  if (what.kind === 'project') {
+    const project = store.project(what.id);
+    if (!project) return null;
+    const tasks = s.tasks.filter((t) => t.projectId === project.id && keep(t)).sort(byMade);
+    const areas = projectAreas(s, project.id);
+    const sections = areas.map((a) => ({ heading: a.name, rows: rowsOf(tasks.filter((t) => t.areaId === a.id), opts) })).filter((x) => x.rows.length);
+    const loose = tasks.filter((t) => !t.areaId || !areas.some((a) => a.id === t.areaId));
+    if (loose.length) sections.push({ heading: areas.length ? 'Ohne Bereich' : undefined, rows: rowsOf(loose, opts) } as { heading: string; rows: Row[] });
+    return { title: project.name, meta: `Projekt · ${when}`, note: project.note?.trim() || undefined, sections, name: project.name };
+  }
+  if (what.kind === 'day') {
+    // the day as it stands: its boxes as they are (done, left, moved on), its subtasks under their task
+    const rows = nestDayItems(s, dayItems(s, what.day, today)).flatMap(({ item, subs }) => [
+      { task: item.task, mark: markOf(item.task, item.state), indent: 0, row: true },
+      ...subs.map((x) => ({ task: x.task, mark: markOf(x.task, x.state), indent: SUB, row: true })),
+    ]);
+    const d = parseDay(what.day);
+    return { title: `${weekdayName(what.day)}, ${longDay(what.day)}`, meta: `Tag · KW ${weekOf(d)}`, sections: [{ rows }], name: `Tag ${what.day}` };
+  }
+  if (what.kind === 'category') {
+    const cat = store.records.get(what.id);
+    if (cat?.type !== 'category' || cat.deleted) return null;
+    const tasks = categoryTasks(s, cat.id, Date.now()).filter(keep);
+    return { title: cat.name, meta: `Kategorie · ${when}`, sections: [{ rows: rowsOf(tasks, opts) }], name: cat.name };
+  }
+  const group = pendingGroups(s).find((g) => g.who.toLowerCase() === what.who.toLowerCase());
+  const tasks = (group?.tasks ?? []).filter((t) => !t.deleted && !sub(t)).sort(byMade);
+  return { title: `Wartet auf ${what.who}`, meta: when, sections: [{ rows: rowsOf(tasks, opts) }], name: `Wartet auf ${what.who}` };
+}
+
+/** The calendar week of a date (ISO). */
+function weekOf(d: Date): number {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const wd = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - wd);
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t.getTime() - y0.getTime()) / 86400000 + 1) / 7);
+}
+
+const rowCount = (spec: Spec) => spec.sections.reduce((n, x) => n + x.rows.filter((r) => r.row).length, 0);
+
+async function layout(spec: Spec, opts: Options, photos: Map<string, ImageBitmap | null>, maxPhoto: number): Promise<Block[]> {
   const c = ctx();
   const hand = handFont(store.settings.font).family;
   const blocks: Block[] = [];
-  const titleLines = wrap(task.text, CONTENT, (s) => smallCaps(c, s, 0, 0, TITLE, hand, false));
+  const titleLines = wrap(spec.title, CONTENT, (x) => smallCaps(c, x, 0, 0, TITLE, hand, false));
   blocks.push({ kind: 'title', lines: titleLines, h: titleLines.length * TITLE_LINE + 6 });
-  const project = store.project(task.projectId);
-  const area = project && task.areaId ? projectAreas(store.snapshot(), project.id).find((a) => a.id === task.areaId) : undefined;
-  const meta = [project ? `Projekt ${project.name}` : '', area ? `Bereich ${area.name}` : '', longDay(dayKey(new Date()))].filter(Boolean).join(' · ');
-  blocks.push({ kind: 'meta', text: meta, h: 54 });
+  blocks.push({ kind: 'meta', text: spec.meta, h: 54 });
+  if (opts.notes && spec.note) {
+    c.font = `${NOTE}px ${CLEAN}`;
+    const lines = wrap(spec.note, CONTENT, (x) => c.measureText(x).width);
+    blocks.push({ kind: 'note', lines, indent: 0, h: lines.length * NOTE_LINE + 18 });
+  }
+  if (!rowCount(spec) && !spec.sections.some((x) => x.rows.some((r) => !r.row))) {
+    blocks.push({ kind: 'heading', text: 'nichts offen', h: 60 });
+  }
 
-  for (const { task: t, sub } of tasksOf(task, opts)) {
-    const indent = sub ? SUB : 0;
-    if (sub) {
-      c.font = `${TASK}px ${hand}`;
-      const lines = wrap(t.text, CONTENT - indent - BOX, (s) => c.measureText(s).width);
-      blocks.push({ kind: 'gap', h: 10 });
-      blocks.push({ kind: 'task', task: t, lines, indent, h: lines.length * TASK_LINE });
+  for (const section of spec.sections) {
+    if (section.heading) {
+      blocks.push({ kind: 'gap', h: 18 });
+      blocks.push({ kind: 'heading', text: section.heading, h: 56 });
     }
-    if (opts.notes && t.note?.trim()) {
-      c.font = `${NOTE}px ${CLEAN}`;
-      const lines = wrap(t.note.trim(), CONTENT - indent - BOX, (s) => c.measureText(s).width);
-      blocks.push({ kind: 'note', lines, indent: indent + BOX, h: lines.length * NOTE_LINE + 8 });
-    }
-    if (opts.photos) {
-      const imgs: ImageBitmap[] = [];
-      for (const id of t.photos ?? []) {
-        if (!photos.has(id)) {
-          const blob = await photoBlob(id).catch(() => null);
-          photos.set(id, blob ? await createImageBitmap(blob).catch(() => null) : null);
+    for (const [i, r] of section.rows.entries()) {
+      const t = r.task;
+      if (r.row) {
+        if (i > 0) blocks.push({ kind: 'gap', h: r.indent ? 6 : 14 });
+        c.font = `${TASK}px ${hand}`;
+        const lines = wrap(t.text, CONTENT - r.indent - BOX, (x) => c.measureText(x).width);
+        blocks.push({ kind: 'task', task: t, state: r.mark, lines, indent: r.indent, h: lines.length * TASK_LINE });
+      }
+      if (opts.notes && t.note?.trim()) {
+        c.font = `${NOTE}px ${CLEAN}`;
+        const lines = wrap(t.note.trim(), CONTENT - r.indent - BOX, (x) => c.measureText(x).width);
+        blocks.push({ kind: 'note', lines, indent: r.indent + BOX, h: lines.length * NOTE_LINE + 8 });
+      }
+      if (opts.photos) {
+        const imgs: ImageBitmap[] = [];
+        for (const id of t.photos ?? []) {
+          if (!photos.has(id)) {
+            const blob = await photoBlob(id).catch(() => null);
+            photos.set(id, blob ? await createImageBitmap(blob).catch(() => null) : null);
+          }
+          const img = photos.get(id);
+          if (img) imgs.push(img);
         }
-        const img = photos.get(id);
-        if (img) imgs.push(img);
+        // large: one under the other, as wide as the page; small: three side by side
+        const width = CONTENT - r.indent - BOX;
+        const perRow = opts.small ? 3 : 1;
+        const cell = (width - (perRow - 1) * 16) / perRow;
+        const tall = opts.small ? 300 : maxPhoto;
+        for (let k = 0; k < imgs.length; k += perRow) {
+          const row = imgs.slice(k, k + perRow).map((img) => {
+            const scale = Math.min(1, cell / img.width, tall / img.height);
+            return { img, w: Math.round(img.width * scale), h: Math.round(img.height * scale) };
+          });
+          blocks.push({ kind: 'gap', h: 10 });
+          blocks.push({ kind: 'photo', imgs: row, h: Math.max(...row.map((x) => x.h)), indent: r.indent + BOX });
+        }
       }
-      // large: one under the other, as wide as the page; small: three side by side
-      const width = CONTENT - indent - BOX;
-      const perRow = opts.small ? 3 : 1;
-      const cell = (width - (perRow - 1) * 16) / perRow;
-      const tall = opts.small ? 300 : maxPhoto;
-      for (let i = 0; i < imgs.length; i += perRow) {
-        const row = imgs.slice(i, i + perRow).map((img) => {
-          const scale = Math.min(1, cell / img.width, tall / img.height);
-          return { img, w: Math.round(img.width * scale), h: Math.round(img.height * scale) };
-        });
-        blocks.push({ kind: 'gap', h: 10 });
-        blocks.push({ kind: 'photo', imgs: row, h: Math.max(...row.map((r) => r.h)), indent: indent + BOX });
-      }
+      // the task shared on its own: room between it and its parts
+      if (!r.row && section.rows.length > 1) blocks.push({ kind: 'gap', h: 22 });
     }
-    if (!sub && tasksOf(task, opts).length > 1) blocks.push({ kind: 'gap', h: 22 });
   }
   return blocks;
 }
@@ -217,11 +331,20 @@ function draw(page: Block[], height: number, foot: string): HTMLCanvasElement {
       c.moveTo(M, y + 42);
       c.lineTo(W - M, y + 42);
       c.stroke();
+    } else if (b.kind === 'heading') {
+      c.fillStyle = INK;
+      smallCaps(c, b.text, M, y + 40, HEADING, hand, true);
+      c.strokeStyle = 'rgba(43, 43, 48, 0.3)';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.moveTo(M, y + 50);
+      c.lineTo(M + smallCaps(c, b.text, 0, 0, HEADING, hand, false) + 8, y + 51);
+      c.stroke();
     } else if (b.kind === 'task') {
       const x = M + b.indent;
-      const done = b.task.doneAt != null;
-      box(c, x + 2, y + 13, done ? 'done' : b.task.pending ? 'pending' : 'open');
-      c.fillStyle = done ? SOFT : INK;
+      const done = b.state === 'done';
+      box(c, x + 2, y + 13, b.state);
+      c.fillStyle = done || b.state === 'dropped' || b.state === 'migrated' ? SOFT : INK;
       c.font = `${TASK}px ${hand}`;
       b.lines.forEach((line, i) => {
         const ly = y + 38 + i * TASK_LINE;
@@ -230,7 +353,7 @@ function draw(page: Block[], height: number, foot: string): HTMLCanvasElement {
           c.fillRect(x + BOX, ly - 12, c.measureText(line).width, 3);
         }
       });
-      if (b.task.pending && !done) {
+      if (b.task.pending && b.state === 'pending') {
         const last = b.lines[b.lines.length - 1];
         const lx = x + BOX + c.measureText(last).width + 14;
         c.fillStyle = SOFT;
@@ -263,7 +386,7 @@ function draw(page: Block[], height: number, foot: string): HTMLCanvasElement {
 }
 
 /** The box before a task: empty, ticked, or with an hourglass. */
-function box(c: CanvasRenderingContext2D, x: number, y: number, state: 'open' | 'done' | 'pending') {
+function box(c: CanvasRenderingContext2D, x: number, y: number, state: Mark) {
   c.strokeStyle = INK;
   c.lineWidth = 2.4;
   c.lineCap = 'round';
@@ -280,6 +403,12 @@ function box(c: CanvasRenderingContext2D, x: number, y: number, state: 'open' | 
       c.moveTo(x + Math.max(3, i), y + 23 - Math.max(0, 3 - i));
       c.lineTo(x + Math.min(23, i + 20), y + 3 + Math.max(0, i + 20 - 23));
     }
+  } else if (state === 'dropped') {
+    // left undone that day: a stroke through the box
+    c.moveTo(x - 3, y + 13); c.lineTo(x + 29, y + 13);
+  } else if (state === 'migrated') {
+    // moved on to a later day
+    c.moveTo(x + 8, y + 6); c.lineTo(x + 18, y + 13); c.lineTo(x + 8, y + 20);
   } else if (state === 'pending') {
     c.moveTo(x + 6, y + 5); c.lineTo(x + 20, y + 5);
     c.moveTo(x + 6, y + 21); c.lineTo(x + 20, y + 21);
@@ -299,20 +428,20 @@ export function fileName(text: string): string {
 
 interface Made { previews: string[]; images: File[]; pdf: File }
 
-async function make(task: Task, opts: Options, photos: Map<string, ImageBitmap | null>): Promise<Made> {
+async function make(spec: Spec, opts: Options, photos: Map<string, ImageBitmap | null>): Promise<Made> {
   const hand = handFont(store.settings.font).family;
   await document.fonts?.load(`${TASK}px ${hand}`).catch(() => {});
-  const name = fileName(task.text);
+  const name = fileName(spec.name);
   const foot = `aus Bullet · ${longDay(dayKey(new Date()))}`;
 
   // as pictures: as long as it is (cut only when very long)
-  const long = paginate(await layout(task, opts, photos, 1000), IMAGE_MAX);
+  const long = paginate(await layout(spec, opts, photos, 1000), IMAGE_MAX);
   const pictures = long.map((page, i) => draw(page, contentHeight(page) + 2 * M + 30, long.length > 1 ? `${foot} · ${i + 1} von ${long.length}` : foot));
   const pngs = await Promise.all(pictures.map((c) => toBlob(c, 'image/png')));
   const images = pngs.map((b, i) => new File([b], `${name}${pngs.length > 1 ? ` ${i + 1}` : ''}.png`, { type: 'image/png' }));
 
   // as A4 pages
-  const pages = paginate(await layout(task, opts, photos, PAGE_H - 2 * M - 120), PAGE_H - 2 * M - 40);
+  const pages = paginate(await layout(spec, opts, photos, PAGE_H - 2 * M - 120), PAGE_H - 2 * M - 40);
   const jpegs = await Promise.all(pages.map((page, i) => toBlob(draw(page, PAGE_H, `${foot} · Seite ${i + 1} von ${pages.length}`), 'image/jpeg', 0.9)));
   const bytes = await Promise.all(jpegs.map(async (b) => new Uint8Array(await b.arrayBuffer())));
   const pdf = makePdf(bytes.map((jpeg) => ({ jpeg, width: W, height: PAGE_H })));
@@ -342,29 +471,60 @@ export function send(files: File[], title: string) {
 
 // --- the window -------------------------------------------------------------------------------
 
+/** The sign for sharing, drawn by hand (a box with an arrow going up out of it), as a button. */
+export function ShareButton(props: { what: ShareWhat; close?: () => void; label?: string }) {
+  return (
+    <button
+      type="button"
+      class={`note-btn ${props.label ? 'share-with-label' : 'icon-btn'} share-open`}
+      aria-label="teilen"
+      title="als Bild oder PDF teilen"
+      onClick={() => { props.close?.(); ui.set({ share: props.what, postIt: null }); }}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8.2 9.6H6.4c-.9 0-1.4.5-1.4 1.4v8.1c0 .9.5 1.4 1.4 1.4h11.2c.9 0 1.4-.5 1.4-1.4V11c0-.9-.5-1.4-1.4-1.4h-1.8" />
+        <path d="M12 3.4v11.3M8.6 6.6 12 3.3l3.4 3.3" />
+      </svg>
+      {props.label}
+    </button>
+  );
+}
+
 export function ShareSheet() {
   const state = useUi();
   if (!state.share) return null;
-  return <ShareWindow key={state.share} taskId={state.share} />;
+  const what = state.share;
+  return <ShareWindow key={JSON.stringify(what)} what={what} />;
 }
 
-function ShareWindow(props: { taskId: string }) {
+function ShareWindow(props: { what: ShareWhat }) {
   const snap = useStore();
-  const task = store.task(props.taskId);
-  const subs = task ? allSubtasks(snap, task.id) : [];
-  const openSubs = subs.filter((t) => t.doneAt == null);
-  const [opts, setOpts] = useState<Options>({ subtasks: subs.length > 0, done: false, notes: true, photos: true, small: false });
+  const what = props.what;
+  const single = what.kind === 'task';
+  const [opts, setOpts] = useState<Options>(() => {
+    const all = specOf(what, { subtasks: true, done: true, notes: true, photos: true, small: false });
+    const anySubs = !!all?.sections.some((x) => x.rows.some((r) => r.indent > 0));
+    return { subtasks: anySubs, done: false, notes: true, photos: true, small: !single };
+  });
   const [made, setMade] = useState<Made | null>(null);
   const [busy, setBusy] = useState(true);
   const photos = useRef(new Map<string, ImageBitmap | null>());
   const close = () => ui.set({ share: null });
+  const spec = specOf(what, opts);
+  // what could go along at all: for which choices are shown
+  const all = specOf(what, { ...opts, subtasks: what.kind !== 'day', done: true });
+  const tasksAll = all ? all.sections.flatMap((x) => x.rows.map((r) => r.task)) : [];
+  const hasSubs = what.kind !== 'day' && !!all?.sections.some((x) => x.rows.some((r) => r.indent > 0));
+  const hasDone = what.kind !== 'day' && tasksAll.some((t) => t.doneAt != null);
+  const hasNotes = tasksAll.some((t) => t.note?.trim()) || !!all?.note;
+  const hasPhotos = tasksAll.some((t) => t.photos?.length);
 
   useEffect(() => {
-    if (!task) return;
+    if (!spec) return;
     let stale = false;
     setBusy(true);
     const timer = setTimeout(() => {
-      make(task, opts, photos.current)
+      make(spec, opts, photos.current)
         .then((m) => {
           if (stale) { m.previews.forEach((u) => URL.revokeObjectURL(u)); return; }
           setMade((old) => { old?.previews.forEach((u) => URL.revokeObjectURL(u)); return m; });
@@ -373,7 +533,7 @@ function ShareWindow(props: { taskId: string }) {
         .catch(() => { if (!stale) setBusy(false); });
     }, 120);
     return () => { stale = true; clearTimeout(timer); };
-  }, [opts.subtasks, opts.done, opts.notes, opts.photos, opts.small, task?.updatedAt]);
+  }, [opts.subtasks, opts.done, opts.notes, opts.photos, opts.small, snap]);
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
@@ -381,31 +541,23 @@ function ShareWindow(props: { taskId: string }) {
     return () => removeEventListener('keydown', esc);
   }, []);
 
-  if (!task) return null;
-  const shown = tasksOf(task, opts).map((x) => x.task);
-  const hasNotes = (opts.subtasks ? [task, ...subs] : [task]).some((t) => t.note?.trim());
-  const hasPhotos = (opts.subtasks ? [task, ...subs] : [task]).some((t) => t.photos?.length);
+  if (!spec) return null;
+  const count = rowCount(spec);
   const toggle = (key: keyof Options) => setOpts({ ...opts, [key]: !opts[key] });
 
   return (
     <div class="share-layer" onPointerDown={(e) => { if (e.target === e.currentTarget) close(); }}>
       <div class="share-window" role="dialog" aria-label="Teilen">
         <header class="share-head">
-          <h2>Teilen</h2>
+          <h2>{single ? 'Teilen' : `${spec.title} teilen`}</h2>
           <button type="button" class="ghost-btn close-x" onClick={close} aria-label="schließen">✕</button>
         </header>
         <div class="share-options">
-          {subs.length > 0 && (
-            <>
-              <button type="button" class={`chip ${opts.subtasks ? 'on' : ''}`} aria-pressed={opts.subtasks} onClick={() => toggle('subtasks')}>
-                mit Unteraufgaben ({opts.done ? subs.length : openSubs.length})
-              </button>
-              {opts.subtasks && subs.length > openSubs.length && (
-                <button type="button" class={`chip ${opts.done ? 'on' : ''}`} aria-pressed={opts.done} onClick={() => toggle('done')}>erledigte auch</button>
-              )}
-              <span class="share-gap" />
-            </>
+          {hasSubs && (
+            <button type="button" class={`chip ${opts.subtasks ? 'on' : ''}`} aria-pressed={opts.subtasks} onClick={() => toggle('subtasks')}>mit Unteraufgaben</button>
           )}
+          {hasDone && <button type="button" class={`chip ${opts.done ? 'on' : ''}`} aria-pressed={opts.done} onClick={() => toggle('done')}>erledigte auch</button>}
+          {(hasSubs || hasDone) && <span class="share-gap" />}
           {hasNotes && <button type="button" class={`chip ${opts.notes ? 'on' : ''}`} aria-pressed={opts.notes} onClick={() => toggle('notes')}>mit Notizen</button>}
           {hasPhotos && <button type="button" class={`chip ${opts.photos ? 'on' : ''}`} aria-pressed={opts.photos} onClick={() => toggle('photos')}>mit Bildern</button>}
           {hasPhotos && opts.photos && (
@@ -420,11 +572,12 @@ function ShareWindow(props: { taskId: string }) {
           {!made && <p class="share-wait">wird gezeichnet …</p>}
         </div>
         <footer class="share-foot">
-          <span class="share-count">{shown.length === 1 ? '1 Aufgabe' : `${shown.length} Aufgaben`}</span>
-          <button type="button" class="note-btn" disabled={busy || !made} onClick={() => made && send(made.images, task.text)}>als Bild</button>
-          <button type="button" class="note-btn save" disabled={busy || !made} onClick={() => made && send([made.pdf], task.text)}>als PDF</button>
+          <span class="share-count">{single ? (count ? `mit ${count === 1 ? '1 Unteraufgabe' : `${count} Unteraufgaben`}` : '1 Aufgabe') : count === 1 ? '1 Aufgabe' : `${count} Aufgaben`}</span>
+          <button type="button" class="note-btn" disabled={busy || !made} onClick={() => made && send(made.images, spec.title)}>als Bild</button>
+          <button type="button" class="note-btn save" disabled={busy || !made} onClick={() => made && send([made.pdf], spec.title)}>als PDF</button>
         </footer>
       </div>
     </div>
   );
 }
+

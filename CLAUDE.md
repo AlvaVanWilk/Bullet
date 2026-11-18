@@ -180,7 +180,11 @@ Bedienung und Einrichtung: `README.md`.
   den Listen blass mit Sanduhr statt Punkt und „· wer“ dahinter; Deadlines wandern weiter.
   Seite „Wartet“ (Lasche mit Sanduhr): eine Fineliner-Box pro Person, „seit …“. Erledigt
   → wartet nicht mehr.
-- Teilen (im Post-it das Teilen-Zeichen rechts neben „löschen“, ohne Text): Fensterchen
+- Teilen (im Post-it das Teilen-Zeichen rechts neben „löschen“, ohne Text; dasselbe Zeichen im Zettel
+  eines Bereichs, eines Projekts, einer Kategorie, rechts im Kopf jeder „Wartet“-Box, und am Tag: den
+  Tagesnamen antippen → kleiner Zettel „teilen“): ganze Listen (`ShareWhat`: Aufgabe, Bereich, Projekt mit
+  Bereichen als Zwischenüberschriften und „Ohne Bereich“, Tag so wie er dasteht – erledigt, liegen
+  geblieben, weitergeschoben –, Kategorie, wartet auf …). Fensterchen
   mit Auswahl (mit Unteraufgaben, erledigte auch, mit Notizen, mit Bildern klein/groß),
   Vorschau wie es aussieht, unten „als Bild“ (PNG, sehr lang → mehrere) oder „als PDF“
   (A4-Seiten als Bilder, `src/lib/pdf.ts`), dann das Teilen-Menü des Geräts (Claude, Mail,

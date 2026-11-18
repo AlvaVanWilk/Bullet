@@ -1,3 +1,4 @@
+import type { ShareWhat } from './Share';
 // What the screen shows right now (not saved, not synced), and hooks to
 // read the stores from components.
 
@@ -26,7 +27,9 @@ export type PostItTarget =
   /** a thought on the idea sheet of a project */
   | { kind: 'thought'; id: string; rect: DOMRect }
   /** a thread there: its writing, pen, line */
-  | { kind: 'thread'; id: string; rect: DOMRect };
+  | { kind: 'thread'; id: string; rect: DOMRect }
+  /** a day, tapped on its name: share it */
+  | { kind: 'day'; day: string; rect: DOMRect };
 
 export interface UiState {
   view: { kind: 'week' } | { kind: 'category'; id: string } | { kind: 'project'; id: string; page?: 'ideas' } | { kind: 'archive' } | { kind: 'waiting' } | { kind: 'household' };
@@ -38,8 +41,8 @@ export interface UiState {
   photo: { taskId: string; id: string } | null;
   /** The GiroCode of a task, to scan with the banking app. */
   qr: string | null;
-  /** A task to share (as a picture or a PDF), with its subtasks, notes and photos. */
-  share: string | null;
+  /** What to share (as a picture or a PDF): a task with its subtasks, notes and photos, or a whole list. */
+  share: ShareWhat | null;
 }
 
 export function observable<T extends object>(initial: T) {

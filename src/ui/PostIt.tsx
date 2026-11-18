@@ -7,9 +7,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CATEGORY_COLORS, categoryColor } from '../lib/colors';
 import { eventStartDay } from '../google/events';
-import { addDays, compareDays, parseDay, shortWeekday, timeLabel, type DayKey } from '../lib/dates';
+import { addDays, compareDays, parseDay, shortWeekday, timeLabel, weekdayName, type DayKey } from '../lib/dates';
 import {
-  deadlineShowsOn, entriesByTask, isOpenToday, isWaiting, liveCategories, pendingNames, prepRows, prepSuggestions, seriesKey,
+  dayItems, deadlineShowsOn, entriesByTask, isOpenToday, isWaiting, liveCategories, pendingNames, prepRows, prepSuggestions, seriesKey,
   specialLinkKey,
 } from '../lib/logic';
 import type { CalEvent, Special, Task, TaskLink } from '../lib/model';
@@ -27,6 +27,7 @@ import { AreaNote, AreaSelect, ProjectCard, ProjectEditNote, ProjectSelect } fro
 import { movePick, SuggestList } from './Suggest';
 import { ChoreMinutesNote, ChoreNote, ChoresTodayNote } from './Household';
 import { ThoughtNote, ThreadNote } from './Ideas';
+import { longDay, ShareButton } from './Share';
 
 const WIDTH = 312;
 
@@ -42,7 +43,7 @@ export function PostItLayer() {
     <div class="postit-layer" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
       <EscCloses close={close} />
       <Placed
-        key={`${target.kind}-${target.kind === 'event' ? target.event.id : target.kind === 'choreMinutes' ? target.weekday : target.kind === 'chore' ? `${target.id}-${target.part ?? ''}` : target.id}`}
+        key={`${target.kind}-${target.kind === 'event' ? target.event.id : target.kind === 'choreMinutes' ? target.weekday : target.kind === 'chore' ? `${target.id}-${target.part ?? ''}` : target.kind === 'day' ? target.day : target.id}`}
         target={target}
         variant={target.kind === 'project' ? 'pslip' : undefined}
       >
@@ -59,7 +60,24 @@ export function PostItLayer() {
         {target.kind === 'choreMinutes' && <ChoreMinutesNote weekday={target.weekday} close={close} />}
         {target.kind === 'thought' && <ThoughtNote id={target.id} close={close} />}
         {target.kind === 'thread' && <ThreadNote id={target.id} close={close} />}
+        {target.kind === 'day' && <DayNote day={target.day} close={close} />}
       </Placed>
+    </div>
+  );
+}
+
+/** A day, tapped on its name: what can be done with it as a whole (share it). */
+function DayNote(props: { day: string; close: () => void }) {
+  const snap = useStore();
+  const today = useToday();
+  const count = dayItems(snap, props.day, today).length;
+  return (
+    <div class="note day-note">
+      <div class="note-title">{weekdayName(props.day)}, {longDay(props.day)}</div>
+      <p class="note-hint">{count === 1 ? '1 Aufgabe' : `${count} Aufgaben`} an diesem Tag</p>
+      <div class="note-actions">
+        <ShareButton what={{ kind: 'day', day: props.day }} close={props.close} label="teilen" />
+      </div>
     </div>
   );
 }
@@ -336,7 +354,7 @@ function TaskNote(props: { target: Extract<PostItTarget, { kind: 'task' }>; clos
           class="note-btn icon-btn share-open"
           aria-label="teilen"
           title="teilen"
-          onClick={() => { props.close(); ui.set({ share: task.id }); }}
+          onClick={() => { props.close(); ui.set({ share: { kind: 'task', id: task.id } }); }}
         >
           <ShareIcon />
         </button>
@@ -665,6 +683,7 @@ function CategoryNote(props: { id: string; close: () => void }) {
             props.close();
           }}
         >{confirmDelete ? 'löschen? Aufgaben bleiben' : 'löschen'}</button>
+        <ShareButton what={{ kind: 'category', id: cat.id }} close={props.close} />
       </div>
     </div>
   );

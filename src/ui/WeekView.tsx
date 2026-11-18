@@ -302,7 +302,17 @@ function DaySection(props: { day: DayKey; today: DayKey; items: DayItem[]; event
       data-day={props.day}
       data-deco-anchor={`day|${props.day}`}
     >
-      <DayHeading day={props.day} isToday={isToday} settings={snap.settings} allDone={isToday && dayAllDone(props.items)} />
+      {/* the name of the day, tapped: a little note to share the day */}
+      <div
+        class="day-head-tap"
+        role="button"
+        tabIndex={0}
+        aria-label={`Tag ${props.day}: teilen`}
+        onClick={(e) => ui.set({ postIt: { kind: 'day', day: props.day, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } })}
+        onKeyDown={(e) => { if (e.key === 'Enter') ui.set({ postIt: { kind: 'day', day: props.day, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } }); }}
+      >
+        <DayHeading day={props.day} isToday={isToday} settings={snap.settings} allDone={isToday && dayAllDone(props.items)} />
+      </div>
       {(special.length > 0 || specials.length > 0) && (
         <ul class="day-specials">
           {special.map((ev) => <li key={ev.id} onClick={(e) => openEvent(ev, e)}>{ev.title}</li>)}
